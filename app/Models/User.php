@@ -10,5 +10,5 @@ class User extends Authenticatable {
     protected function casts(): array { return ['email_verified_at'=>'datetime','password'=>'hashed']; }
     public function location() { return $this->belongsTo(Location::class); }
     public function isAdmin(): bool { return $this->role === 'admin'; }
-    public function is(string $role): bool { return $this->role === $role; }
+    public function hasRole(string $role): bool { return $this->role === $role; }
 }
