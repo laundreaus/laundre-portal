@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Systems Portal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{
+    --cream:#F4EFE6; --cream-line:#E4DBCB; --field:#FFFFFF;
+    --green:#435E53; --green-d:#33473D; --green-l:#6E8B7B;
+    --accent:#C4703F; --text:#F4EFE6; --muted:#8a9790; --ink:#2E3D36;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  .logo svg{height:28px;width:auto;display:block;}
+  button{font-family:inherit;cursor:pointer;}
+  .btn{border:none;border-radius:8px;padding:9px 16px;font-size:13.5px;font-weight:700;}
+  .btn-green{background:var(--green);color:#fff;}
+  .btn-green:hover{filter:brightness(1.1);}
+  .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  .btn-ghost:hover{background:#EFEADD;}
+  input{font-family:inherit;font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:8px;padding:10px 12px;width:100%;}
+  input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(67,94,83,.18);}
+
+  /* Login */
+  #login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--green-d);}
+  #login .card{background:var(--cream);border-radius:16px;padding:36px 34px;width:350px;box-shadow:0 22px 60px rgba(0,0,0,.34);}
+  #login .logo{display:flex;justify-content:center;margin-bottom:8px;}
+  #login h1{font-size:15px;text-align:center;margin:12px 0 22px;color:var(--green);font-weight:600;letter-spacing:.02em;}
+  #login label{font-size:12px;color:#5f7469;display:block;margin:0 0 5px;font-weight:600;}
+  #login .fld{margin-bottom:14px;}
+  #login .err{color:#B4472F;font-size:12.5px;min-height:16px;margin:2px 0 8px;}
+  #login .hint{font-size:11px;color:#8a9790;text-align:center;margin-top:16px;line-height:1.5;}
+
+  /* App */
+  #app{display:none;}
+  #app.show{display:block;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:14px;padding:14px 26px;position:sticky;top:0;z-index:20;}
+  header .logo{display:flex;align-items:center;}
+  header .ttl{font-weight:700;font-size:15px;color:var(--ink);}
+  header .spacer{flex:1;}
+  main{max-width:1120px;margin:0 auto;padding:30px 26px 70px;}
+  .hero h2{font-size:24px;margin:0 0 4px;color:var(--green-d);}
+  .hero p{margin:0 0 22px;color:#6b7d73;font-size:14px;}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:28px;}
+  .stat{background:#fff;border:1px solid var(--cream-line);border-radius:12px;padding:14px 16px;}
+  .stat .n{font-size:24px;font-weight:800;color:var(--green);}
+  .stat .l{font-size:12px;color:#7a8b84;margin-top:2px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
+  a.tile{display:block;background:#fff;border:1px solid var(--cream-line);border-radius:15px;padding:22px;text-decoration:none;color:inherit;transition:.15s;position:relative;overflow:hidden;}
+  a.tile:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(52,73,61,.14);border-color:var(--green-l);}
+  a.tile .ic{width:46px;height:46px;border-radius:11px;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px;}
+  a.tile h3{margin:0 0 6px;font-size:16px;color:var(--green-d);}
+  a.tile p{margin:0;font-size:13px;color:#6b7d73;line-height:1.5;}
+  a.tile .arrow{position:absolute;top:22px;right:22px;color:var(--cream-line);font-size:20px;transition:.15s;}
+  a.tile:hover .arrow{color:var(--accent);}
+  .foot{margin-top:34px;font-size:11.5px;color:#8a9790;line-height:1.6;}
+  /* Sales dashboard */
+  .dash{background:#fff;border:1px solid var(--cream-line);border-radius:16px;padding:20px 22px;margin-bottom:28px;}
+  .dash .dhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+  .dash h3{margin:0;font-size:16px;color:var(--green-d);} .dash .dhead .spacer{flex:1;}
+  .seg{display:inline-flex;background:#EFEADD;border:1px solid var(--cream-line);border-radius:9px;overflow:hidden;}
+  .seg button{background:transparent;border:none;padding:8px 15px;font-size:13px;font-weight:700;color:#6b8073;}
+  .seg button.on{background:var(--green);color:#fff;}
+  .dash .filter{position:relative;} .dash .filter input{width:230px;padding:8px 11px;border:1px solid var(--cream-line);border-radius:8px;font-size:13px;}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi{background:#F3F6F3;border:1px solid #dfe7df;border-radius:11px;padding:12px 14px;}
+  .kpi .n{font-size:22px;font-weight:800;color:var(--green);} .kpi .l{font-size:11.5px;color:#7a8b84;margin-top:2px;}
+  .chartbox{position:relative;height:320px;}
+  .chartempty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8a9790;font-size:13.5px;text-align:center;padding:20px;}
+  .dash .empty{padding:30px;text-align:center;color:#8a9790;font-size:13.5px;}
+  .dash .ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .dash .lbl{font-size:12px;color:#5f7469;font-weight:600;}
+  .datein{width:152px;padding:8px 10px;border:1px solid var(--cream-line);border-radius:8px;font-size:13px;font-family:inherit;color:var(--ink);}
+  .ms{position:relative;}
+  .ms>summary{list-style:none;cursor:pointer;border:1px solid var(--cream-line);border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;color:var(--green);background:#fff;user-select:none;}
+  .ms>summary::-webkit-details-marker{display:none;} .ms>summary::after{content:' ▾';color:#8a9790;}
+  .mspanel{position:absolute;z-index:30;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--cream-line);border-radius:11px;box-shadow:0 12px 32px rgba(52,73,61,.2);padding:8px;min-width:230px;}
+  .mspanel .msrow{display:flex;align-items:center;gap:9px;padding:7px 8px;font-size:13.5px;border-radius:7px;cursor:pointer;}
+  .mspanel .msrow:hover{background:#F3F6F3;} .mspanel .msrow input{width:17px;height:17px;accent-color:var(--green);}
+  .mspanel .msall{border-bottom:1px solid #f0ece2;margin-bottom:4px;padding-bottom:8px;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="card">
+    <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" width="145" height="28.506" viewBox="0 0 145 28.506"> <g id="Group_669" data-name="Group 669" transform="translate(-1862.4 -927.506)"> <path id="Path_843" data-name="Path 843" d="M552.01,324.131a12.885,12.885,0,0,1-.315-2.94,8.664,8.664,0,0,1,.145-1.512,6.607,6.607,0,0,1,.484-1.561,3.343,3.343,0,0,1,.907-1.222,2.106,2.106,0,0,1,1.392-.472,1.843,1.843,0,0,1,1.222.435,3.381,3.381,0,0,1,.859,1.126,5.977,5.977,0,0,1,.5,1.5,8.317,8.317,0,0,1,.157,1.585,8.712,8.712,0,0,1-.218,1.911,5.654,5.654,0,0,1-.726,1.778,3.856,3.856,0,0,1-1.331,1.295,3.951,3.951,0,0,1-2.033.484h-.145A9.542,9.542,0,0,1,552.01,324.131Zm6.449,11.447a8.445,8.445,0,0,0,2.492-1.27,6.5,6.5,0,0,0,1.742-1.911,4.547,4.547,0,0,0,.641-2.348,8.254,8.254,0,0,1-1.5.472,7.648,7.648,0,0,1-1.572.157,8.856,8.856,0,0,1-4.126-.944A7.593,7.593,0,0,1,553.172,327h2.178q4.38,0,6.341-1.234a4.02,4.02,0,0,0,1.96-3.63,5.294,5.294,0,0,0-1-3.133,6.884,6.884,0,0,0-2.916-2.263,11.513,11.513,0,0,0-4.671-.847,9.232,9.232,0,0,0-6.9,2.953,9.832,9.832,0,0,0-1.984,3.206,10.8,10.8,0,0,0-.7,3.908,9.773,9.773,0,0,0,.787,3.908,10.177,10.177,0,0,0,5.372,5.372,9.838,9.838,0,0,0,3.933.787,9.389,9.389,0,0,0,2.892-.448Zm-32.426-17.061a2.632,2.632,0,0,1,.654,1.029,5.07,5.07,0,0,1,.279,1.84v10.793a5.21,5.21,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242H535.8v-.242a1.744,1.744,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V321.143a3.057,3.057,0,0,1,.4-1.621,3.023,3.023,0,0,1,.956-1,1.9,1.9,0,0,1,.968-.351q.581,0,.581.532a1.468,1.468,0,0,1-.182.75,7.6,7.6,0,0,0-.363.726,2.879,2.879,0,0,0-.182,1.137,3.9,3.9,0,0,0,4.113,4.113,3.949,3.949,0,0,0,3-1.21,4.575,4.575,0,0,0,1.137-3.266,5.442,5.442,0,0,0-.568-2.419,4.76,4.76,0,0,0-1.718-1.911,5.236,5.236,0,0,0-2.916-.75,5.3,5.3,0,0,0-2.552.581,5.68,5.68,0,0,0-1.73,1.379,6.655,6.655,0,0,0-.944,1.452v-3.412h-.242a11.652,11.652,0,0,1-1.6.641q-1.04.351-2.3.678t-2.5.545a13.194,13.194,0,0,1-2.239.217v.242a1.1,1.1,0,0,1,.69.326Zm-11.083-1.04a3.658,3.658,0,0,1,.907.678,2.732,2.732,0,0,1,.557.787v11.737a4.991,4.991,0,0,1-.242.859,2.354,2.354,0,0,1-.665.968,1.905,1.905,0,0,1-1.319.423,2.137,2.137,0,0,1-1.5-.532,3.538,3.538,0,0,1-.907-1.415,9.215,9.215,0,0,1-.472-1.948,20.955,20.955,0,0,1-.182-2.129q-.037-1.065-.036-1.96v-1.936q0-1.04.1-2.069a8.567,8.567,0,0,1,.375-1.876,3.161,3.161,0,0,1,.823-1.355,2.059,2.059,0,0,1,1.464-.508,2.3,2.3,0,0,1,1.1.279Zm-10.733,11.846a10.853,10.853,0,0,0,1.306,3.243,6.54,6.54,0,0,0,2.2,2.2,6.516,6.516,0,0,0,6.4-.085,7.039,7.039,0,0,0,2.286-2.5v3.388h8.833v-.242a1.743,1.743,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V307.52h-.242a1.173,1.173,0,0,1-.29.145q-.653.242-1.682.581t-2.215.641q-1.186.3-2.359.508a12.3,12.3,0,0,1-2.093.206v.242a1.1,1.1,0,0,1,.69.326,2.632,2.632,0,0,1,.654,1.029,5.072,5.072,0,0,1,.279,1.84v4.791a8.59,8.59,0,0,0-2.069-1.392,6.061,6.061,0,0,0-2.674-.568,7.344,7.344,0,0,0-3.521.8,7.1,7.1,0,0,0-2.456,2.153,9.605,9.605,0,0,0-1.439,3.061,13.273,13.273,0,0,0-.472,3.545,16.856,16.856,0,0,0,.435,3.9Zm-23.231-11.132a1.1,1.1,0,0,1,.69.326,2.632,2.632,0,0,1,.654,1.029,5.074,5.074,0,0,1,.279,1.84v10.793a5.211,5.211,0,0,1-.363,2.129,1.746,1.746,0,0,1-1.21,1.016v.242H491.44v-.242a1.744,1.744,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V321.507a4,4,0,0,1,.3-1.549,2.9,2.9,0,0,1,.859-1.173,2.023,2.023,0,0,1,1.306-.448,1.382,1.382,0,0,1,1.149.484,2.732,2.732,0,0,1,.508,1.186,7.424,7.424,0,0,1,.133,1.379v10.793a5.212,5.212,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242h10.405v-.242a1.744,1.744,0,0,1-1.21-1.016,5.217,5.217,0,0,1-.363-2.129V322.3a12.14,12.14,0,0,0-.193-2.057,6.589,6.589,0,0,0-.75-2.106,4.344,4.344,0,0,0-1.67-1.634,5.951,5.951,0,0,0-2.976-.641,6.348,6.348,0,0,0-2.553.508,6.868,6.868,0,0,0-2.045,1.343,6.162,6.162,0,0,0-1.331,1.8v-3.654h-.242a1.177,1.177,0,0,1-.29.145q-.653.242-1.682.581t-2.215.641q-1.186.3-2.359.508a12.291,12.291,0,0,1-2.093.206v.242Zm-21.428.351a2.631,2.631,0,0,1,.654,1.029,5.073,5.073,0,0,1,.279,1.84v8.179a12.05,12.05,0,0,0,.193,2.057,6.584,6.584,0,0,0,.75,2.106,4.316,4.316,0,0,0,1.682,1.634,5.964,5.964,0,0,0,2.964.641,6.347,6.347,0,0,0,2.552-.508,6.879,6.879,0,0,0,2.045-1.343,6.161,6.161,0,0,0,1.331-1.8v3.654h.242a2.288,2.288,0,0,1,.29-.145q.653-.267,1.682-.593t2.214-.629q1.186-.3,2.359-.508a12.286,12.286,0,0,1,2.093-.206V333.7a1.131,1.131,0,0,1-.678-.326,2.546,2.546,0,0,1-.665-1.029,5.073,5.073,0,0,1-.279-1.84V315.893h-.242c-.032.017-.077.036-.133.06a1.02,1.02,0,0,0-.157.084,12.744,12.744,0,0,1-1.658.654q-1.029.339-2.226.629t-2.372.472a13.8,13.8,0,0,1-2.093.182v.242a1.1,1.1,0,0,1,.69.326,2.631,2.631,0,0,1,.654,1.029,5.074,5.074,0,0,1,.279,1.84v8.978a4,4,0,0,1-.3,1.549,2.959,2.959,0,0,1-.847,1.173,2.005,2.005,0,0,1-1.319.448,1.349,1.349,0,0,1-1.137-.484,2.654,2.654,0,0,1-.521-1.2,7.5,7.5,0,0,1-.133-1.368V315.894h-.242c-.032.017-.077.036-.133.06a1.016,1.016,0,0,0-.157.084,12.742,12.742,0,0,1-1.658.654q-1.029.34-2.226.629t-2.372.472a13.807,13.807,0,0,1-2.093.182v.242a1.1,1.1,0,0,1,.69.326Zm-12.922,7.671a4.9,4.9,0,0,1,.8-1.609,5.013,5.013,0,0,1,.944-.92,6.394,6.394,0,0,0,.8-.665,1.227,1.227,0,0,0,.326-.907.906.906,0,0,0-.412-.835,9.783,9.783,0,0,0-.92-.5,3.8,3.8,0,0,1-1.1-.787,2.157,2.157,0,0,1-.521-1.585,4.667,4.667,0,0,1,.1-.787,2.785,2.785,0,0,1,.363-.956.854.854,0,0,1,.774-.435,1.213,1.213,0,0,1,1.089.557,3.521,3.521,0,0,1,.5,1.355,9.808,9.808,0,0,1,.133,1.609v11.168c0,.129-.142.3-.423.508a1.493,1.493,0,0,1-.907.315,1.42,1.42,0,0,1-1.029-.412,2.489,2.489,0,0,1-.629-1.053,4.217,4.217,0,0,1-.206-1.295,9.463,9.463,0,0,1,.326-2.771Zm-6.86,7.454a4.892,4.892,0,0,0,1.84,1.743,5.041,5.041,0,0,0,2.444.617,5.451,5.451,0,0,0,3.339-1.04,6.386,6.386,0,0,0,2.129-3.315,5.856,5.856,0,0,0,.532,2.045,4.249,4.249,0,0,0,1.331,1.658,3.523,3.523,0,0,0,2.178.654,7.312,7.312,0,0,0,2.976-.557,23.862,23.862,0,0,0,2.226-1.113v-.242a1.441,1.441,0,0,1-1.439-.944,5.9,5.9,0,0,1-.4-2.3v-6.8a8.971,8.971,0,0,0-.23-1.863,8.676,8.676,0,0,0-.811-2.178,7.526,7.526,0,0,0-1.609-2.057,7.749,7.749,0,0,0-2.625-1.525,13.209,13.209,0,0,0-7.284-.133,7.13,7.13,0,0,0-2.335,1.173,4.885,4.885,0,0,0-1.343,1.585,3.746,3.746,0,0,0-.435,1.706,2.67,2.67,0,0,0,.787,1.924,2.781,2.781,0,0,0,2.093.811,3.022,3.022,0,0,0,1.452-.326,6.245,6.245,0,0,0,1.089-.738,9.376,9.376,0,0,1,.992-.738,2.145,2.145,0,0,1,1.186-.326,2.273,2.273,0,0,1,.787.157.621.621,0,0,1,.424.641.914.914,0,0,1-.545.787,6.738,6.738,0,0,1-1.428.605q-.884.278-1.96.629a17.892,17.892,0,0,0-2.142.859,8.52,8.52,0,0,0-1.948,1.282,5.889,5.889,0,0,0-1.428,1.912,6.282,6.282,0,0,0-.545,2.734,4.87,4.87,0,0,0,.7,2.674ZM418.65,308.22a1.748,1.748,0,0,1,1.21,1,5.2,5.2,0,0,1,.363,2.142v20.812a5.212,5.212,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242h19.238V327.24h-.242a5.049,5.049,0,0,1-.4,1.815,10,10,0,0,1-1.149,2.081,10.884,10.884,0,0,1-1.767,1.948,8.958,8.958,0,0,1-2.275,1.439,6.569,6.569,0,0,1-2.687.557h-1.4V311.366a5.2,5.2,0,0,1,.363-2.142,1.748,1.748,0,0,1,1.21-1v-.242H418.65Z" transform="translate(1443.75 619.986)" fill="#435e53"/> <path id="Path_844" data-name="Path 844" d="M1793.59,316.94a5.4,5.4,0,0,1-4.65,3.522c1.429,1.571,5.14,1.036,6.593-1.471l-1.943-2.051" transform="translate(206.554 611.481)" fill="#435e53"/> </g> </svg></div>
+    <h1>Systems Portal</h1>
+    <form id="loginForm">
+      <div class="fld"><label>Email / username</label><input id="u" type="text" autocomplete="username" /></div>
+      <div class="fld"><label>Password</label><input id="p" type="password" autocomplete="current-password" /></div>
+      <div class="err" id="loginErr"></div>
+      <button class="btn btn-green" style="width:100%" type="submit">Sign in</button>
+    </form>
+    <div class="hint">Admin login: <b>admin</b> / <b>laundre2026</b><br>Franchisee accounts are created by an admin in User Management.<br>Front-end gate — set real auth at the server for production.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <span class="logo"><svg xmlns="http://www.w3.org/2000/svg" width="145" height="28.506" viewBox="0 0 145 28.506"> <g id="Group_669" data-name="Group 669" transform="translate(-1862.4 -927.506)"> <path id="Path_843" data-name="Path 843" d="M552.01,324.131a12.885,12.885,0,0,1-.315-2.94,8.664,8.664,0,0,1,.145-1.512,6.607,6.607,0,0,1,.484-1.561,3.343,3.343,0,0,1,.907-1.222,2.106,2.106,0,0,1,1.392-.472,1.843,1.843,0,0,1,1.222.435,3.381,3.381,0,0,1,.859,1.126,5.977,5.977,0,0,1,.5,1.5,8.317,8.317,0,0,1,.157,1.585,8.712,8.712,0,0,1-.218,1.911,5.654,5.654,0,0,1-.726,1.778,3.856,3.856,0,0,1-1.331,1.295,3.951,3.951,0,0,1-2.033.484h-.145A9.542,9.542,0,0,1,552.01,324.131Zm6.449,11.447a8.445,8.445,0,0,0,2.492-1.27,6.5,6.5,0,0,0,1.742-1.911,4.547,4.547,0,0,0,.641-2.348,8.254,8.254,0,0,1-1.5.472,7.648,7.648,0,0,1-1.572.157,8.856,8.856,0,0,1-4.126-.944A7.593,7.593,0,0,1,553.172,327h2.178q4.38,0,6.341-1.234a4.02,4.02,0,0,0,1.96-3.63,5.294,5.294,0,0,0-1-3.133,6.884,6.884,0,0,0-2.916-2.263,11.513,11.513,0,0,0-4.671-.847,9.232,9.232,0,0,0-6.9,2.953,9.832,9.832,0,0,0-1.984,3.206,10.8,10.8,0,0,0-.7,3.908,9.773,9.773,0,0,0,.787,3.908,10.177,10.177,0,0,0,5.372,5.372,9.838,9.838,0,0,0,3.933.787,9.389,9.389,0,0,0,2.892-.448Zm-32.426-17.061a2.632,2.632,0,0,1,.654,1.029,5.07,5.07,0,0,1,.279,1.84v10.793a5.21,5.21,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242H535.8v-.242a1.744,1.744,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V321.143a3.057,3.057,0,0,1,.4-1.621,3.023,3.023,0,0,1,.956-1,1.9,1.9,0,0,1,.968-.351q.581,0,.581.532a1.468,1.468,0,0,1-.182.75,7.6,7.6,0,0,0-.363.726,2.879,2.879,0,0,0-.182,1.137,3.9,3.9,0,0,0,4.113,4.113,3.949,3.949,0,0,0,3-1.21,4.575,4.575,0,0,0,1.137-3.266,5.442,5.442,0,0,0-.568-2.419,4.76,4.76,0,0,0-1.718-1.911,5.236,5.236,0,0,0-2.916-.75,5.3,5.3,0,0,0-2.552.581,5.68,5.68,0,0,0-1.73,1.379,6.655,6.655,0,0,0-.944,1.452v-3.412h-.242a11.652,11.652,0,0,1-1.6.641q-1.04.351-2.3.678t-2.5.545a13.194,13.194,0,0,1-2.239.217v.242a1.1,1.1,0,0,1,.69.326Zm-11.083-1.04a3.658,3.658,0,0,1,.907.678,2.732,2.732,0,0,1,.557.787v11.737a4.991,4.991,0,0,1-.242.859,2.354,2.354,0,0,1-.665.968,1.905,1.905,0,0,1-1.319.423,2.137,2.137,0,0,1-1.5-.532,3.538,3.538,0,0,1-.907-1.415,9.215,9.215,0,0,1-.472-1.948,20.955,20.955,0,0,1-.182-2.129q-.037-1.065-.036-1.96v-1.936q0-1.04.1-2.069a8.567,8.567,0,0,1,.375-1.876,3.161,3.161,0,0,1,.823-1.355,2.059,2.059,0,0,1,1.464-.508,2.3,2.3,0,0,1,1.1.279Zm-10.733,11.846a10.853,10.853,0,0,0,1.306,3.243,6.54,6.54,0,0,0,2.2,2.2,6.516,6.516,0,0,0,6.4-.085,7.039,7.039,0,0,0,2.286-2.5v3.388h8.833v-.242a1.743,1.743,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V307.52h-.242a1.173,1.173,0,0,1-.29.145q-.653.242-1.682.581t-2.215.641q-1.186.3-2.359.508a12.3,12.3,0,0,1-2.093.206v.242a1.1,1.1,0,0,1,.69.326,2.632,2.632,0,0,1,.654,1.029,5.072,5.072,0,0,1,.279,1.84v4.791a8.59,8.59,0,0,0-2.069-1.392,6.061,6.061,0,0,0-2.674-.568,7.344,7.344,0,0,0-3.521.8,7.1,7.1,0,0,0-2.456,2.153,9.605,9.605,0,0,0-1.439,3.061,13.273,13.273,0,0,0-.472,3.545,16.856,16.856,0,0,0,.435,3.9Zm-23.231-11.132a1.1,1.1,0,0,1,.69.326,2.632,2.632,0,0,1,.654,1.029,5.074,5.074,0,0,1,.279,1.84v10.793a5.211,5.211,0,0,1-.363,2.129,1.746,1.746,0,0,1-1.21,1.016v.242H491.44v-.242a1.744,1.744,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V321.507a4,4,0,0,1,.3-1.549,2.9,2.9,0,0,1,.859-1.173,2.023,2.023,0,0,1,1.306-.448,1.382,1.382,0,0,1,1.149.484,2.732,2.732,0,0,1,.508,1.186,7.424,7.424,0,0,1,.133,1.379v10.793a5.212,5.212,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242h10.405v-.242a1.744,1.744,0,0,1-1.21-1.016,5.217,5.217,0,0,1-.363-2.129V322.3a12.14,12.14,0,0,0-.193-2.057,6.589,6.589,0,0,0-.75-2.106,4.344,4.344,0,0,0-1.67-1.634,5.951,5.951,0,0,0-2.976-.641,6.348,6.348,0,0,0-2.553.508,6.868,6.868,0,0,0-2.045,1.343,6.162,6.162,0,0,0-1.331,1.8v-3.654h-.242a1.177,1.177,0,0,1-.29.145q-.653.242-1.682.581t-2.215.641q-1.186.3-2.359.508a12.291,12.291,0,0,1-2.093.206v.242Zm-21.428.351a2.631,2.631,0,0,1,.654,1.029,5.073,5.073,0,0,1,.279,1.84v8.179a12.05,12.05,0,0,0,.193,2.057,6.584,6.584,0,0,0,.75,2.106,4.316,4.316,0,0,0,1.682,1.634,5.964,5.964,0,0,0,2.964.641,6.347,6.347,0,0,0,2.552-.508,6.879,6.879,0,0,0,2.045-1.343,6.161,6.161,0,0,0,1.331-1.8v3.654h.242a2.288,2.288,0,0,1,.29-.145q.653-.267,1.682-.593t2.214-.629q1.186-.3,2.359-.508a12.286,12.286,0,0,1,2.093-.206V333.7a1.131,1.131,0,0,1-.678-.326,2.546,2.546,0,0,1-.665-1.029,5.073,5.073,0,0,1-.279-1.84V315.893h-.242c-.032.017-.077.036-.133.06a1.02,1.02,0,0,0-.157.084,12.744,12.744,0,0,1-1.658.654q-1.029.339-2.226.629t-2.372.472a13.8,13.8,0,0,1-2.093.182v.242a1.1,1.1,0,0,1,.69.326,2.631,2.631,0,0,1,.654,1.029,5.074,5.074,0,0,1,.279,1.84v8.978a4,4,0,0,1-.3,1.549,2.959,2.959,0,0,1-.847,1.173,2.005,2.005,0,0,1-1.319.448,1.349,1.349,0,0,1-1.137-.484,2.654,2.654,0,0,1-.521-1.2,7.5,7.5,0,0,1-.133-1.368V315.894h-.242c-.032.017-.077.036-.133.06a1.016,1.016,0,0,0-.157.084,12.742,12.742,0,0,1-1.658.654q-1.029.34-2.226.629t-2.372.472a13.807,13.807,0,0,1-2.093.182v.242a1.1,1.1,0,0,1,.69.326Zm-12.922,7.671a4.9,4.9,0,0,1,.8-1.609,5.013,5.013,0,0,1,.944-.92,6.394,6.394,0,0,0,.8-.665,1.227,1.227,0,0,0,.326-.907.906.906,0,0,0-.412-.835,9.783,9.783,0,0,0-.92-.5,3.8,3.8,0,0,1-1.1-.787,2.157,2.157,0,0,1-.521-1.585,4.667,4.667,0,0,1,.1-.787,2.785,2.785,0,0,1,.363-.956.854.854,0,0,1,.774-.435,1.213,1.213,0,0,1,1.089.557,3.521,3.521,0,0,1,.5,1.355,9.808,9.808,0,0,1,.133,1.609v11.168c0,.129-.142.3-.423.508a1.493,1.493,0,0,1-.907.315,1.42,1.42,0,0,1-1.029-.412,2.489,2.489,0,0,1-.629-1.053,4.217,4.217,0,0,1-.206-1.295,9.463,9.463,0,0,1,.326-2.771Zm-6.86,7.454a4.892,4.892,0,0,0,1.84,1.743,5.041,5.041,0,0,0,2.444.617,5.451,5.451,0,0,0,3.339-1.04,6.386,6.386,0,0,0,2.129-3.315,5.856,5.856,0,0,0,.532,2.045,4.249,4.249,0,0,0,1.331,1.658,3.523,3.523,0,0,0,2.178.654,7.312,7.312,0,0,0,2.976-.557,23.862,23.862,0,0,0,2.226-1.113v-.242a1.441,1.441,0,0,1-1.439-.944,5.9,5.9,0,0,1-.4-2.3v-6.8a8.971,8.971,0,0,0-.23-1.863,8.676,8.676,0,0,0-.811-2.178,7.526,7.526,0,0,0-1.609-2.057,7.749,7.749,0,0,0-2.625-1.525,13.209,13.209,0,0,0-7.284-.133,7.13,7.13,0,0,0-2.335,1.173,4.885,4.885,0,0,0-1.343,1.585,3.746,3.746,0,0,0-.435,1.706,2.67,2.67,0,0,0,.787,1.924,2.781,2.781,0,0,0,2.093.811,3.022,3.022,0,0,0,1.452-.326,6.245,6.245,0,0,0,1.089-.738,9.376,9.376,0,0,1,.992-.738,2.145,2.145,0,0,1,1.186-.326,2.273,2.273,0,0,1,.787.157.621.621,0,0,1,.424.641.914.914,0,0,1-.545.787,6.738,6.738,0,0,1-1.428.605q-.884.278-1.96.629a17.892,17.892,0,0,0-2.142.859,8.52,8.52,0,0,0-1.948,1.282,5.889,5.889,0,0,0-1.428,1.912,6.282,6.282,0,0,0-.545,2.734,4.87,4.87,0,0,0,.7,2.674ZM418.65,308.22a1.748,1.748,0,0,1,1.21,1,5.2,5.2,0,0,1,.363,2.142v20.812a5.212,5.212,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242h19.238V327.24h-.242a5.049,5.049,0,0,1-.4,1.815,10,10,0,0,1-1.149,2.081,10.884,10.884,0,0,1-1.767,1.948,8.958,8.958,0,0,1-2.275,1.439,6.569,6.569,0,0,1-2.687.557h-1.4V311.366a5.2,5.2,0,0,1,.363-2.142,1.748,1.748,0,0,1,1.21-1v-.242H418.65Z" transform="translate(1443.75 619.986)" fill="#435e53"/> <path id="Path_844" data-name="Path 844" d="M1793.59,316.94a5.4,5.4,0,0,1-4.65,3.522c1.429,1.571,5.14,1.036,6.593-1.471l-1.943-2.051" transform="translate(206.554 611.481)" fill="#435e53"/> </g> </svg></span>
+    <span class="ttl">· Systems Portal</span>
+    <span class="spacer"></span>
+    <button class="btn btn-ghost" id="logoutBtn">Log out</button>
+  </header>
+  <main>
+    <div class="hero">
+      <h2 id="heroTitle">Welcome back</h2>
+      <p id="heroSub">Your Laundré operations toolkit.</p>
+    </div>
+    <section id="salesDash"></section>
+    <div class="stats" id="stats"></div>
+    <div class="grid" id="grid"></div>
+    <div class="foot">
+      All tools store data in this browser and share it when served from the same address (same website / folder).
+      For production, host the suite behind a login on your own server and swap the browser storage for a shared backend.
+    </div>
+  </main>
+</div>
+
+<script>
+/* ---------- Auth, users & session ---------- */
+const AUTH_KEY='laundre_auth', SESSION_KEY='laundre_session', USERS_KEY='laundre_users_v1';
+const MASTER={user:'admin',pass:'laundre2026'};
+function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function users(){try{const r=localStorage.getItem(USERS_KEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}return [];}
+function session(){try{return JSON.parse(localStorage.getItem(SESSION_KEY)||'null');}catch(e){return null;}}
+function locName(id){try{const a=JSON.parse(localStorage.getItem('laundre_sites_v1')||'[]');const l=a.find(x=>x.id===id);return l?l.name:'';}catch(e){return '';}}
+
+function login(u,p){
+  if(u.toLowerCase()===MASTER.user && p===MASTER.pass){
+    return {userId:'master',name:'Administrator',email:'admin',role:'admin',locationId:null};
+  }
+  const acct=users().find(x=>(x.email||'').toLowerCase()===u.toLowerCase() && x.password===p);
+  if(acct) return {userId:acct.id,name:acct.name||acct.email,email:acct.email,role:acct.role||'franchisee',locationId:acct.locationId||null};
+  return null;
+}
+function currentSession(){
+  let s=session();
+  // Legacy fallback: if the auth flag is set but no session exists (e.g. logged in
+  // before user accounts were added), treat the user as the master admin.
+  if((!s || typeof s!=='object') && localStorage.getItem(AUTH_KEY)==='1'){
+    s={userId:'master',name:'Administrator',email:'admin',role:'admin',locationId:null};
+    try{localStorage.setItem(SESSION_KEY,JSON.stringify(s));}catch(e){}
+  }
+  return (s&&typeof s==='object')?s:null;
+}
+function showApp(){
+  const s=currentSession(); if(!s) return false;
+  const role=s.role||'admin';
+  // Build the dashboard BEFORE hiding the login, so an error can never blank the page.
+  try{
+    renderTiles(role);
+    renderDashboard(role);
+    if(role==='admin'){
+      document.getElementById('heroTitle').textContent='Welcome back';
+      document.getElementById('heroSub').textContent='Your Laundré operations toolkit — locations, sites, franchising, build-outs and franchisee management.';
+      renderStats();
+    } else {
+      const ln=locName(s.locationId);
+      document.getElementById('heroTitle').textContent='Welcome, '+(s.name||'Franchisee');
+      document.getElementById('heroSub').textContent= ln ? ('Managing '+ln) : 'Your franchisee home';
+      document.getElementById('stats').innerHTML='';
+    }
+  }catch(err){ console.error('portal render error',err); }
+  document.getElementById('app').classList.add('show');
+  document.getElementById('login').style.display='none';
+  return true;
+}
+document.getElementById('loginForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const u=document.getElementById('u').value.trim(), p=document.getElementById('p').value;
+  const s=login(u,p);
+  if(s){localStorage.setItem(AUTH_KEY,'1');localStorage.setItem(SESSION_KEY,JSON.stringify(s));document.getElementById('loginErr').textContent='';showApp();}
+  else document.getElementById('loginErr').textContent='Incorrect email or password.';
+});
+document.getElementById('logoutBtn').onclick=()=>{localStorage.removeItem(AUTH_KEY);localStorage.removeItem(SESSION_KEY);location.reload();};
+
+/* ---------- Tools (role-scoped) ---------- */
+const TOOLS=[
+  {icon:'📍',name:'Site Locations',href:'laundre-admin.html',roles:['admin'],desc:'Manage approved laundromat locations, radii and active status.'},
+  {icon:'👤',name:'User Management',href:'laundre-users.html',roles:['admin'],desc:'Create franchisee logins and assign each to a laundromat.'},
+  {icon:'📈',name:'Reporting',href:'laundre-reporting.html',roles:['admin'],desc:'Upload monthly sales reports (CSV) that feed the dashboard.'},
+  {icon:'🗺️',name:'Postcode & Radius Tool',href:'region-postcode-tool.html',roles:['admin'],desc:'Draw a radius around any address and list the postcodes and suburbs it covers.'},
+  {icon:'📊',name:'Prospective Site Analyzer',href:'laundre-site-analyzer.html',roles:['admin'],desc:'Score potential sites on population, parking, size and footfall.'},
+  {icon:'🧮',name:'Cost Analysis',href:'laundre-cost-analysis.html',roles:['admin'],desc:'Fit-out estimator with trade line items, builder margin, GST and price per m².'},
+  {icon:'👥',name:'Franchise CRM',href:'laundre-crm.html',roles:['admin'],desc:'Prospect pipeline: NDA, fees, documents, calls and franchise decisions.'},
+  {icon:'🔧',name:'Suppliers & Contacts',href:'laundre-suppliers.html',roles:['admin'],desc:'Key supplier directory — equipment, fit-out, signage and services.'},
+  {icon:'📒',name:'Bookkeeping Checker',href:'laundre-bookkeeping.html',roles:['admin','franchisee'],desc:'Track quarterly BAS lodgements and annual returns for every laundromat.',
+     fname:'Bookkeeping',fdesc:'Track your store’s quarterly BAS and annual return, and attach the records.'},
+  {icon:'✅',name:'Franchise Checklist',href:'laundre-checklist.html',roles:['admin','franchisee'],desc:'Onboarding checklists across all franchisees.',
+     fname:'My Franchise Checklist',fdesc:'Work through your store’s onboarding checklist and track progress.'},
+  {icon:'📄',name:'Documents',href:'laundre-documents.html',roles:['admin','franchisee'],desc:'Manage key documents and control which franchises can see them.',
+     fdesc:'Key documents and resources shared with your store.'},
+  {icon:'🆘',name:'Support Queue',href:'laundre-support.html',roles:['admin','franchisee'],desc:'Review incidents and questions submitted by franchisees.',
+     fname:'Submit / Ask',fdesc:'Report an incident or ask the franchise team a question.'},
+  {icon:'🧹',name:'Cleaning',href:'laundre-cleaning.html',roles:['admin','cleaner'],desc:'Daily cleaning submissions across all laundromats — ticks, notes and photos.',
+     fname:'Daily Cleaning',fdesc:'Complete today’s cleaning checklist — bins, lint traps, notes, issues and photos.'},
+  {icon:'🛠️',name:'Maintenance',href:'laundre-maintenance.html',roles:['admin','maintenance'],desc:'Machine &amp; tech guides plus maintenance logs across all laundromats.',
+     fname:'Maintenance',fdesc:'Machine guides &amp; instructions, and log your maintenance checks.'},
+  {icon:'💳',name:'Bubble Pay',href:'https://www.bubblepayportal.com/my-dashboard',roles:['admin','franchisee'],ext:true,
+     desc:'Open the Bubble Pay dashboard for payments and machine management.',
+     fdesc:'Open your Bubble Pay dashboard for payments and machine management.'}
+];
+function renderTiles(role){
+  const list=TOOLS.filter(t=>t.roles.includes(role));
+  document.getElementById('grid').innerHTML=list.map(t=>{
+    const name=(role==='franchisee'&&t.fname)?t.fname:t.name;
+    const desc=(role==='franchisee'&&t.fdesc)?t.fdesc:t.desc;
+    const ext=t.ext?' target="_blank" rel="noopener"':'';
+    const arrow=t.ext?'↗':'→';
+    return '<a class="tile" href="'+t.href+'"'+ext+'><span class="arrow">'+arrow+'</span><div class="ic">'+t.icon+'</div><h3>'+esc(name)+'</h3><p>'+esc(desc)+'</p></a>';
+  }).join('');
+}
+
+/* ---------- Stats (admin) ---------- */
+function count(key){try{const raw=localStorage.getItem(key);if(!raw)return 0;const v=JSON.parse(raw);if(Array.isArray(v))return v.length;if(v&&typeof v==='object')return Object.keys(v).length;}catch(e){}return 0;}
+function renderStats(){
+  const s=[
+    {n:count('laundre_sites_v1'),l:'Approved locations'},
+    {n:count('laundre_users_v1'),l:'Franchisee users'},
+    {n:count('laundre_documents_v1'),l:'Documents'},
+    {n:count('laundre_tickets_v1'),l:'Support tickets'},
+    {n:count('laundre_crm_v1'),l:'CRM records'},
+    {n:count('laundre_franchises_v1'),l:'Franchisees'}
+  ];
+  document.getElementById('stats').innerHTML=s.map(x=>'<div class="stat"><div class="n">'+x.n+'</div><div class="l">'+x.l+'</div></div>').join('');
+}
+
+/* ---------- Sales dashboard (admin only) ---------- */
+const SALES_KEY='laundre_sales_v1';
+const SALES_SEED=[{"locationId":"coomera","site":"Coomera","date":"2026-06-01","revenue":760.2,"txns":57},{"locationId":"coomera","site":"Coomera","date":"2026-06-02","revenue":425.25,"txns":41},{"locationId":"coomera","site":"Coomera","date":"2026-06-03","revenue":574.35,"txns":54},{"locationId":"coomera","site":"Coomera","date":"2026-06-04","revenue":576.45,"txns":42},{"locationId":"coomera","site":"Coomera","date":"2026-06-05","revenue":715.05,"txns":65},{"locationId":"coomera","site":"Coomera","date":"2026-06-06","revenue":660.45,"txns":53},{"locationId":"coomera","site":"Coomera","date":"2026-06-07","revenue":1117.2,"txns":101},{"locationId":"coomera","site":"Coomera","date":"2026-06-08","revenue":1118.25,"txns":91},{"locationId":"coomera","site":"Coomera","date":"2026-06-09","revenue":849.45,"txns":81},{"locationId":"coomera","site":"Coomera","date":"2026-06-10","revenue":1236.9,"txns":123},{"locationId":"coomera","site":"Coomera","date":"2026-06-11","revenue":1288.35,"txns":117},{"locationId":"coomera","site":"Coomera","date":"2026-06-12","revenue":1115.1,"txns":106},{"locationId":"coomera","site":"Coomera","date":"2026-06-13","revenue":1193.85,"txns":104},{"locationId":"coomera","site":"Coomera","date":"2026-06-14","revenue":1375.5,"txns":117},{"locationId":"coomera","site":"Coomera","date":"2026-06-15","revenue":1239.0,"txns":99},{"locationId":"coomera","site":"Coomera","date":"2026-06-16","revenue":1107.75,"txns":99},{"locationId":"coomera","site":"Coomera","date":"2026-06-17","revenue":733.95,"txns":72},{"locationId":"coomera","site":"Coomera","date":"2026-06-18","revenue":583.8,"txns":54},{"locationId":"coomera","site":"Coomera","date":"2026-06-19","revenue":644.7,"txns":60},{"locationId":"coomera","site":"Coomera","date":"2026-06-20","revenue":948.15,"txns":78},{"locationId":"coomera","site":"Coomera","date":"2026-06-21","revenue":1471.05,"txns":129},{"locationId":"coomera","site":"Coomera","date":"2026-06-22","revenue":607.95,"txns":64},{"locationId":"coomera","site":"Coomera","date":"2026-06-23","revenue":655.2,"txns":50},{"locationId":"coomera","site":"Coomera","date":"2026-06-24","revenue":556.5,"txns":47},{"locationId":"coomera","site":"Coomera","date":"2026-06-25","revenue":648.9,"txns":57},{"locationId":"coomera","site":"Coomera","date":"2026-06-26","revenue":999.6,"txns":87},{"locationId":"coomera","site":"Coomera","date":"2026-06-27","revenue":847.35,"txns":78},{"locationId":"coomera","site":"Coomera","date":"2026-06-28","revenue":1346.1,"txns":130},{"locationId":"coomera","site":"Coomera","date":"2026-06-29","revenue":773.85,"txns":70},{"locationId":"coomera","site":"Coomera","date":"2026-06-30","revenue":1167.6,"txns":113},{"locationId":"sthport","site":"Southport","date":"2026-06-01","revenue":291.2,"txns":27},{"locationId":"sthport","site":"Southport","date":"2026-06-02","revenue":293.28,"txns":21},{"locationId":"sthport","site":"Southport","date":"2026-06-03","revenue":486.25,"txns":36},{"locationId":"sthport","site":"Southport","date":"2026-06-04","revenue":182.75,"txns":17},{"locationId":"sthport","site":"Southport","date":"2026-06-05","revenue":287.21,"txns":24},{"locationId":"sthport","site":"Southport","date":"2026-06-06","revenue":531.96,"txns":45},{"locationId":"sthport","site":"Southport","date":"2026-06-07","revenue":582.16,"txns":56},{"locationId":"sthport","site":"Southport","date":"2026-06-08","revenue":326.13,"txns":30},{"locationId":"sthport","site":"Southport","date":"2026-06-09","revenue":542.98,"txns":35},{"locationId":"sthport","site":"Southport","date":"2026-06-10","revenue":543.78,"txns":48},{"locationId":"sthport","site":"Southport","date":"2026-06-11","revenue":969.36,"txns":88},{"locationId":"sthport","site":"Southport","date":"2026-06-12","revenue":288.27,"txns":24},{"locationId":"sthport","site":"Southport","date":"2026-06-13","revenue":776.14,"txns":65},{"locationId":"sthport","site":"Southport","date":"2026-06-14","revenue":529.32,"txns":53},{"locationId":"sthport","site":"Southport","date":"2026-06-15","revenue":372.09,"txns":34},{"locationId":"sthport","site":"Southport","date":"2026-06-16","revenue":808.6,"txns":47},{"locationId":"sthport","site":"Southport","date":"2026-06-17","revenue":346.32,"txns":27},{"locationId":"sthport","site":"Southport","date":"2026-06-18","revenue":304.06,"txns":23},{"locationId":"sthport","site":"Southport","date":"2026-06-19","revenue":324.0,"txns":21},{"locationId":"sthport","site":"Southport","date":"2026-06-20","revenue":384.09,"txns":34},{"locationId":"sthport","site":"Southport","date":"2026-06-21","revenue":731.75,"txns":65},{"locationId":"sthport","site":"Southport","date":"2026-06-22","revenue":204.31,"txns":18},{"locationId":"sthport","site":"Southport","date":"2026-06-23","revenue":757.73,"txns":46},{"locationId":"sthport","site":"Southport","date":"2026-06-24","revenue":415.41,"txns":37},{"locationId":"sthport","site":"Southport","date":"2026-06-25","revenue":385.73,"txns":34},{"locationId":"sthport","site":"Southport","date":"2026-06-26","revenue":318.76,"txns":26},{"locationId":"sthport","site":"Southport","date":"2026-06-27","revenue":518.79,"txns":45},{"locationId":"sthport","site":"Southport","date":"2026-06-28","revenue":635.73,"txns":58},{"locationId":"sthport","site":"Southport","date":"2026-06-29","revenue":284.12,"txns":27},{"locationId":"sthport","site":"Southport","date":"2026-06-30","revenue":646.99,"txns":52},{"locationId":"tweed","site":"Tweed","date":"2026-06-01","revenue":799.05,"txns":80},{"locationId":"tweed","site":"Tweed","date":"2026-06-02","revenue":519.75,"txns":60},{"locationId":"tweed","site":"Tweed","date":"2026-06-03","revenue":354.9,"txns":36},{"locationId":"tweed","site":"Tweed","date":"2026-06-04","revenue":656.25,"txns":78},{"locationId":"tweed","site":"Tweed","date":"2026-06-05","revenue":323.4,"txns":40},{"locationId":"tweed","site":"Tweed","date":"2026-06-06","revenue":530.25,"txns":53},{"locationId":"tweed","site":"Tweed","date":"2026-06-07","revenue":1151.85,"txns":114},{"locationId":"tweed","site":"Tweed","date":"2026-06-08","revenue":1115.1,"txns":118},{"locationId":"tweed","site":"Tweed","date":"2026-06-09","revenue":1089.9,"txns":93},{"locationId":"tweed","site":"Tweed","date":"2026-06-10","revenue":936.6,"txns":104},{"locationId":"tweed","site":"Tweed","date":"2026-06-11","revenue":1026.9,"txns":108},{"locationId":"tweed","site":"Tweed","date":"2026-06-12","revenue":1227.45,"txns":114},{"locationId":"tweed","site":"Tweed","date":"2026-06-13","revenue":1088.85,"txns":99},{"locationId":"tweed","site":"Tweed","date":"2026-06-14","revenue":1295.75,"txns":131},{"locationId":"tweed","site":"Tweed","date":"2026-06-15","revenue":871.5,"txns":94},{"locationId":"tweed","site":"Tweed","date":"2026-06-16","revenue":1012.2,"txns":116},{"locationId":"tweed","site":"Tweed","date":"2026-06-17","revenue":531.3,"txns":56},{"locationId":"tweed","site":"Tweed","date":"2026-06-18","revenue":888.32,"txns":97},{"locationId":"tweed","site":"Tweed","date":"2026-06-19","revenue":764.43,"txns":74},{"locationId":"tweed","site":"Tweed","date":"2026-06-20","revenue":663.61,"txns":58},{"locationId":"tweed","site":"Tweed","date":"2026-06-21","revenue":1246.37,"txns":119},{"locationId":"tweed","site":"Tweed","date":"2026-06-22","revenue":942.91,"txns":97},{"locationId":"tweed","site":"Tweed","date":"2026-06-23","revenue":763.36,"txns":75},{"locationId":"tweed","site":"Tweed","date":"2026-06-24","revenue":811.66,"txns":74},{"locationId":"tweed","site":"Tweed","date":"2026-06-25","revenue":853.66,"txns":87},{"locationId":"tweed","site":"Tweed","date":"2026-06-26","revenue":921.91,"txns":92},{"locationId":"tweed","site":"Tweed","date":"2026-06-27","revenue":1067.86,"txns":108},{"locationId":"tweed","site":"Tweed","date":"2026-06-28","revenue":1110.9,"txns":105},{"locationId":"tweed","site":"Tweed","date":"2026-06-29","revenue":1132.97,"txns":99},{"locationId":"tweed","site":"Tweed","date":"2026-06-30","revenue":1097.26,"txns":112}];
+function loadSales(){try{const r=localStorage.getItem(SALES_KEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}try{localStorage.setItem(SALES_KEY,JSON.stringify(SALES_SEED));}catch(e){}return SALES_SEED.slice();}
+let dashGran='daily', dashFrom='', dashTo='', dashSites=null, salesChart=null, lastDashRole=null;
+const PALETTE=['#435E53','#C4703F','#3a6ea5','#8a7fa3','#c9a24b','#6b8e9e','#a35c5c'];
+function AUD(n){return '$'+(Math.round(n||0)).toLocaleString('en-AU');}
+function isoWeekStart(ds){const d=new Date(ds+'T00:00');const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function renderDashboard(role){
+  const host=document.getElementById('salesDash'); if(!host) return;
+  if(role!=='admin' && role!=='franchisee'){ host.innerHTML=''; return; }   // cleaners/maintenance: no sales
+  if(role!==lastDashRole){ dashSites=null; dashFrom=''; dashTo=''; lastDashRole=role; }  // reset scope on account change
+  const isAdmin=role==='admin';
+  const sess=currentSession()||{};
+  const sales=loadSales();
+  let sites=[...new Map(sales.map(r=>[r.locationId,{id:r.locationId,name:(locName(r.locationId)||r.site||r.locationId)}])).values()];
+  if(!isAdmin){ sites=sites.filter(s=>s.id===sess.locationId); dashSites=[sess.locationId]; }   // franchisee: own store only
+  const scoped=sales.filter(r=>isAdmin || r.locationId===sess.locationId);
+  const allDates=scoped.map(r=>r.date).sort();
+  const minD=allDates[0]||'', maxD=allDates[allDates.length-1]||'';
+  if(!dashFrom||dashFrom<minD) dashFrom=minD;
+  if(!dashTo||dashTo>maxD||dashTo<dashFrom) dashTo=maxD;
+  if(isAdmin){ if(!dashSites) dashSites=sites.map(s=>s.id); dashSites=dashSites.filter(id=>sites.some(s=>s.id===id)); if(!dashSites.length&&sites.length) dashSites=sites.map(s=>s.id); }
+  const title=isAdmin?'Sales dashboard':'Store sales — '+esc((sites[0]&&sites[0].name)||locName(sess.locationId)||'your store');
+  const sitePicker=isAdmin
+    ? '<details class="ms" id="siteMs"><summary id="siteSum">Laundromats</summary><div class="mspanel"><label class="msrow msall"><input type="checkbox" id="msAll"> <b>All laundromats</b></label>'
+      +sites.map(s=>'<label class="msrow"><input type="checkbox" class="mssite" value="'+s.id+'"'+(dashSites.includes(s.id)?' checked':'')+'> '+esc(s.name)+'</label>').join('')+'</div></details>'
+    : '';
+  host.innerHTML='<div class="dash"><div class="dhead"><h3>'+title+'</h3><span class="spacer"></span>'
+    +'<div class="seg" id="granSeg"><button data-g="daily">Daily</button><button data-g="weekly">Weekly</button><button data-g="monthly">Monthly</button></div>'
+    +sitePicker+'</div>'
+    +'<div class="ctl" style="margin-bottom:14px"><span class="lbl">From</span><input type="date" class="datein" id="fromDate" min="'+minD+'" max="'+maxD+'" value="'+dashFrom+'">'
+    +'<span class="lbl">to</span><input type="date" class="datein" id="toDate" min="'+minD+'" max="'+maxD+'" value="'+dashTo+'">'
+    +'<button class="btn btn-ghost" id="rangeAll" style="padding:7px 12px">All dates</button></div>'
+    +'<div class="kpis" id="kpis"></div><div class="chartbox"><canvas id="salesChart"></canvas><div class="chartempty" id="chartEmpty" style="display:none"></div></div></div>';
+  document.querySelectorAll('#granSeg button').forEach(b=>{b.classList.toggle('on',b.dataset.g===dashGran);b.onclick=()=>{dashGran=b.dataset.g;document.querySelectorAll('#granSeg button').forEach(x=>x.classList.toggle('on',x===b));drawSales(sales,sites);};});
+  if(isAdmin){
+    const updateSum=()=>{document.getElementById('siteSum').textContent='Laundromats ('+dashSites.length+'/'+sites.length+')';document.getElementById('msAll').checked=dashSites.length===sites.length&&sites.length>0;};
+    updateSum();
+    document.querySelectorAll('.mssite').forEach(cb=>cb.onchange=()=>{dashSites=[...document.querySelectorAll('.mssite:checked')].map(x=>x.value);updateSum();drawSales(sales,sites);});
+    document.getElementById('msAll').onchange=e=>{const on=e.target.checked;document.querySelectorAll('.mssite').forEach(cb=>cb.checked=on);dashSites=on?sites.map(s=>s.id):[];updateSum();drawSales(sales,sites);};
+  }
+  document.getElementById('fromDate').onchange=e=>{dashFrom=e.target.value;if(dashTo<dashFrom){dashTo=dashFrom;document.getElementById('toDate').value=dashTo;}drawSales(sales,sites);};
+  document.getElementById('toDate').onchange=e=>{dashTo=e.target.value;if(dashTo<dashFrom){dashFrom=dashTo;document.getElementById('fromDate').value=dashFrom;}drawSales(sales,sites);};
+  document.getElementById('rangeAll').onclick=()=>{dashFrom=minD;dashTo=maxD;document.getElementById('fromDate').value=minD;document.getElementById('toDate').value=maxD;drawSales(sales,sites);};
+  drawSales(sales,sites);
+}
+function drawSales(sales,sites){
+  const rows=sales.filter(r=>r.date>=dashFrom && r.date<=dashTo && dashSites.includes(r.locationId));
+  const keyFn=r=>dashGran==='monthly'?r.date.slice(0,7):dashGran==='weekly'?isoWeekStart(r.date):r.date;
+  const keys=[...new Set(rows.map(keyFn))].sort();
+  const labels=keys.map(k=>{if(dashGran==='monthly'){const[y,m]=k.split('-');return new Date(y,m-1,1).toLocaleDateString('en-AU',{month:'short',year:'2-digit'});}const d=new Date(k+'T00:00');return d.toLocaleDateString('en-AU',{day:'numeric',month:'short'});});
+  const selSites=sites.filter(s=>dashSites.includes(s.id));
+  const single=selSites.length===1;
+  const datasets=selSites.map((s,idx)=>{const byKey={};rows.filter(r=>r.locationId===s.id).forEach(r=>{const k=keyFn(r);byKey[k]=(byKey[k]||0)+r.revenue;});const color=PALETTE[idx%PALETTE.length];
+    return {label:s.name,data:keys.map(k=>Math.round(byKey[k]||0)),backgroundColor:dashGran==='daily'?(single?color+'33':color):color,borderColor:color,borderWidth:2,fill:dashGran==='daily'&&single,tension:.3,pointRadius:dashGran==='daily'?2:0,order:2};});
+  // Average line: mean combined revenue per period across the shown selection
+  if(keys.length){
+    const bucketTotals=keys.map((k,i)=>datasets.reduce((s,ds)=>s+(ds.data[i]||0),0));
+    const avg=Math.round(bucketTotals.reduce((a,b)=>a+b,0)/bucketTotals.length);
+    datasets.push({type:'line',label:'Average ('+AUD(avg)+')',data:keys.map(()=>avg),borderColor:'#C4703F',borderDash:[6,5],borderWidth:2,pointRadius:0,fill:false,tension:0,order:0});
+  }
+  const totRev=rows.reduce((s,r)=>s+r.revenue,0), totTx=rows.reduce((s,r)=>s+r.txns,0), dayCount=new Set(rows.map(r=>r.date)).size;
+  document.getElementById('kpis').innerHTML=
+     '<div class="kpi"><div class="n">'+AUD(totRev)+'</div><div class="l">Total revenue</div></div>'
+    +'<div class="kpi"><div class="n">'+totTx.toLocaleString('en-AU')+'</div><div class="l">Transactions</div></div>'
+    +'<div class="kpi"><div class="n">'+AUD(dayCount?totRev/dayCount:0)+'</div><div class="l">Avg / day</div></div>'
+    +'<div class="kpi"><div class="n">'+AUD(totTx?totRev/totTx:0)+'</div><div class="l">Avg / transaction</div></div>';
+  const ctx=document.getElementById('salesChart'), emptyEl=document.getElementById('chartEmpty');
+  if(salesChart){salesChart.destroy();salesChart=null;}
+  const noData = (typeof Chart==='undefined') || !keys.length || !selSites.length;
+  if(noData){ ctx.style.display='none'; emptyEl.style.display='flex'; emptyEl.textContent = (typeof Chart==='undefined')?'Chart library unavailable (offline).':'No sales data for this selection.'; return; }
+  ctx.style.display=''; emptyEl.style.display='none';
+  salesChart=new Chart(ctx,{type:dashGran==='daily'?'line':'bar',data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,font:{size:11}}},tooltip:{callbacks:{label:c=>c.dataset.label.replace(/ \(\$.*\)$/,'')+': $'+c.parsed.y.toLocaleString('en-AU')}}},
+      scales:{y:{beginAtZero:true,ticks:{callback:v=>'$'+v.toLocaleString('en-AU')}}}}});
+}
+
+/* ---------- Boot (runs last, after all definitions are initialized) ---------- */
+showApp();  // if it returns false, the login screen remains visible by default
+window.addEventListener('pageshow',function(e){ if(e.persisted) showApp(); });
+</script>
+</body>
+</html>

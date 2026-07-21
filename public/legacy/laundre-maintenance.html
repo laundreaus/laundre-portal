@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Maintenance</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  .logo svg{height:24px;width:auto;display:block;}
+  button{font-family:inherit;cursor:pointer;}
+  .btn{border:none;border-radius:7px;padding:10px 16px;font-size:13.5px;font-weight:700;}
+  .btn-green{background:var(--green);color:#fff;} .btn-green:hover{filter:brightness(1.1);}
+  .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);} .btn-ghost:hover{background:#EFEADD;}
+  .btn-danger{background:transparent;color:#B4472F;border:1px solid #e6cfc7;} .btn-danger:hover{background:#f7ece8;}
+  a.chip{font-size:12.5px;font-weight:700;color:var(--green);text-decoration:none;border:1px solid var(--cream-line);border-radius:7px;padding:8px 12px;}
+  a.chip:hover{background:#EFEADD;}
+  input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:10px 12px;width:100%;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(67,94,83,.18);}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;}
+  header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:1100px;margin:0 auto;padding:22px 22px 70px;}
+  h2{font-size:20px;margin:0 0 4px;color:var(--green-d);} .sub{color:#6b7d73;font-size:13px;margin-bottom:18px;}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:20px 22px;margin-bottom:20px;}
+  .card h3{margin:0 0 14px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);display:flex;align-items:center;}
+  .card h3 .spacer{flex:1;}
+  .guide{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #f0ece2;} .guide:last-child{border-bottom:none;}
+  .guide .gi{width:34px;height:34px;border-radius:8px;background:#EBE4D5;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .guide .gt{flex:1;} .guide .gt b{color:var(--green-d);font-size:14px;} .guide .gt span{display:block;color:#8a9790;font-size:12px;}
+  .gopen{font-size:12.5px;font-weight:700;color:var(--green);text-decoration:none;border:1px solid var(--cream-line);border-radius:7px;padding:7px 11px;} .gopen:hover{background:#EFEADD;}
+  .vis{display:inline-block;border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700;margin-left:6px;}
+  .vis.all{background:#E1EDE4;color:#2f6b46;} .vis.one{background:#EBE4D5;color:#6b5a43;}
+  .rowbtns{display:flex;gap:6px;} .rowbtns button{padding:6px 10px;font-size:12px;border-radius:6px;}
+  .citem{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--cream-line);border-radius:10px;margin-bottom:9px;cursor:pointer;user-select:none;}
+  .citem input{width:22px;height:22px;accent-color:var(--green);} .citem.done{background:#EDF4EE;border-color:#bcd8c4;} .citem span{font-size:14.5px;font-weight:600;}
+  label.fld{font-size:12px;color:#5f7469;font-weight:600;display:block;margin:14px 0 5px;}
+  .photos{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+  .thumb{position:relative;width:84px;height:84px;border-radius:9px;overflow:hidden;border:1px solid var(--cream-line);}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+  .thumb button{position:absolute;top:2px;right:2px;background:rgba(30,42,36,.7);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;line-height:1;}
+  .addphoto{width:84px;height:84px;border:2px dashed var(--cream-line);border-radius:9px;display:flex;align-items:center;justify-content:center;color:#a49b86;font-size:26px;cursor:pointer;}
+  .submitted{background:#E1EDE4;color:#2f6b46;border-radius:10px;padding:12px 14px;font-weight:700;font-size:14px;margin-bottom:14px;}
+  .msg{font-size:13px;color:#B4472F;min-height:16px;margin-top:8px;}
+  .rrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0ece2;font-size:13.5px;} .rrow:last-child{border-bottom:none;}
+  .rrow .d{font-weight:700;color:var(--green-d);width:130px;}
+  .pill{display:inline-block;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;} .pill.ok{background:#E1EDE4;color:#2f6b46;} .pill.iss{background:#F5E3DB;color:#B4472F;}
+  .matrix{overflow-x:auto;background:#fff;border:1px solid var(--cream-line);border-radius:14px;}
+  table{border-collapse:collapse;width:100%;} th,td{padding:9px 8px;font-size:12.5px;text-align:center;border-bottom:1px solid #f0ece2;white-space:nowrap;}
+  th{background:var(--green-d);color:#EAF0EC;font-size:10.5px;text-transform:uppercase;} th.l,td.l{text-align:left;} td.l{font-weight:700;color:var(--green-d);}
+  .mk{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;font-weight:800;font-size:14px;}
+  .mk.yes{background:#E1EDE4;color:#2f6b46;cursor:pointer;} .mk.yes.iss{background:#F5E3DB;color:#B4472F;} .mk.no{background:#F1ECE1;color:#c9c1b0;}
+  .empty{padding:36px;text-align:center;color:#8a9790;}
+  .alert{background:#FBE9E2;border:1px solid #e6cabb;color:#9a3a22;border-radius:12px;padding:12px 16px;font-size:13.5px;font-weight:600;margin-bottom:16px;line-height:1.5;}
+  .warn{display:inline-block;background:#F5E3DB;color:#B4472F;border-radius:12px;padding:1px 8px;font-size:10.5px;font-weight:800;margin-left:6px;}
+  #overlay{position:fixed;inset:0;background:rgba(30,42,36,.55);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow-y:auto;padding:40px 16px;}
+  #overlay.show{display:flex;}
+  .modal{background:var(--cream);border-radius:14px;width:620px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .mhead{display:flex;align-items:flex-start;gap:10px;padding:16px 20px;border-bottom:1px solid var(--cream-line);}
+  .mhead h3{margin:0;font-size:16px;color:var(--green-d);} .mhead .spacer{flex:1;}
+  .mbody{padding:18px 20px;} .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;} .mgrid .full{grid-column:1/-1;}
+  .kv{font-size:13.5px;line-height:1.6;margin-bottom:6px;} .kv b{color:var(--green-d);}
+  .chk{font-size:13.5px;padding:3px 0;} .chk .y{color:#2f6b46;font-weight:700;} .chk .n{color:#B4472F;font-weight:700;}
+  .close{background:transparent;border:none;font-size:22px;color:#8a9790;}
+  .mfoot{display:flex;gap:10px;justify-content:flex-end;padding:0 20px 18px;}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo"><svg xmlns="http://www.w3.org/2000/svg" width="145" height="28.506" viewBox="0 0 145 28.506"> <g id="Group_669" data-name="Group 669" transform="translate(-1862.4 -927.506)"> <path id="Path_843" data-name="Path 843" d="M552.01,324.131a12.885,12.885,0,0,1-.315-2.94,8.664,8.664,0,0,1,.145-1.512,6.607,6.607,0,0,1,.484-1.561,3.343,3.343,0,0,1,.907-1.222,2.106,2.106,0,0,1,1.392-.472,1.843,1.843,0,0,1,1.222.435,3.381,3.381,0,0,1,.859,1.126,5.977,5.977,0,0,1,.5,1.5,8.317,8.317,0,0,1,.157,1.585,8.712,8.712,0,0,1-.218,1.911,5.654,5.654,0,0,1-.726,1.778,3.856,3.856,0,0,1-1.331,1.295,3.951,3.951,0,0,1-2.033.484h-.145A9.542,9.542,0,0,1,552.01,324.131Zm6.449,11.447a8.445,8.445,0,0,0,2.492-1.27,6.5,6.5,0,0,0,1.742-1.911,4.547,4.547,0,0,0,.641-2.348,8.254,8.254,0,0,1-1.5.472,7.648,7.648,0,0,1-1.572.157,8.856,8.856,0,0,1-4.126-.944A7.593,7.593,0,0,1,553.172,327h2.178q4.38,0,6.341-1.234a4.02,4.02,0,0,0,1.96-3.63,5.294,5.294,0,0,0-1-3.133,6.884,6.884,0,0,0-2.916-2.263,11.513,11.513,0,0,0-4.671-.847,9.232,9.232,0,0,0-6.9,2.953,9.832,9.832,0,0,0-1.984,3.206,10.8,10.8,0,0,0-.7,3.908,9.773,9.773,0,0,0,.787,3.908,10.177,10.177,0,0,0,5.372,5.372,9.838,9.838,0,0,0,3.933.787,9.389,9.389,0,0,0,2.892-.448Zm-32.426-17.061a2.632,2.632,0,0,1,.654,1.029,5.07,5.07,0,0,1,.279,1.84v10.793a5.21,5.21,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242H535.8v-.242a1.744,1.744,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V321.143a3.057,3.057,0,0,1,.4-1.621,3.023,3.023,0,0,1,.956-1,1.9,1.9,0,0,1,.968-.351q.581,0,.581.532a1.468,1.468,0,0,1-.182.75,7.6,7.6,0,0,0-.363.726,2.879,2.879,0,0,0-.182,1.137,3.9,3.9,0,0,0,4.113,4.113,3.949,3.949,0,0,0,3-1.21,4.575,4.575,0,0,0,1.137-3.266,5.442,5.442,0,0,0-.568-2.419,4.76,4.76,0,0,0-1.718-1.911,5.236,5.236,0,0,0-2.916-.75,5.3,5.3,0,0,0-2.552.581,5.68,5.68,0,0,0-1.73,1.379,6.655,6.655,0,0,0-.944,1.452v-3.412h-.242a11.652,11.652,0,0,1-1.6.641q-1.04.351-2.3.678t-2.5.545a13.194,13.194,0,0,1-2.239.217v.242a1.1,1.1,0,0,1,.69.326Zm-11.083-1.04a3.658,3.658,0,0,1,.907.678,2.732,2.732,0,0,1,.557.787v11.737a4.991,4.991,0,0,1-.242.859,2.354,2.354,0,0,1-.665.968,1.905,1.905,0,0,1-1.319.423,2.137,2.137,0,0,1-1.5-.532,3.538,3.538,0,0,1-.907-1.415,9.215,9.215,0,0,1-.472-1.948,20.955,20.955,0,0,1-.182-2.129q-.037-1.065-.036-1.96v-1.936q0-1.04.1-2.069a8.567,8.567,0,0,1,.375-1.876,3.161,3.161,0,0,1,.823-1.355,2.059,2.059,0,0,1,1.464-.508,2.3,2.3,0,0,1,1.1.279Zm-10.733,11.846a10.853,10.853,0,0,0,1.306,3.243,6.54,6.54,0,0,0,2.2,2.2,6.516,6.516,0,0,0,6.4-.085,7.039,7.039,0,0,0,2.286-2.5v3.388h8.833v-.242a1.743,1.743,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V307.52h-.242a1.173,1.173,0,0,1-.29.145q-.653.242-1.682.581t-2.215.641q-1.186.3-2.359.508a12.3,12.3,0,0,1-2.093.206v.242a1.1,1.1,0,0,1,.69.326,2.632,2.632,0,0,1,.654,1.029,5.072,5.072,0,0,1,.279,1.84v4.791a8.59,8.59,0,0,0-2.069-1.392,6.061,6.061,0,0,0-2.674-.568,7.344,7.344,0,0,0-3.521.8,7.1,7.1,0,0,0-2.456,2.153,9.605,9.605,0,0,0-1.439,3.061,13.273,13.273,0,0,0-.472,3.545,16.856,16.856,0,0,0,.435,3.9Zm-23.231-11.132a1.1,1.1,0,0,1,.69.326,2.632,2.632,0,0,1,.654,1.029,5.074,5.074,0,0,1,.279,1.84v10.793a5.211,5.211,0,0,1-.363,2.129,1.746,1.746,0,0,1-1.21,1.016v.242H491.44v-.242a1.744,1.744,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V321.507a4,4,0,0,1,.3-1.549,2.9,2.9,0,0,1,.859-1.173,2.023,2.023,0,0,1,1.306-.448,1.382,1.382,0,0,1,1.149.484,2.732,2.732,0,0,1,.508,1.186,7.424,7.424,0,0,1,.133,1.379v10.793a5.212,5.212,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242h10.405v-.242a1.744,1.744,0,0,1-1.21-1.016,5.217,5.217,0,0,1-.363-2.129V322.3a12.14,12.14,0,0,0-.193-2.057,6.589,6.589,0,0,0-.75-2.106,4.344,4.344,0,0,0-1.67-1.634,5.951,5.951,0,0,0-2.976-.641,6.348,6.348,0,0,0-2.553.508,6.868,6.868,0,0,0-2.045,1.343,6.162,6.162,0,0,0-1.331,1.8v-3.654h-.242a1.177,1.177,0,0,1-.29.145q-.653.242-1.682.581t-2.215.641q-1.186.3-2.359.508a12.291,12.291,0,0,1-2.093.206v.242Zm-21.428.351a2.631,2.631,0,0,1,.654,1.029,5.073,5.073,0,0,1,.279,1.84v8.179a12.05,12.05,0,0,0,.193,2.057,6.584,6.584,0,0,0,.75,2.106,4.316,4.316,0,0,0,1.682,1.634,5.964,5.964,0,0,0,2.964.641,6.347,6.347,0,0,0,2.552-.508,6.879,6.879,0,0,0,2.045-1.343,6.161,6.161,0,0,0,1.331-1.8v3.654h.242a2.288,2.288,0,0,1,.29-.145q.653-.267,1.682-.593t2.214-.629q1.186-.3,2.359-.508a12.286,12.286,0,0,1,2.093-.206V333.7a1.131,1.131,0,0,1-.678-.326,2.546,2.546,0,0,1-.665-1.029,5.073,5.073,0,0,1-.279-1.84V315.893h-.242c-.032.017-.077.036-.133.06a1.02,1.02,0,0,0-.157.084,12.744,12.744,0,0,1-1.658.654q-1.029.339-2.226.629t-2.372.472a13.8,13.8,0,0,1-2.093.182v.242a1.1,1.1,0,0,1,.69.326,2.631,2.631,0,0,1,.654,1.029,5.074,5.074,0,0,1,.279,1.84v8.978a4,4,0,0,1-.3,1.549,2.959,2.959,0,0,1-.847,1.173,2.005,2.005,0,0,1-1.319.448,1.349,1.349,0,0,1-1.137-.484,2.654,2.654,0,0,1-.521-1.2,7.5,7.5,0,0,1-.133-1.368V315.894h-.242c-.032.017-.077.036-.133.06a1.016,1.016,0,0,0-.157.084,12.742,12.742,0,0,1-1.658.654q-1.029.34-2.226.629t-2.372.472a13.807,13.807,0,0,1-2.093.182v.242a1.1,1.1,0,0,1,.69.326Zm-12.922,7.671a4.9,4.9,0,0,1,.8-1.609,5.013,5.013,0,0,1,.944-.92,6.394,6.394,0,0,0,.8-.665,1.227,1.227,0,0,0,.326-.907.906.906,0,0,0-.412-.835,9.783,9.783,0,0,0-.92-.5,3.8,3.8,0,0,1-1.1-.787,2.157,2.157,0,0,1-.521-1.585,4.667,4.667,0,0,1,.1-.787,2.785,2.785,0,0,1,.363-.956.854.854,0,0,1,.774-.435,1.213,1.213,0,0,1,1.089.557,3.521,3.521,0,0,1,.5,1.355,9.808,9.808,0,0,1,.133,1.609v11.168c0,.129-.142.3-.423.508a1.493,1.493,0,0,1-.907.315,1.42,1.42,0,0,1-1.029-.412,2.489,2.489,0,0,1-.629-1.053,4.217,4.217,0,0,1-.206-1.295,9.463,9.463,0,0,1,.326-2.771Zm-6.86,7.454a4.892,4.892,0,0,0,1.84,1.743,5.041,5.041,0,0,0,2.444.617,5.451,5.451,0,0,0,3.339-1.04,6.386,6.386,0,0,0,2.129-3.315,5.856,5.856,0,0,0,.532,2.045,4.249,4.249,0,0,0,1.331,1.658,3.523,3.523,0,0,0,2.178.654,7.312,7.312,0,0,0,2.976-.557,23.862,23.862,0,0,0,2.226-1.113v-.242a1.441,1.441,0,0,1-1.439-.944,5.9,5.9,0,0,1-.4-2.3v-6.8a8.971,8.971,0,0,0-.23-1.863,8.676,8.676,0,0,0-.811-2.178,7.526,7.526,0,0,0-1.609-2.057,7.749,7.749,0,0,0-2.625-1.525,13.209,13.209,0,0,0-7.284-.133,7.13,7.13,0,0,0-2.335,1.173,4.885,4.885,0,0,0-1.343,1.585,3.746,3.746,0,0,0-.435,1.706,2.67,2.67,0,0,0,.787,1.924,2.781,2.781,0,0,0,2.093.811,3.022,3.022,0,0,0,1.452-.326,6.245,6.245,0,0,0,1.089-.738,9.376,9.376,0,0,1,.992-.738,2.145,2.145,0,0,1,1.186-.326,2.273,2.273,0,0,1,.787.157.621.621,0,0,1,.424.641.914.914,0,0,1-.545.787,6.738,6.738,0,0,1-1.428.605q-.884.278-1.96.629a17.892,17.892,0,0,0-2.142.859,8.52,8.52,0,0,0-1.948,1.282,5.889,5.889,0,0,0-1.428,1.912,6.282,6.282,0,0,0-.545,2.734,4.87,4.87,0,0,0,.7,2.674ZM418.65,308.22a1.748,1.748,0,0,1,1.21,1,5.2,5.2,0,0,1,.363,2.142v20.812a5.212,5.212,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242h19.238V327.24h-.242a5.049,5.049,0,0,1-.4,1.815,10,10,0,0,1-1.149,2.081,10.884,10.884,0,0,1-1.767,1.948,8.958,8.958,0,0,1-2.275,1.439,6.569,6.569,0,0,1-2.687.557h-1.4V311.366a5.2,5.2,0,0,1,.363-2.142,1.748,1.748,0,0,1,1.21-1v-.242H418.65Z" transform="translate(1443.75 619.986)" fill="#435e53"/> <path id="Path_844" data-name="Path 844" d="M1793.59,316.94a5.4,5.4,0,0,1-4.65,3.522c1.429,1.571,5.14,1.036,6.593-1.471l-1.943-2.051" transform="translate(206.554 611.481)" fill="#435e53"/> </g> </svg></span>
+  <span class="ttl">· Maintenance</span>
+  <span class="spacer"></span>
+  <a class="chip" href="laundre-portal.html">⌂ Portal</a>
+</header>
+<main id="main"></main>
+
+<div id="overlay"><div class="modal">
+  <div class="mhead"><h3 id="mTitle"></h3><span class="spacer"></span><button class="close" id="mClose">×</button></div>
+  <div class="mbody" id="mBody"></div>
+  <div class="mfoot" id="mFoot"></div>
+</div></div>
+
+<script>
+const MKEY='laundre_maintenance_v1', GKEY='laundre_guides_v1';
+const ITEMS=['Machines inspected','Filters / lint cleaned','Water & drainage checked','Payment system checked','Faults resolved / logged','Other (see notes)'];
+function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{role:'admin'};}catch(e){return {role:'admin'};}}
+const ME=SESSION(); const ADMIN=ME.role==='admin';
+let LOGS=[], GUIDES=[];
+function loadA(){try{const r=localStorage.getItem(MKEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}return [];}
+function loadG(){try{const r=localStorage.getItem(GKEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}return [];}
+function saveA(){try{localStorage.setItem(MKEY,JSON.stringify(LOGS));}catch(e){alert('Storage full — fewer/smaller photos.');}}
+function saveG(){try{localStorage.setItem(GKEY,JSON.stringify(GUIDES));}catch(e){alert('Storage full — use links for large guides.');}}
+function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function uid(p){return p+Math.random().toString(36).slice(2,8);}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function laundromats(){try{const r=localStorage.getItem('laundre_sites_v1');if(r){const a=JSON.parse(r);if(Array.isArray(a))return a.map(s=>({id:s.id,name:s.name}));}}catch(e){}return [];}
+function locName(id){const l=laundromats().find(x=>x.id===id);return l?l.name:(id||'—');}
+function findSub(locId,date){return LOGS.find(x=>x.locationId===locId && x.date===date);}
+function dayLabel(ds){const d=new Date(ds+'T00:00');return d.toLocaleDateString('en-AU',{weekday:'short'})+' '+d.getDate();}
+function guideVisible(g){ if(ADMIN) return true; return g.visibility==='all'||g.visibility===ME.locationId; }
+
+/* ============ MAINTENANCE (staff) VIEW ============ */
+let pendingPhotos=[];
+function renderStaff(){
+  const loc=ME.locationId; const existing=findSub(loc,todayStr());
+  pendingPhotos=existing?(existing.photos||[]).slice():[];
+  const done=existing?existing.items:{};
+  const main=document.getElementById('main');
+  let h='<h2>Maintenance</h2><div class="sub">'+esc(locName(loc))+' · '+new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</div>';
+  // guides
+  const gs=GUIDES.filter(guideVisible);
+  h+='<div class="card"><h3>Guides &amp; Instructions</h3>';
+  if(gs.length){ gs.forEach(g=>{ const open=g.link?'<a class="gopen" href="'+esc(g.link)+'" target="_blank" rel="noopener">Open ↗</a>':(g.url?'<a class="gopen" href="'+g.url+'" download="'+esc(g.fileName||'guide')+'">Download</a>':'');
+    h+='<div class="guide"><div class="gi">📘</div><div class="gt"><b>'+esc(g.title)+'</b><span>'+esc(g.category||'')+(g.note?' · '+esc(g.note):'')+'</span></div>'+open+'</div>'; });
+  } else h+='<div class="sub" style="margin:0">No guides have been shared yet.</div>';
+  h+='</div>';
+  // log form
+  h+='<div class="card">';
+  if(existing) h+='<div class="submitted">✓ Logged today at '+new Date(existing.submittedAt).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+' — you can update and resubmit.</div>';
+  h+='<h3>Log maintenance check</h3>';
+  ITEMS.forEach((it,i)=>{const on=!!done[i];h+='<label class="citem'+(on?' done':'')+'" data-ci="'+i+'"><input type="checkbox" '+(on?'checked':'')+'><span>'+esc(it)+'</span></label>';});
+  h+='<label class="fld">Notes</label><textarea id="c_notes" rows="2" placeholder="Work done, parts used, observations…">'+esc(existing?existing.notes:'')+'</textarea>';
+  h+='<label class="fld">Issues / faults for the team</label><textarea id="c_issues" rows="2" placeholder="Anything needing follow-up or parts…">'+esc(existing?existing.issues:'')+'</textarea>';
+  h+='<label class="fld">Photos</label><div class="photos" id="photos"></div><input type="file" id="photoInput" accept="image/*" capture="environment" multiple style="display:none">';
+  h+='<div class="msg" id="msg"></div><div style="text-align:right;margin-top:12px"><button class="btn btn-green" id="submitBtn">'+(existing?'Update log':'Submit log')+'</button></div></div>';
+  // recent
+  const recent=LOGS.filter(x=>x.locationId===loc).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,7);
+  h+='<div class="card"><h3>Recent logs</h3>';
+  if(recent.length){recent.forEach(r=>{const cnt=Object.values(r.items||{}).filter(Boolean).length;
+    h+='<div class="rrow"><span class="d">'+new Date(r.date+'T00:00').toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short'})+'</span><span class="pill ok">'+cnt+'/'+ITEMS.length+'</span>'+(r.issues?' <span class="pill iss">issue</span>':'')+(r.photos&&r.photos.length?' <span class="pill ok">'+r.photos.length+' 📷</span>':'')+'</div>';});
+  } else h+='<div class="sub" style="margin:0">No logs yet.</div>';
+  h+='</div>';
+  main.innerHTML=h;
+  renderPhotos();
+  main.querySelectorAll('.citem').forEach(el=>el.querySelector('input').addEventListener('change',e=>el.classList.toggle('done',e.target.checked)));
+  document.getElementById('photoInput').onchange=e=>{[...e.target.files].forEach(f=>{if(f.size>2.5*1024*1024){document.getElementById('msg').textContent='Some photos over 2.5MB were skipped.';return;}const rd=new FileReader();rd.onload=()=>{pendingPhotos.push(rd.result);renderPhotos();};rd.readAsDataURL(f);});e.target.value='';};
+  document.getElementById('submitBtn').onclick=submitLog;
+}
+function renderPhotos(){const c=document.getElementById('photos');if(!c)return;c.innerHTML=pendingPhotos.map((p,i)=>'<div class="thumb"><img src="'+p+'"><button data-rp="'+i+'">×</button></div>').join('')+'<div class="addphoto" id="addphoto">+</div>';c.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>{pendingPhotos.splice(+b.dataset.rp,1);renderPhotos();});document.getElementById('addphoto').onclick=()=>document.getElementById('photoInput').click();}
+function submitLog(){
+  const loc=ME.locationId;const items={};document.querySelectorAll('.citem').forEach(el=>{items[+el.dataset.ci]=el.querySelector('input').checked;});
+  const rec={id:(findSub(loc,todayStr())||{}).id||uid('mn_'),locationId:loc,date:todayStr(),by:ME.name||ME.email||'Maintenance',byEmail:ME.email||'',items,notes:document.getElementById('c_notes').value.trim(),issues:document.getElementById('c_issues').value.trim(),photos:pendingPhotos.slice(),submittedAt:Date.now()};
+  LOGS=LOGS.filter(x=>!(x.locationId===loc&&x.date===todayStr()));LOGS.push(rec);saveA();renderStaff();
+}
+
+/* ============ ADMIN VIEW: guides mgmt + submissions ============ */
+function lastSubDate(locId){const ds=LOGS.filter(x=>x.locationId===locId).map(x=>x.date).sort();return ds.length?ds[ds.length-1]:null;}
+function daysSince(ds){if(!ds)return Infinity;return Math.round((new Date(todayStr()+'T00:00')-new Date(ds+'T00:00'))/864e5);}
+function renderAdmin(){
+  const main=document.getElementById('main');
+  const locs=laundromats(); const today=todayStr();
+  const doneToday=locs.filter(l=>findSub(l.id,today)).length;
+  const gaps={}; locs.forEach(l=>gaps[l.id]=daysSince(lastSubDate(l.id)));
+  const overdue=locs.filter(l=>gaps[l.id]>=2);
+  let h='<h2>Maintenance</h2><div class="sub">Machine &amp; technology guides, plus maintenance logs across all laundromats · '+doneToday+' of '+locs.length+' logged today</div>';
+  if(overdue.length){ h+='<div class="alert">⚠ '+overdue.length+' store'+(overdue.length>1?'s':'')+' overdue — no maintenance log for 2+ days: '
+    +overdue.map(l=>esc(l.name)+' ('+(gaps[l.id]===Infinity?'never':gaps[l.id]+' days')+')').join(' · ')+'</div>'; }
+  // guides mgmt
+  h+='<div class="card"><h3>Guides &amp; Instructions <span class="spacer"></span><button class="btn btn-green" id="addGuide" style="padding:7px 13px;font-size:12.5px">＋ Add guide</button></h3><div id="guideList"></div></div>';
+  // submissions matrix
+  const days=[];for(let i=0;i<10;i++){const d=new Date();d.setDate(d.getDate()-i);days.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));}
+  h+='<div class="card" style="padding:0;overflow:hidden"><h3 style="padding:18px 20px 0">Maintenance Logs</h3>';
+  if(locs.length){
+    h+='<div class="matrix" style="border:none"><table><thead><tr><th class="l">Laundromat</th>'+days.map(d=>'<th>'+dayLabel(d)+'</th>').join('')+'</tr></thead><tbody>';
+    locs.forEach(l=>{const badge=gaps[l.id]>=2?' <span class="warn">⚠ '+(gaps[l.id]===Infinity?'never':gaps[l.id]+'d')+'</span>':'';h+='<tr><td class="l">'+esc(l.name)+badge+'</td>'+days.map(d=>{const s=findSub(l.id,d);if(s){return '<td><span class="mk yes'+(s.issues?' iss':'')+'" data-loc="'+l.id+'" data-date="'+d+'">✓</span></td>';}return '<td><span class="mk no">✗</span></td>';}).join('')+'</tr>';});
+    h+='</tbody></table></div><div class="sub" style="padding:12px 20px 18px;margin:0">✓ logged · ✗ none · orange = issue. Click a ✓ for detail.</div>';
+  } else h+='<div class="empty">No laundromats yet.</div>';
+  h+='</div>';
+  main.innerHTML=h;
+  renderGuideList();
+  document.getElementById('addGuide').onclick=()=>openGuideEditor(null);
+  main.querySelectorAll('.mk.yes').forEach(b=>b.onclick=()=>openLogDetail(b.dataset.loc,b.dataset.date));
+}
+function renderGuideList(){
+  const el=document.getElementById('guideList');
+  if(!GUIDES.length){el.innerHTML='<div class="sub" style="margin:0">No guides yet. Add machine manuals, tech instructions or SOPs.</div>';return;}
+  el.innerHTML=GUIDES.map(g=>{
+    const open=g.link?'<a class="gopen" href="'+esc(g.link)+'" target="_blank" rel="noopener">Open ↗</a>':(g.url?'<a class="gopen" href="'+g.url+'" download="'+esc(g.fileName||'guide')+'">Download</a>':'');
+    const vis=g.visibility==='all'?'<span class="vis all">All</span>':'<span class="vis one">'+esc(locName(g.visibility))+'</span>';
+    return '<div class="guide"><div class="gi">📘</div><div class="gt"><b>'+esc(g.title)+vis+'</b><span>'+esc(g.category||'')+(g.note?' · '+esc(g.note):'')+'</span></div>'+open
+      +'<div class="rowbtns"><button class="btn btn-ghost" data-ge="'+g.id+'">Edit</button><button class="btn btn-danger" data-gd="'+g.id+'">Del</button></div></div>';
+  }).join('');
+  el.querySelectorAll('[data-ge]').forEach(b=>b.onclick=()=>openGuideEditor(b.dataset.ge));
+  el.querySelectorAll('[data-gd]').forEach(b=>b.onclick=()=>{const g=GUIDES.find(x=>x.id===b.dataset.gd);if(confirm('Delete “'+g.title+'”?')){GUIDES=GUIDES.filter(x=>x.id!==b.dataset.gd);saveG();renderGuideList();}});
+}
+function openGuideEditor(id){
+  const g=id?GUIDES.find(x=>x.id===id):null;
+  document.getElementById('mTitle').textContent=id?'Edit guide':'Add guide';
+  const locs=laundromats();
+  document.getElementById('mBody').innerHTML=
+    '<div class="mgrid"><div class="full"><label class="fld" style="margin-top:0">Title</label><input id="g_title" value="'+esc(g?g.title:'')+'"></div>'
+    +'<div><label class="fld" style="margin-top:0">Category</label><input id="g_category" value="'+esc(g?g.category:'')+'" placeholder="e.g. Washer / Dryer / POS"></div>'
+    +'<div><label class="fld" style="margin-top:0">Visible to</label><select id="g_visibility"><option value="all">All laundromats</option>'+locs.map(l=>'<option value="'+l.id+'"'+(g&&g.visibility===l.id?' selected':'')+'>'+esc(l.name)+'</option>').join('')+'</select></div>'
+    +'<div class="full"><label class="fld" style="margin-top:0">Link (video/manual) — optional</label><input id="g_link" value="'+esc(g?g.link:'')+'" placeholder="https://"></div>'
+    +'<div class="full"><label class="fld" style="margin-top:0">Or upload a file (≤3MB)</label><input id="g_file" type="file"></div>'
+    +'<div class="full"><label class="fld" style="margin-top:0">Note</label><input id="g_note" value="'+esc(g?g.note:'')+'"></div></div>'
+    +'<div class="msg" id="gmsg"></div>';
+  if(g&&g.visibility&&g.visibility!=='all') document.getElementById('g_visibility').value=g.visibility;
+  document.getElementById('mFoot').innerHTML='<button class="btn btn-ghost" id="gCancel">Cancel</button><button class="btn btn-green" id="gSave">Save guide</button>';
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById('gCancel').onclick=closeModal;
+  document.getElementById('gSave').onclick=()=>{
+    const title=document.getElementById('g_title').value.trim();const link=document.getElementById('g_link').value.trim();
+    if(!title){document.getElementById('gmsg').textContent='Please enter a title.';return;}
+    const fileInput=document.getElementById('g_file');
+    const finish=(fo)=>{const rec={id:id||uid('gd_'),title,category:document.getElementById('g_category').value.trim(),visibility:document.getElementById('g_visibility').value,link,note:document.getElementById('g_note').value.trim(),fileName:fo?fo.name:(g?g.fileName:''),url:fo?fo.url:(g?g.url:''),createdAt:g?g.createdAt:Date.now()};if(link){rec.url='';rec.fileName='';}if(id)GUIDES=GUIDES.map(x=>x.id===id?rec:x);else GUIDES.push(rec);saveG();renderGuideList();closeModal();};
+    if(fileInput.files[0]){const f=fileInput.files[0];if(f.size>3*1024*1024){document.getElementById('gmsg').textContent='File too large (max 3MB). Use a link.';return;}const rd=new FileReader();rd.onload=()=>finish({name:f.name,url:rd.result});rd.readAsDataURL(f);}
+    else if(!link && !(g&&(g.url||g.link))){document.getElementById('gmsg').textContent='Add a link or upload a file.';return;}
+    else finish(null);
+  };
+}
+function openLogDetail(locId,date){
+  const s=findSub(locId,date);if(!s)return;
+  document.getElementById('mTitle').textContent=locName(locId)+' — '+new Date(date+'T00:00').toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'});
+  let h='<div class="kv"><b>Logged by:</b> '+esc(s.by)+' at '+new Date(s.submittedAt).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+'</div><div style="margin:10px 0">';
+  ITEMS.forEach((it,i)=>{const on=!!(s.items&&s.items[i]);h+='<div class="chk">'+(on?'<span class="y">✓</span>':'<span class="n">✗</span>')+' '+esc(it)+'</div>';});
+  h+='</div>';
+  if(s.notes)h+='<div class="kv"><b>Notes:</b> '+esc(s.notes)+'</div>';
+  if(s.issues)h+='<div class="kv"><b>Issues:</b> '+esc(s.issues)+'</div>';
+  if(s.photos&&s.photos.length)h+='<div class="kv"><b>Photos:</b></div><div class="photos">'+s.photos.map(p=>'<a class="thumb" href="'+p+'" target="_blank"><img src="'+p+'"></a>').join('')+'</div>';
+  document.getElementById('mBody').innerHTML=h;
+  document.getElementById('mFoot').innerHTML='';
+  document.getElementById('overlay').classList.add('show');
+}
+function closeModal(){document.getElementById('overlay').classList.remove('show');}
+document.getElementById('mClose').onclick=closeModal;
+
+LOGS=loadA();GUIDES=loadG();
+if(ADMIN) renderAdmin(); else renderStaff();
+</script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Cost Analysis</title>
+<script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}if(!a||(s&&s.role&&s.role!=='admin'))location.replace('laundre-portal.html');})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  .logo svg{height:24px;width:auto;display:block;}
+  button{font-family:inherit;cursor:pointer;}
+  .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;}
+  .btn-green{background:var(--green);color:#fff;} .btn-green:hover{filter:brightness(1.1);}
+  .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);} .btn-ghost:hover{background:#EFEADD;}
+  .btn-danger{background:transparent;color:#B4472F;border:1px solid #e6cfc7;} .btn-danger:hover{background:#f7ece8;}
+  a.chip{font-size:12.5px;font-weight:700;color:var(--green);text-decoration:none;border:1px solid var(--cream-line);border-radius:7px;padding:8px 12px;}
+  a.chip:hover{background:#EFEADD;}
+  input,select{font-family:inherit;font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:8px 10px;width:100%;}
+  input:focus,select:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(67,94,83,.18);}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;}
+  header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:1120px;margin:0 auto;padding:22px 22px 60px;}
+  .projbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+  .projbar h2{font-size:19px;margin:0;color:var(--green-d);}
+  .projbar .spacer{flex:1;}
+  #projSel{width:auto;min-width:220px;}
+  .layout{display:grid;grid-template-columns:1fr 320px;gap:22px;align-items:start;}
+  @media(max-width:880px){.layout{grid-template-columns:1fr;}}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:13px;padding:18px 20px;margin-bottom:18px;}
+  .card h3{margin:0 0 14px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);}
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .fields .full{grid-column:1/-1;}
+  label{font-size:12px;color:#5f7469;font-weight:600;display:block;margin:0 0 5px;}
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#7a8b84;padding:6px 8px;border-bottom:1px solid var(--cream-line);}
+  td{padding:5px 8px;border-bottom:1px solid #f2eee4;}
+  td.amt{width:150px;} td.act{width:40px;text-align:right;}
+  .lineinput{border:1px solid transparent;background:transparent;padding:7px 8px;}
+  .lineinput:hover{border-color:var(--cream-line);}
+  .rm{background:transparent;border:none;color:#B4472F;font-size:16px;cursor:pointer;}
+  .addline{margin-top:10px;}
+  .summary .row{display:flex;justify-content:space-between;padding:7px 0;font-size:13.5px;border-bottom:1px dashed #e7ddca;}
+  .summary .row.big{font-size:16px;font-weight:800;color:var(--green-d);border-bottom:none;padding-top:12px;}
+  .summary .row.psqm{background:var(--green-d);color:#fff;border-radius:10px;padding:12px 14px;margin-top:12px;font-weight:800;}
+  .summary .row.psqm span:last-child{font-size:18px;}
+  .summary .sub{font-size:11px;color:var(--muted);margin-top:2px;}
+  .stick{position:sticky;top:74px;}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo"><svg xmlns="http://www.w3.org/2000/svg" width="145" height="28.506" viewBox="0 0 145 28.506"> <g id="Group_669" data-name="Group 669" transform="translate(-1862.4 -927.506)"> <path id="Path_843" data-name="Path 843" d="M552.01,324.131a12.885,12.885,0,0,1-.315-2.94,8.664,8.664,0,0,1,.145-1.512,6.607,6.607,0,0,1,.484-1.561,3.343,3.343,0,0,1,.907-1.222,2.106,2.106,0,0,1,1.392-.472,1.843,1.843,0,0,1,1.222.435,3.381,3.381,0,0,1,.859,1.126,5.977,5.977,0,0,1,.5,1.5,8.317,8.317,0,0,1,.157,1.585,8.712,8.712,0,0,1-.218,1.911,5.654,5.654,0,0,1-.726,1.778,3.856,3.856,0,0,1-1.331,1.295,3.951,3.951,0,0,1-2.033.484h-.145A9.542,9.542,0,0,1,552.01,324.131Zm6.449,11.447a8.445,8.445,0,0,0,2.492-1.27,6.5,6.5,0,0,0,1.742-1.911,4.547,4.547,0,0,0,.641-2.348,8.254,8.254,0,0,1-1.5.472,7.648,7.648,0,0,1-1.572.157,8.856,8.856,0,0,1-4.126-.944A7.593,7.593,0,0,1,553.172,327h2.178q4.38,0,6.341-1.234a4.02,4.02,0,0,0,1.96-3.63,5.294,5.294,0,0,0-1-3.133,6.884,6.884,0,0,0-2.916-2.263,11.513,11.513,0,0,0-4.671-.847,9.232,9.232,0,0,0-6.9,2.953,9.832,9.832,0,0,0-1.984,3.206,10.8,10.8,0,0,0-.7,3.908,9.773,9.773,0,0,0,.787,3.908,10.177,10.177,0,0,0,5.372,5.372,9.838,9.838,0,0,0,3.933.787,9.389,9.389,0,0,0,2.892-.448Zm-32.426-17.061a2.632,2.632,0,0,1,.654,1.029,5.07,5.07,0,0,1,.279,1.84v10.793a5.21,5.21,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242H535.8v-.242a1.744,1.744,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V321.143a3.057,3.057,0,0,1,.4-1.621,3.023,3.023,0,0,1,.956-1,1.9,1.9,0,0,1,.968-.351q.581,0,.581.532a1.468,1.468,0,0,1-.182.75,7.6,7.6,0,0,0-.363.726,2.879,2.879,0,0,0-.182,1.137,3.9,3.9,0,0,0,4.113,4.113,3.949,3.949,0,0,0,3-1.21,4.575,4.575,0,0,0,1.137-3.266,5.442,5.442,0,0,0-.568-2.419,4.76,4.76,0,0,0-1.718-1.911,5.236,5.236,0,0,0-2.916-.75,5.3,5.3,0,0,0-2.552.581,5.68,5.68,0,0,0-1.73,1.379,6.655,6.655,0,0,0-.944,1.452v-3.412h-.242a11.652,11.652,0,0,1-1.6.641q-1.04.351-2.3.678t-2.5.545a13.194,13.194,0,0,1-2.239.217v.242a1.1,1.1,0,0,1,.69.326Zm-11.083-1.04a3.658,3.658,0,0,1,.907.678,2.732,2.732,0,0,1,.557.787v11.737a4.991,4.991,0,0,1-.242.859,2.354,2.354,0,0,1-.665.968,1.905,1.905,0,0,1-1.319.423,2.137,2.137,0,0,1-1.5-.532,3.538,3.538,0,0,1-.907-1.415,9.215,9.215,0,0,1-.472-1.948,20.955,20.955,0,0,1-.182-2.129q-.037-1.065-.036-1.96v-1.936q0-1.04.1-2.069a8.567,8.567,0,0,1,.375-1.876,3.161,3.161,0,0,1,.823-1.355,2.059,2.059,0,0,1,1.464-.508,2.3,2.3,0,0,1,1.1.279Zm-10.733,11.846a10.853,10.853,0,0,0,1.306,3.243,6.54,6.54,0,0,0,2.2,2.2,6.516,6.516,0,0,0,6.4-.085,7.039,7.039,0,0,0,2.286-2.5v3.388h8.833v-.242a1.743,1.743,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V307.52h-.242a1.173,1.173,0,0,1-.29.145q-.653.242-1.682.581t-2.215.641q-1.186.3-2.359.508a12.3,12.3,0,0,1-2.093.206v.242a1.1,1.1,0,0,1,.69.326,2.632,2.632,0,0,1,.654,1.029,5.072,5.072,0,0,1,.279,1.84v4.791a8.59,8.59,0,0,0-2.069-1.392,6.061,6.061,0,0,0-2.674-.568,7.344,7.344,0,0,0-3.521.8,7.1,7.1,0,0,0-2.456,2.153,9.605,9.605,0,0,0-1.439,3.061,13.273,13.273,0,0,0-.472,3.545,16.856,16.856,0,0,0,.435,3.9Zm-23.231-11.132a1.1,1.1,0,0,1,.69.326,2.632,2.632,0,0,1,.654,1.029,5.074,5.074,0,0,1,.279,1.84v10.793a5.211,5.211,0,0,1-.363,2.129,1.746,1.746,0,0,1-1.21,1.016v.242H491.44v-.242a1.744,1.744,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V321.507a4,4,0,0,1,.3-1.549,2.9,2.9,0,0,1,.859-1.173,2.023,2.023,0,0,1,1.306-.448,1.382,1.382,0,0,1,1.149.484,2.732,2.732,0,0,1,.508,1.186,7.424,7.424,0,0,1,.133,1.379v10.793a5.212,5.212,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242h10.405v-.242a1.744,1.744,0,0,1-1.21-1.016,5.217,5.217,0,0,1-.363-2.129V322.3a12.14,12.14,0,0,0-.193-2.057,6.589,6.589,0,0,0-.75-2.106,4.344,4.344,0,0,0-1.67-1.634,5.951,5.951,0,0,0-2.976-.641,6.348,6.348,0,0,0-2.553.508,6.868,6.868,0,0,0-2.045,1.343,6.162,6.162,0,0,0-1.331,1.8v-3.654h-.242a1.177,1.177,0,0,1-.29.145q-.653.242-1.682.581t-2.215.641q-1.186.3-2.359.508a12.291,12.291,0,0,1-2.093.206v.242Zm-21.428.351a2.631,2.631,0,0,1,.654,1.029,5.073,5.073,0,0,1,.279,1.84v8.179a12.05,12.05,0,0,0,.193,2.057,6.584,6.584,0,0,0,.75,2.106,4.316,4.316,0,0,0,1.682,1.634,5.964,5.964,0,0,0,2.964.641,6.347,6.347,0,0,0,2.552-.508,6.879,6.879,0,0,0,2.045-1.343,6.161,6.161,0,0,0,1.331-1.8v3.654h.242a2.288,2.288,0,0,1,.29-.145q.653-.267,1.682-.593t2.214-.629q1.186-.3,2.359-.508a12.286,12.286,0,0,1,2.093-.206V333.7a1.131,1.131,0,0,1-.678-.326,2.546,2.546,0,0,1-.665-1.029,5.073,5.073,0,0,1-.279-1.84V315.893h-.242c-.032.017-.077.036-.133.06a1.02,1.02,0,0,0-.157.084,12.744,12.744,0,0,1-1.658.654q-1.029.339-2.226.629t-2.372.472a13.8,13.8,0,0,1-2.093.182v.242a1.1,1.1,0,0,1,.69.326,2.631,2.631,0,0,1,.654,1.029,5.074,5.074,0,0,1,.279,1.84v8.978a4,4,0,0,1-.3,1.549,2.959,2.959,0,0,1-.847,1.173,2.005,2.005,0,0,1-1.319.448,1.349,1.349,0,0,1-1.137-.484,2.654,2.654,0,0,1-.521-1.2,7.5,7.5,0,0,1-.133-1.368V315.894h-.242c-.032.017-.077.036-.133.06a1.016,1.016,0,0,0-.157.084,12.742,12.742,0,0,1-1.658.654q-1.029.34-2.226.629t-2.372.472a13.807,13.807,0,0,1-2.093.182v.242a1.1,1.1,0,0,1,.69.326Zm-12.922,7.671a4.9,4.9,0,0,1,.8-1.609,5.013,5.013,0,0,1,.944-.92,6.394,6.394,0,0,0,.8-.665,1.227,1.227,0,0,0,.326-.907.906.906,0,0,0-.412-.835,9.783,9.783,0,0,0-.92-.5,3.8,3.8,0,0,1-1.1-.787,2.157,2.157,0,0,1-.521-1.585,4.667,4.667,0,0,1,.1-.787,2.785,2.785,0,0,1,.363-.956.854.854,0,0,1,.774-.435,1.213,1.213,0,0,1,1.089.557,3.521,3.521,0,0,1,.5,1.355,9.808,9.808,0,0,1,.133,1.609v11.168c0,.129-.142.3-.423.508a1.493,1.493,0,0,1-.907.315,1.42,1.42,0,0,1-1.029-.412,2.489,2.489,0,0,1-.629-1.053,4.217,4.217,0,0,1-.206-1.295,9.463,9.463,0,0,1,.326-2.771Zm-6.86,7.454a4.892,4.892,0,0,0,1.84,1.743,5.041,5.041,0,0,0,2.444.617,5.451,5.451,0,0,0,3.339-1.04,6.386,6.386,0,0,0,2.129-3.315,5.856,5.856,0,0,0,.532,2.045,4.249,4.249,0,0,0,1.331,1.658,3.523,3.523,0,0,0,2.178.654,7.312,7.312,0,0,0,2.976-.557,23.862,23.862,0,0,0,2.226-1.113v-.242a1.441,1.441,0,0,1-1.439-.944,5.9,5.9,0,0,1-.4-2.3v-6.8a8.971,8.971,0,0,0-.23-1.863,8.676,8.676,0,0,0-.811-2.178,7.526,7.526,0,0,0-1.609-2.057,7.749,7.749,0,0,0-2.625-1.525,13.209,13.209,0,0,0-7.284-.133,7.13,7.13,0,0,0-2.335,1.173,4.885,4.885,0,0,0-1.343,1.585,3.746,3.746,0,0,0-.435,1.706,2.67,2.67,0,0,0,.787,1.924,2.781,2.781,0,0,0,2.093.811,3.022,3.022,0,0,0,1.452-.326,6.245,6.245,0,0,0,1.089-.738,9.376,9.376,0,0,1,.992-.738,2.145,2.145,0,0,1,1.186-.326,2.273,2.273,0,0,1,.787.157.621.621,0,0,1,.424.641.914.914,0,0,1-.545.787,6.738,6.738,0,0,1-1.428.605q-.884.278-1.96.629a17.892,17.892,0,0,0-2.142.859,8.52,8.52,0,0,0-1.948,1.282,5.889,5.889,0,0,0-1.428,1.912,6.282,6.282,0,0,0-.545,2.734,4.87,4.87,0,0,0,.7,2.674ZM418.65,308.22a1.748,1.748,0,0,1,1.21,1,5.2,5.2,0,0,1,.363,2.142v20.812a5.212,5.212,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242h19.238V327.24h-.242a5.049,5.049,0,0,1-.4,1.815,10,10,0,0,1-1.149,2.081,10.884,10.884,0,0,1-1.767,1.948,8.958,8.958,0,0,1-2.275,1.439,6.569,6.569,0,0,1-2.687.557h-1.4V311.366a5.2,5.2,0,0,1,.363-2.142,1.748,1.748,0,0,1,1.21-1v-.242H418.65Z" transform="translate(1443.75 619.986)" fill="#435e53"/> <path id="Path_844" data-name="Path 844" d="M1793.59,316.94a5.4,5.4,0,0,1-4.65,3.522c1.429,1.571,5.14,1.036,6.593-1.471l-1.943-2.051" transform="translate(206.554 611.481)" fill="#435e53"/> </g> </svg></span>
+  <span class="ttl">· Cost Analysis</span>
+  <span class="spacer"></span>
+  <a class="chip" href="laundre-portal.html">⌂ Portal</a>
+  <button class="btn btn-ghost" id="exportBtn">Export</button>
+</header>
+<main>
+  <div class="projbar">
+    <h2>Fit-out Cost Analysis</h2>
+    <span class="spacer"></span>
+    <select id="projSel"></select>
+    <button class="btn btn-ghost" id="newBtn">＋ New</button>
+    <button class="btn btn-ghost" id="dupBtn">Duplicate (VE)</button>
+    <button class="btn btn-danger" id="delBtn">Delete</button>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="card">
+        <h3>Project details</h3>
+        <div class="fields">
+          <div class="full"><label>Project name</label><input id="p_name" /></div>
+          <div class="full"><label>Location</label><input id="p_location" /></div>
+          <div><label>Site size (m²)</label><input id="p_sqm" type="number" step="1" min="1" /></div>
+          <div><label>Builder's margin (%)</label><input id="p_margin" type="number" step="0.5" /></div>
+          <div><label>GST (%)</label><input id="p_gst" type="number" step="0.5" /></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Trade line items (ex GST)</h3>
+        <table id="itemsTbl"><thead><tr><th>Trade / item</th><th class="amt">Amount (ex GST)</th><th class="act"></th></tr></thead><tbody></tbody></table>
+        <button class="btn btn-ghost addline" id="addLine">＋ Add line</button>
+      </div>
+    </div>
+
+    <div class="stick">
+      <div class="card summary" id="summary"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const STORE_KEY='laundre_cost_v1';
+const AUD=n=>'$'+(Math.round(n||0)).toLocaleString('en-AU');
+function toowoomba(){
+  return {id:'toowoomba',name:'Laundré Toowoomba',location:'Tenancy 2A, Northpoint Shopping Centre, Toowoomba City',
+    sqm:63,marginPct:12.5,gstPct:10,
+    items:[
+      {label:'Construction Preliminaries',amount:24400},
+      {label:'Gyprock / Framing Works',amount:32250},
+      {label:'Access Doors',amount:2790},
+      {label:'Painting Works (Muruwash + Sand)',amount:28440},
+      {label:'Cabinetry / Joinery',amount:16500},
+      {label:'Microcement Flooring',amount:17500},
+      {label:'Skirting',amount:2490},
+      {label:'Electrical Works',amount:12941},
+      {label:'Electrical — Additional Items (CCTV, AV, data)',amount:8950},
+      {label:'Plumbing Works',amount:17550},
+      {label:'Signage',amount:18560}
+    ]};
+}
+let DATA=[], curId=null;
+function load(){try{const r=localStorage.getItem(STORE_KEY);if(r){const a=JSON.parse(r);if(Array.isArray(a)&&a.length)return a;}}catch(e){}const s=[toowoomba()];save(s);return s;}
+function save(a){DATA=a||DATA;try{localStorage.setItem(STORE_KEY,JSON.stringify(DATA));}catch(e){}}
+function cur(){return DATA.find(p=>p.id===curId)||DATA[0];}
+function uid(){return 'proj_'+Math.random().toString(36).slice(2,7);}
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+function calc(p){
+  const subtotal=(p.items||[]).reduce((s,i)=>s+(+i.amount||0),0);
+  const margin=subtotal*(+p.marginPct||0)/100;
+  const totalEx=subtotal+margin;
+  const gst=totalEx*(+p.gstPct||0)/100;
+  const grandInc=totalEx+gst;
+  const perSqm=(+p.sqm>0)?totalEx/p.sqm:0;
+  const perSqmInc=(+p.sqm>0)?grandInc/p.sqm:0;
+  return {subtotal,margin,totalEx,gst,grandInc,perSqm,perSqmInc};
+}
+function renderProjSel(){
+  document.getElementById('projSel').innerHTML=DATA.map(p=>'<option value="'+p.id+'"'+(p.id===curId?' selected':'')+'>'+esc(p.name)+'</option>').join('');
+}
+function renderFields(){
+  const p=cur();
+  document.getElementById('p_name').value=p.name||'';
+  document.getElementById('p_location').value=p.location||'';
+  document.getElementById('p_sqm').value=p.sqm||'';
+  document.getElementById('p_margin').value=p.marginPct;
+  document.getElementById('p_gst').value=p.gstPct;
+}
+function renderItems(){
+  const p=cur();
+  const tb=document.querySelector('#itemsTbl tbody');
+  tb.innerHTML=(p.items||[]).map((it,i)=>
+    '<tr><td><input class="lineinput" data-i="'+i+'" data-k="label" value="'+esc(it.label)+'" /></td>'
+    +'<td class="amt"><input class="lineinput" data-i="'+i+'" data-k="amount" type="number" step="1" value="'+(it.amount||0)+'" /></td>'
+    +'<td class="act"><button class="rm" data-rm="'+i+'">×</button></td></tr>').join('');
+  tb.querySelectorAll('.lineinput').forEach(inp=>inp.oninput=()=>{
+    const i=+inp.dataset.i,k=inp.dataset.k;
+    cur().items[i][k]=k==='amount'?(+inp.value||0):inp.value;
+    save();renderSummary();
+  });
+  tb.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{cur().items.splice(+b.dataset.rm,1);save();renderItems();renderSummary();});
+}
+function renderSummary(){
+  const p=cur(), c=calc(p);
+  document.getElementById('summary').innerHTML=
+    '<h3>Estimate</h3>'
+    +'<div class="row"><span>Sub-total (ex GST)</span><span>'+AUD(c.subtotal)+'</span></div>'
+    +'<div class="row"><span>Builder\'s margin ('+(p.marginPct)+'%)</span><span>'+AUD(c.margin)+'</span></div>'
+    +'<div class="row big"><span>Total (ex GST)</span><span>'+AUD(c.totalEx)+'</span></div>'
+    +'<div class="row"><span>GST ('+(p.gstPct)+'%)</span><span>'+AUD(c.gst)+'</span></div>'
+    +'<div class="row big"><span>Grand total (inc GST)</span><span>'+AUD(c.grandInc)+'</span></div>'
+    +'<div class="row psqm"><span>Price / m² <span class="sub" style="color:#cfe0d5">'+(p.sqm||0)+' m² · ex GST</span></span><span>'+AUD(c.perSqm)+'</span></div>'
+    +'<div class="row" style="border-bottom:none"><span class="sub">Inc GST / m²</span><span class="sub">'+AUD(c.perSqmInc)+'</span></div>';
+}
+function renderAll(){renderProjSel();renderFields();renderItems();renderSummary();}
+
+['p_name','p_location','p_sqm','p_margin','p_gst'].forEach(idn=>{
+  document.getElementById(idn).addEventListener('input',()=>{
+    const p=cur();
+    p.name=document.getElementById('p_name').value;
+    p.location=document.getElementById('p_location').value;
+    p.sqm=+document.getElementById('p_sqm').value||0;
+    p.marginPct=+document.getElementById('p_margin').value||0;
+    p.gstPct=+document.getElementById('p_gst').value||0;
+    save();renderSummary();
+    if(idn==='p_name') renderProjSel();
+  });
+});
+document.getElementById('projSel').onchange=e=>{curId=e.target.value;renderAll();};
+document.getElementById('addLine').onclick=()=>{cur().items.push({label:'New item',amount:0});save();renderItems();renderSummary();};
+document.getElementById('newBtn').onclick=()=>{const p={id:uid(),name:'New project',location:'',sqm:63,marginPct:12.5,gstPct:10,items:[{label:'Construction Preliminaries',amount:0}]};DATA.push(p);curId=p.id;save();renderAll();};
+document.getElementById('dupBtn').onclick=()=>{const p=cur();const n=JSON.parse(JSON.stringify(p));n.id=uid();n.name=p.name+' (VE)';DATA.push(n);curId=n.id;save();renderAll();};
+document.getElementById('delBtn').onclick=()=>{if(DATA.length<=1){alert('Keep at least one project.');return;}if(confirm('Delete “'+cur().name+'”?')){DATA=DATA.filter(p=>p.id!==curId);curId=DATA[0].id;save();renderAll();}};
+document.getElementById('exportBtn').onclick=()=>{
+  const blob=new Blob([JSON.stringify(DATA,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='laundre-cost-projects.json';a.click();URL.revokeObjectURL(a.href);
+};
+DATA=load();curId=DATA[0].id;renderAll();
+</script>
+</body>
+</html>

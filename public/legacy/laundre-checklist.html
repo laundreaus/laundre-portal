@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Franchise Onboarding</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cardo:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sage:       #3F5346;
+    --sage-deep:  #2E3D33;
+    --sage-soft:  #5A6F60;
+    --cream:      #ECE5D3;
+    --cream-soft: #F5F0E1;
+    --cream-deep: #DCD3BC;
+    --terra:      #C7956D;
+    --terra-deep: #A77450;
+    --ink:        #1F2A22;
+    --muted:      #7A8579;
+    --line:       #D4CBB4;
+    --done:       #6F8B73;
+    --shadow:     0 1px 2px rgba(31,42,34,.04), 0 8px 24px rgba(31,42,34,.06);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, Segoe UI, sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  a { color: var(--sage); text-decoration: none; }
+  a:hover { color: var(--terra-deep); }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    background: var(--sage);
+    color: var(--cream);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--sage-deep);
+  }
+  .brand {
+    font-family: 'Cardo', Georgia, serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    line-height: 1;
+  }
+  .brand .acute { font-style: italic; }
+  .topbar-meta {
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: rgba(236,229,211,0.7);
+  }
+  .topbar-nav a {
+    color: rgba(236,229,211,0.85);
+    margin-left: 24px;
+    font-size: 12px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+  }
+  .topbar-nav a:hover { color: var(--cream); }
+
+  /* ---------- Layout ---------- */
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+  .hero {
+    margin-bottom: 36px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--terra-deep);
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  h1 {
+    font-family: 'Cardo', Georgia, serif;
+    font-weight: 400;
+    font-size: 48px;
+    line-height: 1.05;
+    margin: 0 0 8px;
+    color: var(--sage-deep);
+  }
+  .subtle {
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 640px;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--sage);
+    color: var(--cream);
+    border: 1px solid var(--sage);
+    padding: 10px 18px;
+    font: 500 13px/1 'Inter', sans-serif;
+    letter-spacing: 0.4px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .15s;
+    text-transform: uppercase;
+  }
+  .btn:hover { background: var(--sage-deep); border-color: var(--sage-deep); color: var(--cream); }
+  .btn.ghost {
+    background: transparent;
+    color: var(--sage);
+    border-color: var(--line);
+  }
+  .btn.ghost:hover {
+    background: var(--cream-soft);
+    color: var(--sage-deep);
+    border-color: var(--sage);
+  }
+  .btn.terra {
+    background: var(--terra);
+    border-color: var(--terra);
+    color: #fff;
+  }
+  .btn.terra:hover { background: var(--terra-deep); border-color: var(--terra-deep); color: #fff; }
+  .btn.small { padding: 6px 12px; font-size: 11px; }
+  .btn.icon { padding: 8px 10px; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  /* ---------- Cards / tables ---------- */
+  .card {
+    background: var(--cream-soft);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+  }
+  .franchise-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .franchise-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 24px;
+    align-items: center;
+    padding: 22px 24px;
+    background: var(--cream-soft);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    transition: all .15s;
+  }
+  .franchise-row:hover {
+    border-color: var(--sage-soft);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+  }
+  .fr-name {
+    font-family: 'Cardo', Georgia, serif;
+    font-size: 22px;
+    color: var(--sage-deep);
+    margin: 0 0 4px;
+  }
+  .fr-meta { color: var(--muted); font-size: 13px; }
+  .fr-progress {
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .fr-progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .bar {
+    height: 6px;
+    background: var(--cream-deep);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .bar > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--sage-soft), var(--sage));
+    border-radius: 100px;
+    transition: width .4s;
+  }
+
+  /* ---------- Empty state ---------- */
+  .empty {
+    text-align: center;
+    padding: 80px 32px;
+    color: var(--muted);
+    border: 1px dashed var(--line);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.3);
+  }
+  .empty h3 {
+    font-family: 'Cardo', serif;
+    color: var(--sage-deep);
+    font-size: 24px;
+    font-weight: 400;
+    margin: 0 0 8px;
+  }
+
+  /* ---------- Modal ---------- */
+  .modal-mask {
+    position: fixed;
+    inset: 0;
+    background: rgba(46,61,51,0.55);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 80px 20px;
+    z-index: 50;
+  }
+  .modal {
+    background: var(--cream-soft);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 520px;
+    padding: 32px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.2);
+  }
+  .modal h2 {
+    font-family: 'Cardo', serif;
+    font-weight: 400;
+    color: var(--sage-deep);
+    margin: 0 0 18px;
+    font-size: 28px;
+  }
+  label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--sage-soft);
+    margin: 14px 0 6px;
+    font-weight: 500;
+  }
+  input[type="text"], input[type="email"], textarea {
+    width: 100%;
+    padding: 10px 12px;
+    font: 400 14px/1.4 'Inter', sans-serif;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    color: var(--ink);
+    transition: border-color .15s;
+  }
+  input[type="text"]:focus, input[type="email"]:focus, textarea:focus {
+    outline: none;
+    border-color: var(--sage);
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  /* ---------- Franchise (checklist) view ---------- */
+  .fr-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 32px;
+    align-items: end;
+    margin-bottom: 24px;
+  }
+  .progress-block {
+    text-align: right;
+    min-width: 200px;
+  }
+  .progress-num {
+    font-family: 'Cardo', serif;
+    font-size: 42px;
+    line-height: 1;
+    color: var(--sage-deep);
+  }
+  .progress-num .pct { font-size: 22px; color: var(--sage-soft); margin-left: 2px; }
+  .progress-sub {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  .section {
+    background: var(--cream-soft);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--cream-soft);
+    border-bottom: 1px solid transparent;
+    transition: background .15s;
+  }
+  .section.open .section-head { border-bottom-color: var(--line); }
+  .section-head:hover { background: #fff; }
+  .section-title-wrap { display: flex; align-items: center; gap: 16px; min-width: 0; }
+  .section-num {
+    font-family: 'Cardo', serif;
+    color: var(--terra);
+    font-size: 13px;
+    letter-spacing: 1px;
+    width: 28px;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-family: 'Cardo', serif;
+    font-size: 21px;
+    color: var(--sage-deep);
+    font-weight: 400;
+    margin: 0;
+  }
+  .section-meta {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+  .section-count {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+  .chev {
+    width: 12px;
+    height: 12px;
+    border-right: 2px solid var(--sage-soft);
+    border-bottom: 2px solid var(--sage-soft);
+    transform: rotate(45deg) translate(-2px,-2px);
+    transition: transform .2s;
+  }
+  .section.open .chev { transform: rotate(-135deg) translate(-2px,-2px); }
+  .section-body {
+    display: none;
+    padding: 8px 24px 18px;
+  }
+  .section.open .section-body { display: block; }
+
+  .task {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(212,203,180,0.5);
+  }
+  .task:last-of-type { border-bottom: none; }
+  .task .check {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid var(--sage-soft);
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    position: relative;
+    transition: all .15s;
+    margin-top: 1px;
+  }
+  .task .check:hover { border-color: var(--sage); }
+  .task .check:checked {
+    background: var(--sage);
+    border-color: var(--sage);
+  }
+  .task .check:checked::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 11px;
+    border-right: 2px solid var(--cream);
+    border-bottom: 2px solid var(--cream);
+    transform: rotate(45deg);
+  }
+  .task-body { flex: 1; min-width: 0; }
+  .task-label {
+    color: var(--ink);
+    font-size: 14.5px;
+    line-height: 1.45;
+  }
+  .task.done .task-label {
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-color: var(--sage-soft);
+    text-decoration-thickness: 1px;
+  }
+  .task-note {
+    color: var(--muted);
+    font-size: 12.5px;
+    margin-top: 2px;
+  }
+  .task-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .task:hover .task-actions { opacity: 1; }
+  .task-actions button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 6px;
+    transition: color .15s;
+  }
+  .task-actions button:hover { color: var(--terra-deep); }
+  .task .custom-tag {
+    display: inline-block;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--terra-deep);
+    border: 1px solid var(--terra);
+    padding: 1px 6px;
+    border-radius: 100px;
+    margin-left: 8px;
+    vertical-align: middle;
+    font-weight: 500;
+  }
+
+  .add-task-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+  }
+  .add-task-row input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.6);
+    border-radius: 4px;
+    font: 400 13.5px 'Inter',sans-serif;
+  }
+  .add-task-row input:focus { outline: none; border-color: var(--sage); background: #fff; }
+
+  /* ---------- Misc ---------- */
+  .pill {
+    display: inline-block;
+    background: var(--cream-deep);
+    color: var(--sage-deep);
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .toolbar h2 {
+    font-family: 'Cardo', serif;
+    font-size: 24px;
+    color: var(--sage-deep);
+    margin: 0;
+    font-weight: 400;
+  }
+
+  .footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--sage-deep);
+    color: var(--cream);
+    padding: 12px 22px;
+    border-radius: 100px;
+    font-size: 13px;
+    letter-spacing: 0.4px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s, transform .25s;
+    z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+  .backend-banner {
+    background: rgba(199,149,109,0.12);
+    border: 1px solid rgba(199,149,109,0.4);
+    color: var(--terra-deep);
+    border-radius: 6px;
+    padding: 10px 16px;
+    font-size: 12.5px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .backend-banner strong { color: var(--terra-deep); }
+
+  /* Print-friendly */
+  @media print {
+    .topbar, .topbar-nav, .add-task-row, .task-actions, .toolbar .btn-row, .backend-banner, .footer { display: none !important; }
+    body { background: #fff; }
+    .section { break-inside: avoid; border-color: #ccc; }
+    .section-body { display: block !important; }
+  }
+
+  @media (max-width: 640px) {
+    .topbar { padding: 14px 18px; flex-wrap: wrap; gap: 8px; }
+    .topbar-nav a { margin-left: 0; margin-right: 16px; }
+    .wrap { padding: 28px 18px 60px; }
+    h1 { font-size: 36px; }
+    .franchise-row { grid-template-columns: 1fr; gap: 12px; }
+    .fr-progress { min-width: 0; }
+    .fr-header { grid-template-columns: 1fr; }
+    .progress-block { text-align: left; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <span class="brand">Laundr<span class="acute">é</span></span>
+    <span class="topbar-meta" style="margin-left:14px;">Franchise Onboarding</span>
+  </div>
+  <nav class="topbar-nav" id="topnav">
+    <a href="#" id="nav-admin">Admin</a>
+    <a href="laundre-portal.html" style="margin-left:16px;">⌂ Portal</a>
+  </nav>
+</div>
+
+<div class="wrap" id="app"></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   LAUNDRÉ — Franchise Onboarding Checklist
+   Single-file HTML, browser-local storage.
+
+   Data layer is wrapped in `Store` so swapping to a real backend
+   later (Firebase, Supabase, REST) only requires re-implementing
+   load() / save() / list().
+   ============================================================ */
+
+/* ----------  DEFAULT CHECKLIST TEMPLATE  ----------
+   Sourced from the Laundré Franchise Agreement (V2 clean draft).
+   Sections map to the practical onboarding sequence a new franchisee
+   must complete from contract date through grand opening.
+*/
+const DEFAULT_TEMPLATE = [
+  {
+    title: "Pre-Opening Administration",
+    tasks: [
+      { label: "Franchise Agreement signed by all parties", note: "Including any Guarantor" },
+      { label: "Documentation Fee paid ($3,500 + GST)", note: "Prior to agreement preparation" },
+      { label: "Franchise Fee paid ($39,990 + GST)", note: "Payable on Contract Date" },
+      { label: "Cooling-off period confirmed (clause 2)", note: "" },
+      { label: "Independent legal advice obtained (clause 69)", note: "" },
+      { label: "Franchisee corporate / trust structure established", note: "Clauses 61–62" },
+      { label: "Statement of Solvency provided", note: "Clause 39" }
+    ]
+  },
+  {
+    title: "Territory, Premises & Lease",
+    tasks: [
+      { label: "Territory map (Annexure B) reviewed & accepted", note: "" },
+      { label: "Site selected — meets Premises Criteria", note: "40–130m², ≥30% renter demographic, parking within 20m" },
+      { label: "Site Selection Fee paid (if applicable)", note: "" },
+      { label: "Lease executed by Franchisee (or Licence Agreement signed)", note: "Clause 13" },
+      { label: "Required lease terms inserted (Franchisor consent / assignment / rectification rights)", note: "" },
+      { label: "Tripartite deed signed (if required by Franchisor)", note: "" },
+      { label: "Business Name registered — \"Laundré – [Territory]\"", note: "" }
+    ]
+  },
+  {
+    title: "Fit Out & Build",
+    tasks: [
+      { label: "Project Management Fee paid (if applicable)", note: "" },
+      { label: "Floorplan approved by Franchisor", note: "" },
+      { label: "Fit Out plan signed off against current Image", note: "Clause 16" },
+      { label: "Approved Suppliers / contractors engaged", note: "" },
+      { label: "Build commenced", note: "" },
+      { label: "Brand signage & external branding installed", note: "" },
+      { label: "Fit Out completion inspection passed", note: "" },
+      { label: "Snag list closed out", note: "" }
+    ]
+  },
+  {
+    title: "Equipment & Starter Pack",
+    tasks: [
+      { label: "Equipment List (Annexure D) ordered", note: "" },
+      { label: "Equipment installed & commissioned", note: "" },
+      { label: "Starter Pack (Annexure C) received & checked", note: "" },
+      { label: "Lint traps, filters & safety systems verified", note: "" },
+      { label: "Coin / cashless payment systems operational", note: "" },
+      { label: "Machine uptime test completed (target ≥95%)", note: "Minimum Performance Criteria – clause 29" }
+    ]
+  },
+  {
+    title: "Technology, POS & Customer Systems",
+    tasks: [
+      { label: "Electronic Equipment & Software installed", note: "Clause 32" },
+      { label: "POS system configured & online", note: "" },
+      { label: "Customer-facing app / digital channel integration tested", note: "" },
+      { label: "Customer data flow to Franchisor verified", note: "Clause 31" },
+      { label: "Security cameras operating 24/7", note: "Customer Experience & Safety – clause 29" },
+      { label: "Test transactions reconciled end-to-end", note: "" }
+    ]
+  },
+  {
+    title: "Licences, Insurance & Compliance",
+    tasks: [
+      { label: "All local council & regulatory licences obtained", note: "Clause 20" },
+      { label: "Public liability insurance in place", note: "Clause 40" },
+      { label: "Business & contents insurance current", note: "" },
+      { label: "Workers compensation in place (if applicable)", note: "" },
+      { label: "WHS compliance audit completed", note: "" },
+      { label: "Privacy & customer-data compliance reviewed", note: "Clause 36" }
+    ]
+  },
+  {
+    title: "Training",
+    tasks: [
+      { label: "Initial Training Programme completed by Franchisee", note: "Clause 41" },
+      { label: "Responsible Manager appointed & trained", note: "Clause 28" },
+      { label: "All operational personnel trained", note: "" },
+      { label: "Operations Manual reviewed & acknowledged", note: "Clause 35" },
+      { label: "Brand standards & tone-of-voice training completed", note: "" }
+    ]
+  },
+  {
+    title: "Suppliers & Inventory",
+    tasks: [
+      { label: "Approved Suppliers list received", note: "Clause 27" },
+      { label: "Opening inventory ordered", note: "Clause 19" },
+      { label: "Consumables (detergents, softeners, etc.) stocked", note: "" },
+      { label: "Stock management process documented", note: "" }
+    ]
+  },
+  {
+    title: "Marketing & Launch",
+    tasks: [
+      { label: "Local Marketing Expenditure plan agreed", note: "Clause 22" },
+      { label: "Opening Promotional Campaign approved", note: "Clause 21" },
+      { label: "Social media accounts created per Franchisor specs", note: "Clause 23" },
+      { label: "Local launch collateral approved", note: "" },
+      { label: "Soft launch date confirmed", note: "" },
+      { label: "Grand opening date confirmed & promoted", note: "" }
+    ]
+  },
+  {
+    title: "Operational Readiness",
+    tasks: [
+      { label: "Daily cleaning checklist in place", note: "Store Presentation – clause 29" },
+      { label: "Weekly deep-clean checklist logged", note: "" },
+      { label: "Maintenance & service log set up", note: "Equipment Performance – clause 29" },
+      { label: "Repairs SLA confirmed (48-hour target)", note: "" },
+      { label: "Franchisor reporting cadence agreed", note: "Engagement & Reporting – clause 29" },
+      { label: "Minimum Performance Criteria reviewed & acknowledged", note: "" }
+    ]
+  }
+];
+
+/* ----------  STORE  (swap out for backend later)  ---------- */
+const STORAGE_KEY = "laundre_franchises_v1";
+
+const Store = {
+  _load() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+    catch (e) { return {}; }
+  },
+  _save(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  },
+  list() {
+    const all = this._load();
+    return Object.values(all).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  },
+  get(id) {
+    return this._load()[id] || null;
+  },
+  save(franchise) {
+    const all = this._load();
+    franchise.updatedAt = Date.now();
+    all[franchise.id] = franchise;
+    this._save(all);
+  },
+  remove(id) {
+    const all = this._load();
+    delete all[id];
+    this._save(all);
+  },
+  exists(id) {
+    return Boolean(this._load()[id]);
+  }
+};
+
+/* ----------  HELPERS  ---------- */
+function uid(prefix='f') {
+  return prefix + '_' + Math.random().toString(36).slice(2,8) + Date.now().toString(36).slice(-4);
+}
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), 2000);
+}
+function newFranchise(name, location, contact) {
+  return {
+    id: uid(),
+    name: name.trim(),
+    location: (location||'').trim(),
+    contact: (contact||'').trim(),
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    sections: DEFAULT_TEMPLATE.map(s => ({
+      id: uid('s'),
+      title: s.title,
+      tasks: s.tasks.map(t => ({
+        id: uid('t'),
+        label: t.label,
+        note: t.note || '',
+        done: false,
+        custom: false,
+        doneAt: null
+      }))
+    }))
+  };
+}
+function franchiseProgress(f) {
+  let total = 0, done = 0;
+  f.sections.forEach(s => s.tasks.forEach(t => { total++; if (t.done) done++; }));
+  return { total, done, pct: total ? Math.round((done/total)*100) : 0 };
+}
+function fmtDate(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' });
+}
+
+/* ----------  SYNC FROM APPROVED LOCATIONS  ---------- */
+/* Each approved location in the Site Locations tool (laundre_sites_v1) automatically
+   gets a matching onboarding checklist here, linked by sourceLocationId. */
+function syncFromLocations() {
+  let sites = [];
+  try { const r = localStorage.getItem('laundre_sites_v1'); if (r) { const a = JSON.parse(r); if (Array.isArray(a)) sites = a; } }
+  catch (e) { return; }
+  if (!sites.length) return;
+  const all = Store._load();
+  const linked = new Set(Object.values(all).map(f => f.sourceLocationId).filter(Boolean));
+  let added = 0;
+  sites.forEach(s => {
+    if (!s || !s.id || linked.has(s.id)) return;
+    const f = newFranchise(s.name || 'Unnamed location', s.address || '', '');
+    f.sourceLocationId = s.id;
+    if (s.dateApproved) { const t = new Date(s.dateApproved + 'T00:00').getTime(); if (!isNaN(t)) { f.createdAt = t; f.updatedAt = t; } }
+    all[f.id] = f;
+    added++;
+  });
+  if (added) Store._save(all);
+}
+
+/* ----------  ROUTING  ---------- */
+function currentSession(){ try { return JSON.parse(localStorage.getItem('laundre_session')||'null'); } catch(e){ return null; } }
+function route() {
+  syncFromLocations();
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  const sess = currentSession();
+  const navAdmin = document.getElementById('nav-admin');
+
+  /* Franchisee: scoped to their own store's checklist only */
+  if (sess && sess.role && sess.role !== 'admin') {
+    if (navAdmin) navAdmin.style.display = 'none';
+    const mine = Store.list().find(f => f.sourceLocationId === sess.locationId);
+    if (mine) { renderFranchise(app, mine.id); }
+    else {
+      app.innerHTML = '<div style="max-width:640px;margin:26px auto;padding:22px;background:#fff;border:1px solid var(--line);border-radius:12px;color:var(--sage-soft);">'
+        + 'No laundromat is assigned to your account yet. Please contact your administrator.</div>';
+    }
+    return;
+  }
+
+  /* Admin: full access */
+  if (navAdmin) navAdmin.onclick = (e) => { e.preventDefault(); location.hash = ''; };
+  const hash = (location.hash || '').replace(/^#/, '');
+  if (hash.startsWith('/f/')) { renderFranchise(app, hash.slice(3)); }
+  else { renderAdmin(app); }
+}
+window.addEventListener('hashchange', route);
+window.addEventListener('DOMContentLoaded', route);
+
+/* ----------  ADMIN VIEW  ---------- */
+function renderAdmin(app) {
+  const franchises = Store.list();
+
+  app.innerHTML = `
+    <div class="hero">
+      <div class="eyebrow">Admin Portal</div>
+      <h1>Franchise onboarding</h1>
+      <div class="subtle">Create a checklist for each new franchisee, share their unique link, and track their progress from contract through grand opening.</div>
+    </div>
+
+    <div class="backend-banner">
+      <div><strong>Note:</strong> This prototype stores data in your browser only. Each franchisee's progress is visible to them on their own device. When ready, swap the <code>Store</code> layer for a shared backend so progress syncs centrally.</div>
+    </div>
+
+    <div class="toolbar">
+      <h2>Franchises <span class="pill" style="margin-left:8px;">${franchises.length}</span></h2>
+      <div class="btn-row">
+        <button class="btn ghost" id="export-btn">Export all (JSON)</button>
+        <button class="btn ghost" id="import-btn">Import JSON</button>
+        <button class="btn terra" id="new-btn">+ New franchise</button>
+      </div>
+    </div>
+
+    <div class="franchise-grid" id="grid">
+      ${franchises.length === 0 ? `
+        <div class="empty">
+          <h3>No franchises yet</h3>
+          <p>Click <strong>+ New franchise</strong> to create the first onboarding checklist.</p>
+        </div>
+      ` : franchises.map(f => {
+        const p = franchiseProgress(f);
+        return `
+          <div class="franchise-row" data-id="${f.id}" data-action="open">
+            <div>
+              <div class="fr-name">${esc(f.name)}</div>
+              <div class="fr-meta">${esc(f.location || '—')}${f.contact ? ' · ' + esc(f.contact) : ''} · created ${fmtDate(f.createdAt)}</div>
+            </div>
+            <div class="fr-progress">
+              <div class="fr-progress-label"><span>Progress</span><span>${p.done} / ${p.total} · ${p.pct}%</span></div>
+              <div class="bar"><span style="width:${p.pct}%"></span></div>
+            </div>
+            <div class="btn-row" data-stop="1">
+              <button class="btn ghost small" data-action="copy" data-id="${f.id}">Copy link</button>
+              <button class="btn ghost small" data-action="delete" data-id="${f.id}">Delete</button>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <div class="footer">Laundré · Franchise Network · Commercial in Confidence</div>
+  `;
+
+  document.getElementById('new-btn').onclick = openNewModal;
+  document.getElementById('export-btn').onclick = exportAll;
+  document.getElementById('import-btn').onclick = importAll;
+
+  document.getElementById('grid').addEventListener('click', (e) => {
+    const stop = e.target.closest('[data-stop]');
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const id = btn.dataset.id || btn.closest('[data-id]')?.dataset.id;
+    const action = btn.dataset.action;
+    if (action === 'copy') {
+      const url = location.origin + location.pathname + '#/f/' + id;
+      navigator.clipboard.writeText(url).then(() => toast('Franchise link copied'));
+      e.stopPropagation();
+    } else if (action === 'delete') {
+      if (confirm('Delete this franchise and all its progress? This cannot be undone.')) {
+        Store.remove(id);
+        toast('Franchise deleted');
+        route();
+      }
+      e.stopPropagation();
+    } else if (action === 'open' && !stop) {
+      location.hash = '/f/' + id;
+    }
+  });
+}
+
+function openNewModal() {
+  const mask = document.createElement('div');
+  mask.className = 'modal-mask';
+  mask.innerHTML = `
+    <div class="modal" role="dialog" aria-labelledby="m-title">
+      <h2 id="m-title">New franchise</h2>
+      <label for="m-name">Franchisee / Business Name</label>
+      <input id="m-name" type="text" placeholder="e.g. Bill Hudson — Bondi" autofocus />
+      <label for="m-loc">Territory / Location</label>
+      <input id="m-loc" type="text" placeholder="e.g. Bondi NSW" />
+      <label for="m-contact">Primary contact (optional)</label>
+      <input id="m-contact" type="text" placeholder="email or phone" />
+      <div class="modal-actions">
+        <button class="btn ghost" id="m-cancel">Cancel</button>
+        <button class="btn terra" id="m-create">Create checklist</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(mask);
+  const close = () => mask.remove();
+  mask.addEventListener('click', (e) => { if (e.target === mask) close(); });
+  document.getElementById('m-cancel').onclick = close;
+  document.getElementById('m-create').onclick = () => {
+    const name = document.getElementById('m-name').value.trim();
+    if (!name) { document.getElementById('m-name').focus(); return; }
+    const loc = document.getElementById('m-loc').value;
+    const contact = document.getElementById('m-contact').value;
+    const f = newFranchise(name, loc, contact);
+    Store.save(f);
+    close();
+    toast('Franchise created');
+    location.hash = '/f/' + f.id;
+  };
+  document.getElementById('m-name').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('m-create').click(); });
+}
+
+function exportAll() {
+  const data = Store._load();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'laundre-franchises-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Export downloaded');
+}
+function importAll() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = () => {
+    const file = input.files[0];
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const data = JSON.parse(r.result);
+        if (typeof data !== 'object') throw new Error();
+        const current = Store._load();
+        const merged = { ...current, ...data };
+        Store._save(merged);
+        toast('Import complete');
+        route();
+      } catch(e) { alert('Could not read that file.'); }
+    };
+    r.readAsText(file);
+  };
+  input.click();
+}
+
+/* ----------  FRANCHISE / CHECKLIST VIEW  ---------- */
+function renderFranchise(app, id) {
+  const f = Store.get(id);
+
+  if (!f) {
+    app.innerHTML = `
+      <div class="hero">
+        <div class="eyebrow">Not found</div>
+        <h1>This checklist doesn't exist</h1>
+        <div class="subtle">It may have been deleted, or this link may be from a different device. (Data is currently stored per-browser.)</div>
+        <div class="btn-row" style="margin-top:24px;">
+          <a class="btn" href="#">← Back to admin</a>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const p = franchiseProgress(f);
+
+  app.innerHTML = `
+    <div class="hero">
+      <div class="eyebrow">Onboarding Checklist</div>
+      <div class="fr-header">
+        <div>
+          <h1>${esc(f.name)}</h1>
+          <div class="subtle">${esc(f.location || '')}${f.contact ? ' · ' + esc(f.contact) : ''}</div>
+        </div>
+        <div class="progress-block">
+          <div class="progress-num"><span id="pct-num">${p.pct}</span><span class="pct">%</span></div>
+          <div class="progress-sub"><span id="pct-text">${p.done} of ${p.total} complete</span></div>
+        </div>
+      </div>
+      <div class="bar" style="margin-top:18px;"><span id="hero-bar" style="width:${p.pct}%"></span></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="btn-row">
+        <button class="btn ghost small" id="expand-all">Expand all</button>
+        <button class="btn ghost small" id="collapse-all">Collapse all</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn ghost small" id="print-btn">Print</button>
+        <button class="btn ghost small" id="copy-link">Copy share link</button>
+        <a class="btn ghost small" href="#">← Admin</a>
+      </div>
+    </div>
+
+    <div id="sections"></div>
+
+    <div class="footer">Last updated ${fmtDate(f.updatedAt)} · Laundré Franchising Pty Ltd · Commercial in Confidence</div>
+  `;
+
+  renderSections(f);
+
+  document.getElementById('expand-all').onclick = () => {
+    document.querySelectorAll('.section').forEach(s => s.classList.add('open'));
+  };
+  document.getElementById('collapse-all').onclick = () => {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('open'));
+  };
+  document.getElementById('print-btn').onclick = () => {
+    document.querySelectorAll('.section').forEach(s => s.classList.add('open'));
+    setTimeout(() => window.print(), 100);
+  };
+  document.getElementById('copy-link').onclick = () => {
+    navigator.clipboard.writeText(location.href).then(() => toast('Link copied'));
+  };
+}
+
+function renderSections(f) {
+  const container = document.getElementById('sections');
+  container.innerHTML = f.sections.map((s, sIdx) => {
+    const sDone = s.tasks.filter(t => t.done).length;
+    const sTotal = s.tasks.length;
+    const open = sDone < sTotal; // open the ones not yet finished by default
+    return `
+      <div class="section ${open ? 'open' : ''}" data-sid="${s.id}">
+        <div class="section-head" data-toggle>
+          <div class="section-title-wrap">
+            <span class="section-num">${String(sIdx+1).padStart(2,'0')}</span>
+            <h3 class="section-title">${esc(s.title)}</h3>
+          </div>
+          <div class="section-meta">
+            <span class="section-count">${sDone} / ${sTotal}</span>
+            <span class="chev"></span>
+          </div>
+        </div>
+        <div class="section-body">
+          ${s.tasks.map(t => taskHTML(t)).join('')}
+          <div class="add-task-row">
+            <input type="text" placeholder="+ Add a custom task for this section" data-add-input />
+            <button class="btn small" data-add-btn>Add</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // bind events
+  container.querySelectorAll('.section').forEach(sectionEl => {
+    const sid = sectionEl.dataset.sid;
+
+    sectionEl.querySelector('[data-toggle]').addEventListener('click', () => {
+      sectionEl.classList.toggle('open');
+    });
+
+    sectionEl.querySelectorAll('.task').forEach(taskEl => {
+      const tid = taskEl.dataset.tid;
+      taskEl.querySelector('.check').addEventListener('change', (e) => {
+        toggleTask(f, sid, tid, e.target.checked);
+      });
+      const delBtn = taskEl.querySelector('[data-delete]');
+      if (delBtn) {
+        delBtn.addEventListener('click', () => {
+          if (confirm('Remove this custom task?')) deleteTask(f, sid, tid);
+        });
+      }
+    });
+
+    const addInput = sectionEl.querySelector('[data-add-input]');
+    const addBtn   = sectionEl.querySelector('[data-add-btn]');
+    const doAdd = () => {
+      const label = addInput.value.trim();
+      if (!label) return;
+      addTask(f, sid, label);
+      addInput.value = '';
+    };
+    addBtn.addEventListener('click', doAdd);
+    addInput.addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+  });
+}
+
+function taskHTML(t) {
+  return `
+    <div class="task ${t.done ? 'done' : ''}" data-tid="${t.id}">
+      <input type="checkbox" class="check" ${t.done ? 'checked' : ''} aria-label="Mark complete" />
+      <div class="task-body">
+        <div class="task-label">${esc(t.label)}${t.custom ? '<span class="custom-tag">Custom</span>' : ''}</div>
+        ${t.note ? `<div class="task-note">${esc(t.note)}${t.done && t.doneAt ? ' · ticked ' + fmtDate(t.doneAt) : ''}</div>` : (t.done && t.doneAt ? `<div class="task-note">Ticked ${fmtDate(t.doneAt)}</div>` : '')}
+      </div>
+      <div class="task-actions">
+        ${t.custom ? `<button data-delete>Delete</button>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function toggleTask(f, sid, tid, done) {
+  const section = f.sections.find(s => s.id === sid);
+  const task = section?.tasks.find(t => t.id === tid);
+  if (!task) return;
+  task.done = done;
+  task.doneAt = done ? Date.now() : null;
+  Store.save(f);
+  // partial re-render for snappiness
+  updateProgressOnly(f, sid);
+}
+function addTask(f, sid, label) {
+  const section = f.sections.find(s => s.id === sid);
+  if (!section) return;
+  section.tasks.push({
+    id: uid('t'),
+    label,
+    note: '',
+    done: false,
+    custom: true,
+    doneAt: null
+  });
+  Store.save(f);
+  renderSections(f);
+  updateProgressOnly(f);
+  toast('Task added');
+}
+function deleteTask(f, sid, tid) {
+  const section = f.sections.find(s => s.id === sid);
+  if (!section) return;
+  section.tasks = section.tasks.filter(t => t.id !== tid);
+  Store.save(f);
+  renderSections(f);
+  updateProgressOnly(f);
+}
+function updateProgressOnly(f, sid) {
+  const p = franchiseProgress(f);
+  const pn = document.getElementById('pct-num');
+  const pt = document.getElementById('pct-text');
+  const hb = document.getElementById('hero-bar');
+  if (pn) pn.textContent = p.pct;
+  if (pt) pt.textContent = `${p.done} of ${p.total} complete`;
+  if (hb) hb.style.width = p.pct + '%';
+  // section count + task styling
+  if (sid) {
+    const sec = f.sections.find(s => s.id === sid);
+    if (sec) {
+      const sDone = sec.tasks.filter(t => t.done).length;
+      const sEl = document.querySelector(`.section[data-sid="${sid}"]`);
+      if (sEl) {
+        sEl.querySelector('.section-count').textContent = `${sDone} / ${sec.tasks.length}`;
+        sec.tasks.forEach(t => {
+          const te = sEl.querySelector(`.task[data-tid="${t.id}"]`);
+          if (te) te.classList.toggle('done', t.done);
+        });
+      }
+    }
+  }
+}
+</script>
+</body>
+</html>
