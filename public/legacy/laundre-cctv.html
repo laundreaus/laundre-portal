@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · CCTV</title>
+<script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}var r=s&&s.role;if(!a||(r&&r!=='admin'&&r!=='franchisee'))location.replace('laundre-portal.html');})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  .wm{font-family:Georgia,'Times New Roman',serif;font-weight:700;font-size:21px;color:var(--green);letter-spacing:.3px;}
+  button{font-family:inherit;cursor:pointer;}
+  .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;}
+  .btn-green{background:var(--green);color:#fff;} .btn-green:hover{filter:brightness(1.1);}
+  .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);} .btn-ghost:hover{background:#EFEADD;}
+  a.chip{font-size:12.5px;font-weight:700;color:var(--green);text-decoration:none;border:1px solid var(--cream-line);border-radius:7px;padding:8px 12px;}
+  a.chip:hover{background:#EFEADD;}
+  input,select,textarea{font-family:inherit;font-size:13.5px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:9px 11px;width:100%;}
+  textarea{resize:vertical;min-height:64px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(67,94,83,.18);}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;}
+  header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:1120px;margin:0 auto;padding:22px 22px 60px;}
+  h2{font-size:20px;margin:0 0 4px;color:var(--green-d);} .sub{color:#6b7d73;font-size:13px;margin-bottom:18px;}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:18px 20px;margin-bottom:20px;}
+  .card h3{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);}
+  .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+  label{font-size:12px;color:#5f7469;font-weight:600;display:block;margin:0 0 5px;}
+  .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .feeds{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .feed{background:#11201b;border:1px solid var(--cream-line);border-radius:12px;overflow:hidden;position:relative;aspect-ratio:16/9;}
+  .feed iframe,.feed video,.feed img{width:100%;height:100%;border:0;display:block;object-fit:cover;}
+  .feed .lbl{position:absolute;top:8px;left:8px;background:rgba(17,32,27,.75);color:#EAF0EC;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;z-index:2;}
+  .feed .none{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8a9790;font-size:13px;background:#F3F6F3;}
+  .msg{font-size:12.5px;min-height:16px;margin-top:8px;} .msg.ok{color:#2f6b46;} .msg.err{color:#B4472F;}
+  .hint{font-size:11.5px;color:#8a9790;margin-top:8px;line-height:1.6;}
+  .empty{padding:40px;text-align:center;color:#8a9790;background:#fff;border-radius:12px;}
+</style>
+</head>
+<body>
+<header>
+  <span class="wm">Laundré</span>
+  <span class="ttl">· CCTV</span>
+  <span class="spacer"></span>
+  <a class="chip" href="laundre-portal.html">⌂ Portal</a>
+</header>
+<main>
+  <h2 id="head">CCTV</h2>
+  <p class="sub" id="sub"></p>
+
+  <div class="card" id="adminCard" style="display:none">
+    <h3>Configure feeds</h3>
+    <div class="row">
+      <div style="min-width:280px"><label>Laundromat</label><select id="siteSel" onchange="loadSite()"></select></div>
+    </div>
+    <div class="fgrid">
+      <div><label>Feed 1 — embed link or code</label><textarea id="e0" placeholder="https://… or full &lt;iframe&gt;/embed code"></textarea></div>
+      <div><label>Feed 2 — embed link or code</label><textarea id="e1"></textarea></div>
+      <div><label>Feed 3 — embed link or code</label><textarea id="e2"></textarea></div>
+      <div><label>Feed 4 — embed link or code</label><textarea id="e3"></textarea></div>
+    </div>
+    <div class="row" style="margin-top:14px;margin-bottom:0"><button class="btn btn-green" onclick="saveSite()">Save feeds</button><button class="btn btn-ghost" onclick="renderPreview()">Refresh preview</button></div>
+    <div class="msg" id="msg"></div>
+    <p class="hint">Paste a stream URL (goes into an iframe) or a full embed snippet from your camera/NVR provider (RTSP-to-web, Wyze, UniFi Protect share link, YouTube live, etc.). Feeds are stored in this browser for the prototype.</p>
+  </div>
+
+  <div class="card">
+    <h3 id="prevTitle">Live view</h3>
+    <div class="feeds" id="feeds"></div>
+  </div>
+</main>
+
+<script>
+var KEY='laundre_cctv_v1';
+var SITE_FALLBACK=[{id:'sthport',name:'Laundré Southport/Ashmore'},{id:'coomera',name:'Laundré Coomera'},{id:'tweed',name:'Laundré Tweed Heads South'}];
+var sess=null; try{sess=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}
+var isAdmin=!(sess&&sess.role&&sess.role!=='admin');
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function sites(){try{var a=JSON.parse(localStorage.getItem('laundre_sites_v1')||'[]');if(Array.isArray(a)&&a.length)return a.map(function(x){return {id:x.id,name:x.name};});}catch(e){}return SITE_FALLBACK;}
+function store(){try{var o=JSON.parse(localStorage.getItem(KEY)||'{}');return (o&&typeof o==='object')?o:{};}catch(e){return {};}}
+function saveStore(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){}}
+function feedsFor(id){var o=store();var a=o[id];return Array.isArray(a)?a:['','','',''];}
+function locName(id){var s=sites().find(function(x){return x.id===id;});return s?s.name:(id||'your store');}
+
+function currentSiteId(){
+  if(isAdmin){var sel=document.getElementById('siteSel');return sel?sel.value:'';}
+  return sess&&sess.locationId;
+}
+function renderPreview(){
+  var id=currentSiteId();
+  document.getElementById('prevTitle').textContent = isAdmin ? ('Live view — '+locName(id)) : 'Live view';
+  var host=document.getElementById('feeds');
+  var arr=feedsFor(id);
+  var any=arr.some(function(v){return v&&v.trim();});
+  if(!any){host.innerHTML='<div class="empty" style="grid-column:1/-1">No camera feeds set for this laundromat yet.'+(isAdmin?' Add them above.':' Ask your admin to add them.')+'</div>';return;}
+  host.innerHTML='';
+  for(var i=0;i<4;i++){
+    var v=(arr[i]||'').trim();
+    var d=document.createElement('div');d.className='feed';
+    var lbl=document.createElement('span');lbl.className='lbl';lbl.textContent='Cam '+(i+1);d.appendChild(lbl);
+    if(!v){var n=document.createElement('div');n.className='none';n.textContent='No feed';d.appendChild(n);}
+    else if(v.indexOf('<')>=0){var w=document.createElement('div');w.style.cssText='position:absolute;inset:0';w.innerHTML=v;d.appendChild(w);}
+    else{var f=document.createElement('iframe');f.src=v;f.setAttribute('allow','autoplay; fullscreen');f.setAttribute('allowfullscreen','');d.appendChild(f);}
+    host.appendChild(d);
+  }
+}
+function loadSite(){
+  var id=document.getElementById('siteSel').value;var arr=feedsFor(id);
+  for(var i=0;i<4;i++){document.getElementById('e'+i).value=arr[i]||'';}
+  document.getElementById('msg').textContent='';
+  renderPreview();
+}
+function saveSite(){
+  var id=document.getElementById('siteSel').value;var o=store();
+  o[id]=[0,1,2,3].map(function(i){return document.getElementById('e'+i).value.trim();});
+  saveStore(o);
+  var m=document.getElementById('msg');m.className='msg ok';m.textContent='Saved feeds for '+locName(id)+'.';
+  renderPreview();
+}
+function init(){
+  if(isAdmin){
+    document.getElementById('adminCard').style.display='';
+    document.getElementById('head').textContent='CCTV';
+    document.getElementById('sub').textContent='Enter up to 4 camera feeds per laundromat. Each franchisee sees only their own store.';
+    var sel=document.getElementById('siteSel');
+    sel.innerHTML=sites().map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>';}).join('');
+    loadSite();
+  } else {
+    document.getElementById('head').textContent='CCTV — '+locName(sess&&sess.locationId);
+    document.getElementById('sub').textContent='Live camera feeds for your laundromat.';
+    renderPreview();
+  }
+}
+init();
+</script>
+</body>
+</html>

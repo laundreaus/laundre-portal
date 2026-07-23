@@ -1,11 +1,33 @@
 <?php
 namespace App\Http\Controllers;
+use App\Models\{Location, User, Document, Ticket, Franchise};
 class PortalController extends Controller {
-    public function index() { return view('portal'); }
-    // Serves the transitional static tool pages behind auth.
-    public function legacy(string $file) {
-        $path = public_path('legacy/'.basename($file));
-        abort_unless(is_file($path) && str_ends_with($file, '.html'), 404);
-        return response()->file($path);
+    public function index() { return $this->serve('laundre-portal', true); }
+    public function tool(string $page) { return $this->serve($page, false); }
+    private function serve(string $page, bool $isHome = false) {
+        $path = public_path('legacy/'.basename($page).'.html');
+        abort_unless(is_file($path), 404);
+        $html = file_get_contents($path);
+        $html = preg_replace('/(["\'])laundre-portal\.html\1/', '$1/$1', $html);
+        $html = preg_replace('/(["\'])([A-Za-z0-9_\-]+)\.html\1/', '$1/$2$1', $html);
+        $u = auth()->user();
+        $sessionJson = json_encode(['role'=>$u->role,'locationId'=>$u->location_id,'name'=>$u->name,'email'=>$u->email], JSON_UNESCAPED_SLASHES);
+        $bridge = '<style>#login{display:none!important}#app{display:block!important}</style><script>try{localStorage.setItem("laundre_auth","1");localStorage.setItem("laundre_session",'.json_encode($sessionJson).');}catch(e){}</script>';
+        $html = str_ireplace('<head>', '<head>'.$bridge, $html);
+        $logout = '<form id="__llogout" method="POST" action="/logout" style="display:none">'.csrf_field().'</form><script>document.addEventListener("DOMContentLoaded",function(){var b=document.getElementById("logoutBtn");if(b){b.onclick=function(e){e.preventDefault();document.getElementById("__llogout").submit();};}});</script>';
+        $html = str_ireplace('</body>', $logout.'</body>', $html);
+        if ($isHome && $u->role === 'admin') {
+            $counts = [
+                'laundre_sites_v1' => Location::count(),
+                'laundre_users_v1' => User::where('role', '!=', 'admin')->count(),
+                'laundre_documents_v1' => Document::count(),
+                'laundre_tickets_v1' => Ticket::count(),
+                'laundre_crm_v1' => 0,
+                'laundre_franchises_v1' => Franchise::count(),
+            ];
+            $stats = '<script>(function(){var C='.json_encode($counts).';window.count=function(k){return C.hasOwnProperty(k)?C[k]:0;};function r(){try{renderStats();}catch(e){}}r();setTimeout(r,250);})();</script>';
+            $html = str_ireplace('</body>', $stats.'</body>', $html);
+        }
+        return response($html, 200)->header('Content-Type', 'text/html; charset=UTF-8');
     }
 }

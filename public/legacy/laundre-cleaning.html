@@ -155,8 +155,8 @@ function submitClean(){
     by:ME.name||ME.email||'Cleaner',byEmail:ME.email||'',
     items,labels:ITEMS.slice(),notes:document.getElementById('c_notes').value.trim(),issues:document.getElementById('c_issues').value.trim(),
     photos:pendingPhotos.slice(),submittedAt:Date.now()};
-  DATA=DATA.filter(x=>!(x.locationId===loc&&x.date===todayStr())); DATA.push(rec); save();
-  renderCleaner();
+  function finish(){DATA=DATA.filter(x=>!(x.locationId===loc&&x.date===todayStr()));DATA.push(rec);save();renderCleaner();}
+  if(navigator.geolocation){var done=false;var to=setTimeout(function(){if(done)return;done=true;rec.geo={error:'timeout',at:Date.now()};finish();},9000);navigator.geolocation.getCurrentPosition(function(p){if(done)return;done=true;clearTimeout(to);rec.geo={lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy||0),at:Date.now()};finish();},function(err){if(done)return;done=true;clearTimeout(to);rec.geo={error:(err&&err.message)||'denied',at:Date.now()};finish();},{enableHighAccuracy:true,timeout:8000,maximumAge:0});}else{rec.geo={error:'unsupported',at:Date.now()};finish();}
 }
 
 /* ============ ADMIN DASHBOARD ============ */
@@ -205,6 +205,7 @@ function openDetail(locId,date){
   const s=findSub(locId,date); if(!s) return;
   document.getElementById('mTitle').textContent=locName(locId)+' — '+new Date(date+'T00:00').toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long'});
   let h='<div class="kv"><b>Submitted by:</b> '+esc(s.by)+' at '+new Date(s.submittedAt).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+'</div>';
+  if(s.geo){h+='<div class="kv"><b>Location:</b> '+(s.geo.lat?('<a href="https://maps.google.com/?q='+s.geo.lat+','+s.geo.lng+'" target="_blank" rel="noopener">'+s.geo.lat+', '+s.geo.lng+'</a> (+/-'+(s.geo.acc||0)+'m)'):('not captured'+(s.geo.error?' - '+esc(s.geo.error):'')))+(s.geo.at?(' at '+new Date(s.geo.at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})):'')+'</div>';}
   h+='<div style="margin:10px 0">';
   (s.labels&&s.labels.length?s.labels:ITEMS).forEach((it,i)=>{const on=!!(s.items&&s.items[i]);h+='<div class="chk">'+(on?'<span class="y">✓</span>':'<span class="n">✗</span>')+' '+esc(it)+'</div>';});
   h+='</div>';

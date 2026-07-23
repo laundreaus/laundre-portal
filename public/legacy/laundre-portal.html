@@ -182,6 +182,9 @@ document.getElementById('logoutBtn').onclick=()=>{localStorage.removeItem(AUTH_K
 
 /* ---------- Tools (role-scoped) ---------- */
 const TOOLS=[
+  {icon:'📐',name:'Layout Tool',href:'laundre-layout.html',roles:['admin'],desc:'To-scale drag-and-drop fit-out designer: draw the floor, place Fuego washers/dryers and fixtures, and get live area and cost.'},
+  {icon:'📹',name:'CCTV',href:'laundre-cctv.html',roles:['admin','franchisee'],desc:'Enter 4 camera feed embeds per laundromat; each franchisee sees only their store.',fname:'CCTV',fdesc:'Live camera feeds for your laundromat.'},
+  {icon:'📘',name:'Maintenance Docs',href:'laundre-maintenance-docs.html',roles:['admin','maintenance'],desc:'Upload manuals, service guides and technical docs for the maintenance team.',fname:'Maintenance Docs',fdesc:'Manuals, guides and technical docs for your maintenance work.'},
   {icon:'📍',name:'Site Locations',href:'laundre-admin.html',roles:['admin'],desc:'Manage approved laundromat locations, radii and active status.'},
   {icon:'👤',name:'User Management',href:'laundre-users.html',roles:['admin'],desc:'Create franchisee logins and assign each to a laundromat.'},
   {icon:'📈',name:'Reporting',href:'laundre-reporting.html',roles:['admin'],desc:'Upload monthly sales reports (CSV) that feed the dashboard.'},
