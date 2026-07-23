@@ -62,7 +62,7 @@
     </div>
     <div class="row" style="margin-top:14px;margin-bottom:0"><button class="btn btn-green" onclick="saveSite()">Save feeds</button><button class="btn btn-ghost" onclick="renderPreview()">Refresh preview</button></div>
     <div class="msg" id="msg"></div>
-    <p class="hint">Paste a stream URL (goes into an iframe) or a full embed snippet from your camera/NVR provider (RTSP-to-web, Wyze, UniFi Protect share link, YouTube live, etc.). Feeds are stored in this browser for the prototype.</p>
+    <p class="hint">Paste a stream URL (goes into an iframe) or a full embed snippet from your camera/NVR provider (RTSP-to-web, Wyze, UniFi Protect share link, YouTube live, etc.). Feeds are saved to the live system and shared with the assigned franchisee.</p>
   </div>
 
   <div class="card">
@@ -72,16 +72,16 @@
 </main>
 
 <script>
-var KEY='laundre_cctv_v1';
-var SITE_FALLBACK=[{id:'sthport',name:'Laundré Southport/Ashmore'},{id:'coomera',name:'Laundré Coomera'},{id:'tweed',name:'Laundré Tweed Heads South'}];
+var SKEY='cctv';
 var sess=null; try{sess=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}
 var isAdmin=!(sess&&sess.role&&sess.role!=='admin');
+var CSRF=(window.LAUNDRE_CSRF||'');
+var LOCS=[], FEEDS={};
 function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-function sites(){try{var a=JSON.parse(localStorage.getItem('laundre_sites_v1')||'[]');if(Array.isArray(a)&&a.length)return a.map(function(x){return {id:x.id,name:x.name};});}catch(e){}return SITE_FALLBACK;}
-function store(){try{var o=JSON.parse(localStorage.getItem(KEY)||'{}');return (o&&typeof o==='object')?o:{};}catch(e){return {};}}
-function saveStore(o){try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){}}
-function feedsFor(id){var o=store();var a=o[id];return Array.isArray(a)?a:['','','',''];}
-function locName(id){var s=sites().find(function(x){return x.id===id;});return s?s.name:(id||'your store');}
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+function apiGet(u){return fetch(u,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function locName(id){var l=LOCS.find(function(x){return String(x.id)===String(id);});return l?l.name:(id||'your store');}
+function feedsFor(id){var a=FEEDS[String(id)];return Array.isArray(a)?a:['','','',''];}
 
 function currentSiteId(){
   if(isAdmin){var sel=document.getElementById('siteSel');return sel?sel.value:'';}
@@ -89,7 +89,7 @@ function currentSiteId(){
 }
 function renderPreview(){
   var id=currentSiteId();
-  document.getElementById('prevTitle').textContent = isAdmin ? ('Live view — '+locName(id)) : 'Live view';
+  document.getElementById('prevTitle').textContent = isAdmin ? ('Live view \u2014 '+locName(id)) : 'Live view';
   var host=document.getElementById('feeds');
   var arr=feedsFor(id);
   var any=arr.some(function(v){return v&&v.trim();});
@@ -112,25 +112,32 @@ function loadSite(){
   renderPreview();
 }
 function saveSite(){
-  var id=document.getElementById('siteSel').value;var o=store();
-  o[id]=[0,1,2,3].map(function(i){return document.getElementById('e'+i).value.trim();});
-  saveStore(o);
-  var m=document.getElementById('msg');m.className='msg ok';m.textContent='Saved feeds for '+locName(id)+'.';
-  renderPreview();
+  var id=document.getElementById('siteSel').value;
+  FEEDS[String(id)]=[0,1,2,3].map(function(i){return document.getElementById('e'+i).value.trim();});
+  var m=document.getElementById('msg');m.className='msg';m.textContent='Saving\u2026';
+  fetch('/settings-api/'+SKEY,{method:'PUT',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({value:FEEDS})})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(v){FEEDS=(v&&typeof v==='object')?v:FEEDS;m.className='msg ok';m.textContent='Saved feeds for '+locName(id)+'. Franchisees will see these on their next load.';renderPreview();})
+    .catch(function(e){m.className='msg err';m.textContent='Could not save \u2014 '+e.message;});
 }
 function init(){
-  if(isAdmin){
-    document.getElementById('adminCard').style.display='';
-    document.getElementById('head').textContent='CCTV';
-    document.getElementById('sub').textContent='Enter up to 4 camera feeds per laundromat. Each franchisee sees only their own store.';
-    var sel=document.getElementById('siteSel');
-    sel.innerHTML=sites().map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>';}).join('');
-    loadSite();
-  } else {
-    document.getElementById('head').textContent='CCTV — '+locName(sess&&sess.locationId);
-    document.getElementById('sub').textContent='Live camera feeds for your laundromat.';
-    renderPreview();
-  }
+  var loaders=[apiGet('/settings-api/'+SKEY).then(function(v){FEEDS=(v&&typeof v==='object'&&!Array.isArray(v))?v:{};}).catch(function(){FEEDS={};})];
+  if(isAdmin){loaders.push(apiGet('/locations-api').then(function(a){LOCS=Array.isArray(a)?a:[];}).catch(function(){LOCS=[];}));}
+  else{loaders.push(apiGet('/locations-api').then(function(a){LOCS=Array.isArray(a)?a:[];}).catch(function(){LOCS=[];}));}
+  Promise.all(loaders).then(function(){
+    if(isAdmin){
+      document.getElementById('adminCard').style.display='';
+      document.getElementById('head').textContent='CCTV';
+      document.getElementById('sub').textContent='Enter up to 4 camera feeds per laundromat. Saved to the live system so each franchisee sees only their own store.';
+      var sel=document.getElementById('siteSel');
+      sel.innerHTML=LOCS.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>';}).join('');
+      loadSite();
+    } else {
+      document.getElementById('head').textContent='CCTV \u2014 '+locName(sess&&sess.locationId);
+      document.getElementById('sub').textContent='Live camera feeds for your laundromat.';
+      renderPreview();
+    }
+  });
 }
 init();
 </script>

@@ -64,7 +64,7 @@
   <div id="tableWrap"></div>
   <div class="note">
     Assign each non-admin user to a laundromat. Franchisees see their store’s checklist, bookkeeping, documents and support; Cleaners see the daily cleaning checklist; Maintenance see machine guides and the maintenance log — each scoped to their assigned store.
-    Passwords are stored in this browser for the prototype; move to a real backend with hashed passwords for production.
+    Users are saved to the live database with securely hashed passwords, and can log in immediately.
   </div>
 </main>
 
@@ -84,48 +84,69 @@
 </div>
 
 <script>
-const KEY='laundre_users_v1';
-let USERS=[];
-function load(){try{const r=localStorage.getItem(KEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}return [];}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(USERS));}catch(e){}}
+const API='/users-api', LAPI='/locations-api';
+const CSRF=(window.LAUNDRE_CSRF||'');
+let USERS=[], LOCS=[];
 function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function uid(){return 'usr_'+Math.random().toString(36).slice(2,8);}
-function laundromats(){try{const r=localStorage.getItem('laundre_sites_v1');if(r){const a=JSON.parse(r);if(Array.isArray(a))return a.map(s=>({id:s.id,name:s.name}));}}catch(e){}return [];}
-function locName(id){const l=laundromats().find(x=>x.id===id);return l?l.name:'';}
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+function laundromats(){return LOCS;}
+function locName(id){const l=LOCS.find(x=>String(x.id)===String(id));return l?l.name:'';}
+
+async function loadAll(){
+  try{
+    const [locs,users]=await Promise.all([apiGet(LAPI),apiGet(API)]);
+    LOCS=Array.isArray(locs)?locs:[]; USERS=Array.isArray(users)?users:[];
+    render();
+  }catch(e){
+    document.getElementById('tableWrap').innerHTML='<div class="empty">Could not load users — '+esc(e.message)+'. Try reloading the page.</div>';
+  }
+}
 
 function render(){
   document.getElementById('count').textContent=USERS.length+(USERS.length===1?' user':' users');
   const wrap=document.getElementById('tableWrap');
-  if(!USERS.length){wrap.innerHTML='<div class="empty">No users yet. Click “＋ Add user” to create a franchisee login.</div>';return;}
+  if(!USERS.length){wrap.innerHTML='<div class="empty">No users yet. Click \u201c\uFF0B Add user\u201d to create a login.</div>';return;}
   let h='<table><thead><tr><th>User</th><th>Role</th><th>Laundromat</th><th style="text-align:right">Actions</th></tr></thead><tbody>';
   USERS.forEach(u=>{
+    const role=u.role||'franchisee';
     h+='<tr>'
-      +'<td><div class="uname">'+esc(u.name||'—')+'</div><div class="uemail">'+esc(u.email||'')+'</div></td>'
-      +'<td><span class="role '+(u.role==='admin'?'admin':'franchisee')+'">'+esc((u.role||'franchisee').charAt(0).toUpperCase()+(u.role||'franchisee').slice(1))+'</span></td>'
-      +'<td class="loc">'+(u.role==='admin'?'<span class="uemail">All (admin)</span>':esc(locName(u.locationId)||'<span class="uemail">— unassigned —</span>'))+'</td>'
+      +'<td><div class="uname">'+esc(u.name||'\u2014')+'</div><div class="uemail">'+esc(u.email||'')+'</div></td>'
+      +'<td><span class="role '+(role==='admin'?'admin':'franchisee')+'">'+esc(role.charAt(0).toUpperCase()+role.slice(1))+'</span></td>'
+      +'<td class="loc">'+(role==='admin'?'<span class="uemail">All (admin)</span>':esc(locName(u.location_id)||'')||'<span class="uemail">\u2014 unassigned \u2014</span>')+'</td>'
       +'<td><div class="rowbtns"><button class="btn btn-ghost" data-edit="'+u.id+'">Edit</button><button class="btn btn-danger" data-del="'+u.id+'">Delete</button></div></td>'
       +'</tr>';
   });
   h+='</tbody></table>';
   wrap.innerHTML=h;
   wrap.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEditor(b.dataset.edit));
-  wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const u=USERS.find(x=>x.id===b.dataset.del);if(confirm('Delete user “'+(u.name||u.email)+'”?')){USERS=USERS.filter(x=>x.id!==b.dataset.del);save();render();}});
+  wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>delUser(b.dataset.del));
+}
+
+async function delUser(id){
+  const u=USERS.find(x=>String(x.id)===String(id));
+  if(!confirm('Delete user \u201c'+((u&&(u.name||u.email))||'')+'\u201d? This removes their login.'))return;
+  try{
+    const r=await fetch(API+'/'+id,{method:'DELETE',headers:hdrs(false),credentials:'same-origin'});
+    if(!r.ok&&r.status!==204)throw new Error('HTTP '+r.status);
+    await loadAll();
+  }catch(e){alert('Could not delete: '+e.message);}
 }
 
 let editId=null;
 function fillLocations(sel){
-  const locs=laundromats();
-  document.getElementById('f_location').innerHTML='<option value="">— select laundromat —</option>'+locs.map(l=>'<option value="'+l.id+'"'+(l.id===sel?' selected':'')+'>'+esc(l.name)+'</option>').join('');
+  document.getElementById('f_location').innerHTML='<option value="">\u2014 select laundromat \u2014</option>'+LOCS.map(l=>'<option value="'+l.id+'"'+(String(l.id)===String(sel)?' selected':'')+'>'+esc(l.name)+'</option>').join('');
 }
 function toggleLocWrap(){document.getElementById('locWrap').style.display=document.getElementById('f_role').value!=='admin'?'block':'none';}
 function openEditor(id){
-  editId=id;const u=id?USERS.find(x=>x.id===id):null;
+  editId=id?id:null;const u=id?USERS.find(x=>String(x.id)===String(id)):null;
   document.getElementById('etitle').textContent=id?'Edit user':'Add user';
-  document.getElementById('f_name').value=u?u.name:'';
-  document.getElementById('f_email').value=u?u.email:'';
-  document.getElementById('f_password').value=u?u.password:'';
+  document.getElementById('f_name').value=u?(u.name||''):'';
+  document.getElementById('f_email').value=u?(u.email||''):'';
+  document.getElementById('f_password').value='';
+  document.getElementById('f_password').placeholder=id?'Leave blank to keep current':'Set a password';
   document.getElementById('f_role').value=u?(u.role||'franchisee'):'franchisee';
-  fillLocations(u?u.locationId:'');
+  fillLocations(u?u.location_id:'');
   toggleLocWrap();
   document.getElementById('emsg').textContent='';
   document.getElementById('overlay').classList.add('show');
@@ -135,28 +156,33 @@ document.getElementById('f_role').onchange=toggleLocWrap;
 document.getElementById('addBtn').onclick=()=>openEditor(null);
 document.getElementById('eclose').onclick=closeEditor;
 document.getElementById('ecancel').onclick=closeEditor;
-document.getElementById('esave').onclick=()=>{
+document.getElementById('esave').onclick=async ()=>{
   const name=document.getElementById('f_name').value.trim();
   const email=document.getElementById('f_email').value.trim();
   const password=document.getElementById('f_password').value;
   const role=document.getElementById('f_role').value;
-  const locationId=document.getElementById('f_location').value;
+  const location_id=document.getElementById('f_location').value;
   const msg=document.getElementById('emsg');
-  if(!email){msg.textContent='Email / username is required.';return;}
-  if(!password){msg.textContent='Please set a password.';return;}
-  if(email.toLowerCase()==='admin'){msg.textContent='“admin” is reserved for the master login.';return;}
-  const clash=USERS.find(x=>(x.email||'').toLowerCase()===email.toLowerCase() && x.id!==editId);
-  if(clash){msg.textContent='That email is already in use.';return;}
-  if(role!=='admin' && !locationId){msg.textContent='Assign a laundromat for '+role+' accounts.';return;}
-  const rec={id:editId||uid(),name,email,password,role,locationId:role!=='admin'?locationId:null};
-  if(editId)USERS=USERS.map(x=>x.id===editId?rec:x); else USERS.push(rec);
-  save();render();closeEditor();
+  if(!name){msg.textContent='Full name is required.';return;}
+  if(!email){msg.textContent='Email is required.';return;}
+  if(!editId && !password){msg.textContent='Please set a password.';return;}
+  if(role!=='admin' && !location_id){msg.textContent='Assign a laundromat for '+role+' accounts.';return;}
+  const payload={name,email,role,location_id:role!=='admin'?Number(location_id):null};
+  if(password)payload.password=password;
+  const url=editId?(API+'/'+editId):API;
+  const method=editId?'PUT':'POST';
+  try{
+    const r=await fetch(url,{method,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(payload)});
+    if(r.status===422){const j=await r.json();const first=j.errors?Object.values(j.errors)[0][0]:(j.message||'Validation failed');msg.textContent=first;return;}
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    closeEditor();await loadAll();
+  }catch(e){msg.textContent='Could not save: '+e.message;}
 };
 document.getElementById('exportBtn').onclick=()=>{
-  const blob=new Blob([JSON.stringify(USERS,null,2)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify(USERS.map(u=>({name:u.name,email:u.email,role:u.role,location:locName(u.location_id)})),null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='laundre-users.json';a.click();URL.revokeObjectURL(a.href);
 };
-USERS=load();render();
+loadAll();
 </script>
 </body>
 </html>

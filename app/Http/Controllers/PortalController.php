@@ -12,7 +12,7 @@ class PortalController extends Controller {
         $html = preg_replace('/(["\'])([A-Za-z0-9_\-]+)\.html\1/', '$1/$2$1', $html);
         $u = auth()->user();
         $sessionJson = json_encode(['role'=>$u->role,'locationId'=>$u->location_id,'name'=>$u->name,'email'=>$u->email], JSON_UNESCAPED_SLASHES);
-        $bridge = '<style>#login{display:none!important}#app{display:block!important}</style><script>try{localStorage.setItem("laundre_auth","1");localStorage.setItem("laundre_session",'.json_encode($sessionJson).');}catch(e){}</script>';
+        $bridge = '<style>#login{display:none!important}#app{display:block!important}</style><script>try{localStorage.setItem("laundre_auth","1");localStorage.setItem("laundre_session",'.json_encode($sessionJson).');}catch(e){}window.LAUNDRE_CSRF='.json_encode(csrf_token()).';</script>';
         $html = str_ireplace('<head>', '<head>'.$bridge, $html);
         $logout = '<form id="__llogout" method="POST" action="/logout" style="display:none">'.csrf_field().'</form><script>document.addEventListener("DOMContentLoaded",function(){var b=document.getElementById("logoutBtn");if(b){b.onclick=function(e){e.preventDefault();document.getElementById("__llogout").submit();};}});</script>';
         $html = str_ireplace('</body>', $logout.'</body>', $html);
