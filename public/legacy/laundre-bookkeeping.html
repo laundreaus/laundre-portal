@@ -86,58 +86,55 @@
 </main>
 
 <script>
-const STORE_KEY='laundre_bookkeeping_v1';
-const LOC_KEY='laundre_sites_v1';
-const QUARTERS=[['q1','Q1','Jul–Sep · due 28 Oct'],['q2','Q2','Oct–Dec · due 28 Feb'],['q3','Q3','Jan–Mar · due 28 Apr'],['q4','Q4','Apr–Jun · due 28 Jul']];
+const CSRF=(window.LAUNDRE_CSRF||'');
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+const QUARTERS=[['q1','Q1','Jul\u2013Sep \u00b7 due 28 Oct'],['q2','Q2','Oct\u2013Dec \u00b7 due 28 Feb'],['q3','Q3','Jan\u2013Mar \u00b7 due 28 Apr'],['q4','Q4','Apr\u2013Jun \u00b7 due 28 Jul']];
 const CYCLE=['none','lodged','outstanding','na'];
-const LABEL={none:'—',lodged:'✓ Lodged',outstanding:'● Outstanding',na:'N/A'};
-
-let DB={entities:[],status:{}};
-function load(){try{const r=localStorage.getItem(STORE_KEY);if(r){const o=JSON.parse(r);if(o&&typeof o==='object'){o.entities=o.entities||[];o.status=o.status||{};return o;}}}catch(e){}return {entities:[],status:{}};}
-function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(DB));}catch(e){}}
-function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-
-function locations(){try{const r=localStorage.getItem(LOC_KEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a.map(s=>({id:s.id,name:s.name,address:s.address||'',dateApproved:s.dateApproved||''}));}}catch(e){}return [];}
+const LABEL={none:'\u2014',lodged:'\u2713 Lodged',outstanding:'\u25cf Outstanding',na:'N/A'};
+let LOCS=[]; let STATUS={};  // STATUS[locId][fy] = {q1..q4,annual,dates,files}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function locations(){return LOCS;}
 function fmtD(d){if(!d)return '';const dt=new Date(d+'T00:00');return isNaN(dt)?'':dt.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});}
 const ME=(function(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{role:'admin'};}catch(e){return {role:'admin'};}})();
-const ADMIN=ME.role==='admin';
+const ADMIN=!(ME.role&&ME.role!=='admin');
 function rows(){
-  const locs=locations();
-  if(!ADMIN){ return locs.filter(l=>l.id===ME.locationId); }  // franchisee: their site only
-  const ids=new Set(locs.map(l=>l.id));
-  const extra=DB.entities.filter(e=>!ids.has(e.id));
-  return [...locs,...extra];
+  if(!ADMIN){ return LOCS.filter(l=>String(l.id)===String(ME.locationId)); }
+  return LOCS.slice();
 }
-
-/* Financial years */
 function currentFYStart(){const d=new Date();return d.getMonth()>=6?d.getFullYear():d.getFullYear()-1;}
-function fyLabel(y){return y+'–'+String(y+1).slice(2);}
+function fyLabel(y){return y+'\u2013'+String(y+1).slice(2);}
 let FY=currentFYStart();
 function buildFYSel(){
   const cur=currentFYStart();const years=[];for(let y=cur;y>=cur-4;y--)years.push(y);
   document.getElementById('fySel').innerHTML=years.map(y=>'<option value="'+y+'"'+(y===FY?' selected':'')+'>FY '+fyLabel(y)+'</option>').join('');
 }
-
 function rec(rowId){
-  const key=String(FY);
-  DB.status[rowId]=DB.status[rowId]||{};
-  DB.status[rowId][key]=DB.status[rowId][key]||{q1:'none',q2:'none',q3:'none',q4:'none',annual:'none',dates:{},files:{}};
-  const r=DB.status[rowId][key]; r.dates=r.dates||{}; r.files=r.files||{};
+  const key=String(FY); const rid=String(rowId);
+  STATUS[rid]=STATUS[rid]||{};
+  STATUS[rid][key]=STATUS[rid][key]||{q1:'none',q2:'none',q3:'none',q4:'none',annual:'none',dates:{},files:{}};
+  const r=STATUS[rid][key]; r.dates=r.dates||{}; r.files=r.files||{};
   return r;
 }
+async function upsert(rowId){
+  const r=rec(rowId);
+  const body={location_id:Number(rowId),fy:String(FY),q1:r.q1,q2:r.q2,q3:r.q3,q4:r.q4,annual:r.annual,dates:r.dates,files:r.files};
+  try{const resp=await fetch('/bookkeeping-api',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(body)});if(!resp.ok)throw new Error('HTTP '+resp.status);}
+  catch(e){alert('Could not save: '+e.message);}
+}
 function cellHTML(rowId,field){
-  const r=rec(rowId);const st=r[field]||'none';const dt=r.dates&&r.dates[field]?' — '+r.dates[field]:'';
+  const r=rec(rowId);const st=r[field]||'none';const dt=r.dates&&r.dates[field]?' \u2014 '+r.dates[field]:'';
   const f=r.files&&r.files[field];
   const att = f
-    ? '<a class="filelink" href="'+f.url+'" download="'+esc(f.name)+'" title="Download: '+esc(f.name)+'" onclick="event.stopPropagation()">📄</a><button class="filex" data-fx="1" data-row="'+rowId+'" data-f="'+field+'" title="Remove '+esc(f.name)+'">×</button>'
-    : '<button class="attbtn" data-attach="1" data-row="'+rowId+'" data-f="'+field+'" title="Attach record">📎</button>';
+    ? '<a class="filelink" href="'+f.url+'" target="_blank" title="Open: '+esc(f.name)+'" onclick="event.stopPropagation()">\ud83d\udcc4</a><button class="filex" data-fx="1" data-row="'+rowId+'" data-f="'+field+'" title="Remove '+esc(f.name)+'">\u00d7</button>'
+    : '<button class="attbtn" data-attach="1" data-row="'+rowId+'" data-f="'+field+'" title="Attach record">\ud83d\udcce</button>';
   return '<div class="cellwrap"><button class="cell '+st+'" data-row="'+rowId+'" data-f="'+field+'" title="'+LABEL[st]+dt+'">'+LABEL[st]+'</button><div class="attrow">'+att+'</div></div>';
 }
 function render(){
   buildFYSel();
   const rws=rows();
   const wrap=document.getElementById('tableWrap');
-  if(!rws.length){wrap.innerHTML='<div class="empty">No laundromats found. Add them in <b>Site Locations</b>, or use “＋ Add entity” for a bookkeeping-only record.</div>';document.getElementById('stats').innerHTML='';return;}
+  if(!rws.length){wrap.innerHTML='<div class="empty">No laundromats found.</div>';document.getElementById('stats').innerHTML='';return;}
   let h='<table><thead><tr><th class="l">Laundromat</th>'
     +QUARTERS.map(q=>'<th>'+q[1]+'<small>'+q[2]+'</small></th>').join('')
     +'<th>Annual<small>Income tax return</small></th><th>BAS lodged</th></tr></thead><tbody>';
@@ -146,7 +143,7 @@ function render(){
     const r=rec(l.id);
     let rl=0; QUARTERS.forEach(q=>{if(r[q[0]]==='lodged')rl++; if(r[q[0]]!=='na'){basTotal++; if(r[q[0]]==='lodged')basLodged++;}});
     if(r.annual==='lodged')annLodged++;
-    const sub=[l.address?esc(l.address):'',l.dateApproved?'approved '+fmtD(l.dateApproved):''].filter(Boolean).join(' · ');
+    const sub=[l.address?esc(l.address):'',l.date_approved?'approved '+fmtD(l.date_approved):''].filter(Boolean).join(' \u00b7 ');
     h+='<tr><td class="l"><div class="lname">'+esc(l.name)+'</div>'+(sub?'<div class="laddr">'+sub+'</div>':'')+'</td>'
       +QUARTERS.map(q=>'<td>'+cellHTML(l.id,q[0])+'</td>').join('')
       +'<td>'+cellHTML(l.id,'annual')+'</td>'
@@ -154,15 +151,15 @@ function render(){
   });
   h+='</tbody></table>';
   wrap.innerHTML=h;
-  wrap.querySelectorAll('.cell').forEach(b=>b.onclick=()=>{
+  wrap.querySelectorAll('.cell').forEach(b=>b.onclick=async ()=>{
     const r=rec(b.dataset.row);const f=b.dataset.f;
     const next=CYCLE[(CYCLE.indexOf(r[f]||'none')+1)%CYCLE.length];
     r[f]=next;r.dates=r.dates||{};
     r.dates[f]= next==='lodged' ? new Date().toISOString().slice(0,10) : '';
-    save();render();
+    render(); await upsert(b.dataset.row);
   });
   wrap.querySelectorAll('.attbtn').forEach(b=>b.onclick=e=>{e.stopPropagation();pendingTarget={row:b.dataset.row,field:b.dataset.f};fileInput.value='';fileInput.click();});
-  wrap.querySelectorAll('.filex').forEach(b=>b.onclick=e=>{e.stopPropagation();const r=rec(b.dataset.row);if(r.files)delete r.files[b.dataset.f];save();render();});
+  wrap.querySelectorAll('.filex').forEach(b=>b.onclick=async e=>{e.stopPropagation();const r=rec(b.dataset.row);if(r.files)delete r.files[b.dataset.f];render();await upsert(b.dataset.row);});
   const annTotal=rws.length;
   document.getElementById('stats').innerHTML=
     '<div class="stat"><div class="n">'+basLodged+' / '+basTotal+'</div><div class="l">BAS lodged (FY '+fyLabel(FY)+')</div></div>'
@@ -173,33 +170,45 @@ const fileInput=document.getElementById('fileInput');
 let pendingTarget=null;
 fileInput.onchange=()=>{
   const f=fileInput.files[0];if(!f||!pendingTarget)return;
-  if(f.size>3*1024*1024){alert('File too large (max 3MB). Please attach a smaller PDF/scan.');fileInput.value='';return;}
+  if(f.size>8*1024*1024){alert('File too large (max 8MB).');fileInput.value='';return;}
+  const tgt=pendingTarget; pendingTarget=null;
   const rd=new FileReader();
-  rd.onload=()=>{
-    const r=rec(pendingTarget.row);r.files=r.files||{};
-    r.files[pendingTarget.field]={name:f.name,url:rd.result,date:new Date().toISOString().slice(0,10)};
-    pendingTarget=null;fileInput.value='';
-    try{save();}catch(e){alert('Could not save — browser storage may be full from attached files.');}
-    render();
+  rd.onload=async ()=>{
+    try{
+      const up=await fetch('/upload-api',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({data:rd.result,name:f.name})});
+      if(!up.ok)throw new Error('upload HTTP '+up.status);
+      const info=await up.json();
+      const r=rec(tgt.row);r.files=r.files||{};
+      r.files[tgt.field]={name:info.name,url:info.url,date:new Date().toISOString().slice(0,10)};
+      render(); await upsert(tgt.row);
+    }catch(e){alert('Could not attach: '+e.message);}
+    fileInput.value='';
   };
   rd.readAsDataURL(f);
 };
-document.getElementById('fySel').onchange=e=>{FY=+e.target.value;render();};
-document.getElementById('addBtn').onclick=()=>{
-  const name=prompt('Entity / laundromat name (for bookkeeping only — not on the map):');
-  if(name&&name.trim()){DB.entities.push({id:'bk_'+Math.random().toString(36).slice(2,7),name:name.trim(),address:''});save();render();}
-};
+document.getElementById('fySel').onchange=async e=>{FY=+e.target.value;render();};
+var addB=document.getElementById('addBtn'); if(addB) addB.style.display='none';
 document.getElementById('exportBtn').onclick=()=>{
   const out=rows().map(l=>{const r=rec(l.id);const files={};Object.keys(r.files||{}).forEach(k=>{if(r.files[k])files[k]=r.files[k].name;});
     return {name:l.name,fy:'FY '+fyLabel(FY),q1:r.q1,q2:r.q2,q3:r.q3,q4:r.q4,annual:r.annual,dates:r.dates,files};});
   const blob=new Blob([JSON.stringify(out,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='laundre-bookkeeping-'+fyLabel(FY)+'.json';a.click();URL.revokeObjectURL(a.href);
 };
-if(!ADMIN){
-  document.getElementById('addBtn').style.display='none';        // franchisees can't add other entities
-  const loc=document.querySelector('.chip[href="laundre-admin.html"]'); if(loc) loc.style.display='none';
+if(!ADMIN){ var lk=document.querySelector('.chip[href="laundre-admin.html"]'); if(lk) lk.style.display='none'; }
+async function loadAll(){
+  try{
+    const [locs,entries]=await Promise.all([apiGet('/locations-api'),apiGet('/bookkeeping-api')]);
+    LOCS=Array.isArray(locs)?locs:[];
+    STATUS={};
+    (Array.isArray(entries)?entries:[]).forEach(e=>{
+      const rid=String(e.location_id), fy=String(e.fy);
+      STATUS[rid]=STATUS[rid]||{};
+      STATUS[rid][fy]={q1:e.q1||'none',q2:e.q2||'none',q3:e.q3||'none',q4:e.q4||'none',annual:e.annual||'none',dates:e.dates||{},files:e.files||{}};
+    });
+    render();
+  }catch(e){document.getElementById('tableWrap').innerHTML='<div class="empty">Could not load \u2014 '+esc(e.message)+'.</div>';}
 }
-DB=load();render();
+loadAll();
 </script>
 </body>
 </html>

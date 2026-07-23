@@ -94,24 +94,30 @@
 </div>
 
 <script>
-const KEY='laundre_tickets_v1';
+const CSRF=(window.LAUNDRE_CSRF||'');
 function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{role:'admin'};}catch(e){return {role:'admin'};}}
-const ME=SESSION(); const ADMIN=ME.role==='admin';
-let TIX=[], openId=null;
-function load(){try{const r=localStorage.getItem(KEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}return [];}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(TIX));}catch(e){}}
-function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function uid(){return 'tkt_'+Math.random().toString(36).slice(2,8);}
-function laundromats(){try{const r=localStorage.getItem('laundre_sites_v1');if(r){const a=JSON.parse(r);if(Array.isArray(a))return a.map(s=>({id:s.id,name:s.name}));}}catch(e){}return [];}
-function locName(id){const l=laundromats().find(x=>x.id===id);return l?l.name:(id||'—');}
+const ME=SESSION(); const ADMIN=!(ME.role&&ME.role!=='admin');
+let TIX=[], LOCS=[], openId=null;
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+function locName(id){const l=LOCS.find(x=>String(x.id)===String(id));return l?l.name:(id||'\u2014');}
+function ms(v){var t=Date.parse(v);return isNaN(t)?0:t;}
 function fmt(ts){if(!ts)return '';const d=new Date(ts);return d.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'});}
+function normalize(t){return {id:t.id,type:t.type,subject:t.subject,body:t.body,locationId:t.location_id,userName:t.user_name,userEmail:t.user_email,status:t.status,createdAt:ms(t.created_at),responses:(t.messages||[]).map(m=>({from:m.from,role:m.role,text:m.text,at:ms(m.created_at)}))};}
 
-function mine(t){ return ADMIN || t.locationId===ME.locationId || t.userEmail===ME.email; }
+async function loadAll(){
+  try{
+    const [locs,tix]=await Promise.all([apiGet('/locations-api'),apiGet('/tickets-api')]);
+    LOCS=Array.isArray(locs)?locs:[]; TIX=(Array.isArray(tix)?tix:[]).map(normalize);
+    render(); if(openId){openTicket(openId);}
+  }catch(e){document.getElementById('listWrap').innerHTML='<div class="empty">Could not load requests \u2014 '+esc(e.message)+'. Try reloading.</div>';}
+}
 
 function render(){
   if(ADMIN){document.getElementById('adminTools').style.display='flex';document.getElementById('pageTitle').textContent='Support Queue';}
   else {document.getElementById('submitCard').style.display='block';document.getElementById('pageTitle').textContent='Support & Requests';}
-  let rows=TIX.filter(mine);
+  let rows=TIX.slice();
   if(ADMIN){
     const fs=document.getElementById('fStatus').value, ft=document.getElementById('fType').value;
     if(fs)rows=rows.filter(t=>t.status===fs);
@@ -119,7 +125,7 @@ function render(){
   }
   rows.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   const wrap=document.getElementById('listWrap');
-  if(!rows.length){wrap.innerHTML='<div class="empty">'+(ADMIN?'No tickets in the queue.':'You haven’t submitted any requests yet.')+'</div>';return;}
+  if(!rows.length){wrap.innerHTML='<div class="empty">'+(ADMIN?'No tickets in the queue.':'You haven\u2019t submitted any requests yet.')+'</div>';return;}
   let h='<table><thead><tr><th>Request</th><th>Type</th>'+(ADMIN?'<th>Laundromat</th>':'')+'<th>Status</th><th>Updated</th></tr></thead><tbody>';
   rows.forEach(t=>{
     const last=t.responses&&t.responses.length?t.responses[t.responses.length-1].at:t.createdAt;
@@ -137,14 +143,14 @@ function render(){
 }
 
 function openTicket(id){
-  openId=id;const t=TIX.find(x=>x.id===id);if(!t)return;
+  openId=id;const t=TIX.find(x=>String(x.id)===String(id));if(!t)return;
   document.getElementById('dTitle').innerHTML=esc(t.subject)+' <span class="st '+(t.status==='Closed'?'closed':'open')+'" style="margin-left:6px">'+esc(t.status)+'</span>';
-  let h='<div class="tmeta" style="margin-bottom:10px"><span class="tag '+(t.type==='Incident'?'incident':'question')+'">'+esc(t.type)+'</span> · '+esc(locName(t.locationId))+' · '+esc(t.userName||t.userEmail||'')+' · '+fmt(t.createdAt)+'</div>';
+  let h='<div class="tmeta" style="margin-bottom:10px"><span class="tag '+(t.type==='Incident'?'incident':'question')+'">'+esc(t.type)+'</span> \u00b7 '+esc(locName(t.locationId))+' \u00b7 '+esc(t.userName||t.userEmail||'')+' \u00b7 '+fmt(t.createdAt)+'</div>';
   h+='<div class="thread"><div class="bub them"><div class="who">'+esc(t.userName||t.userEmail||'Franchisee')+'</div>'+esc(t.body)+'</div>';
-  (t.responses||[]).forEach(r=>{h+='<div class="bub '+(r.role==='admin'?'staff':'them')+'"><div class="who">'+esc(r.from)+(r.role==='admin'?' · Franchise team':'')+' · '+fmt(r.at)+'</div>'+esc(r.text)+'</div>';});
+  (t.responses||[]).forEach(r=>{h+='<div class="bub '+(r.role==='admin'?'staff':'them')+'"><div class="who">'+esc(r.from)+(r.role==='admin'?' \u00b7 Franchise team':'')+' \u00b7 '+fmt(r.at)+'</div>'+esc(r.text)+'</div>';});
   h+='</div>';
   if(t.status!=='Closed' || ADMIN){
-    h+='<label>Reply</label><textarea id="replyBox" rows="2" placeholder="Type a reply…"></textarea><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">';
+    h+='<label>Reply</label><textarea id="replyBox" rows="2" placeholder="Type a reply\u2026"></textarea><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">';
     if(ADMIN){ h+='<button class="btn btn-ghost" id="toggleStatus">'+(t.status==='Closed'?'Reopen':'Mark closed')+'</button>'; }
     h+='<button class="btn btn-green" id="sendReply">Send reply</button></div>';
   } else {
@@ -153,15 +159,18 @@ function openTicket(id){
   document.getElementById('dBody').innerHTML=h;
   document.getElementById('overlay').classList.add('show');
   const sr=document.getElementById('sendReply');
-  if(sr) sr.onclick=()=>{
+  if(sr) sr.onclick=async ()=>{
     const txt=document.getElementById('replyBox').value.trim();if(!txt)return;
-    t.responses=t.responses||[];
-    t.responses.push({from:ME.name||ME.email||(ADMIN?'Admin':'Franchisee'),role:ME.role||'admin',text:txt,at:Date.now()});
-    if(ADMIN && t.status==='Open'){} // stays open until closed
-    save();openTicket(id);render();
+    sr.disabled=true;
+    try{const r=await fetch('/tickets-api/'+id+'/reply',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({text:txt})});if(!r.ok)throw new Error('HTTP '+r.status);await loadAll();}
+    catch(e){alert('Could not send reply: '+e.message);sr.disabled=false;}
   };
   const ts=document.getElementById('toggleStatus');
-  if(ts) ts.onclick=()=>{t.status=t.status==='Closed'?'Open':'Closed';save();openTicket(id);render();};
+  if(ts) ts.onclick=async ()=>{
+    const ns=t.status==='Closed'?'Open':'Closed';
+    try{const r=await fetch('/tickets-api/'+id+'/status',{method:'PATCH',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({status:ns})});if(!r.ok)throw new Error('HTTP '+r.status);await loadAll();}
+    catch(e){alert('Could not update status: '+e.message);}
+  };
 }
 document.getElementById('dClose').onclick=()=>{document.getElementById('overlay').classList.remove('show');openId=null;};
 
@@ -169,20 +178,23 @@ if(ADMIN){
   document.getElementById('fStatus').onchange=render;
   document.getElementById('fType').onchange=render;
 } else {
-  document.getElementById('submitBtn').onclick=()=>{
+  document.getElementById('submitBtn').onclick=async ()=>{
     const subject=document.getElementById('f_subject').value.trim();
     const body=document.getElementById('f_body').value.trim();
     const msg=document.getElementById('submitMsg');
     if(!subject){msg.textContent='Please enter a subject.';return;}
     if(!body){msg.textContent='Please describe your request.';return;}
-    TIX.push({id:uid(),type:document.getElementById('f_type').value,locationId:ME.locationId||null,
-      userEmail:ME.email||'',userName:ME.name||'',subject,body,status:'Open',createdAt:Date.now(),responses:[]});
-    save();
-    document.getElementById('f_subject').value='';document.getElementById('f_body').value='';msg.textContent='';
-    render();
+    msg.style.color='';msg.textContent='Submitting\u2026';
+    try{
+      const r=await fetch('/tickets-api',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({type:document.getElementById('f_type').value,subject,body})});
+      if(r.status===422){const j=await r.json();msg.style.color='#B4472F';msg.textContent=(j.message||'Please check the form');return;}
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      document.getElementById('f_subject').value='';document.getElementById('f_body').value='';msg.textContent='';
+      await loadAll();
+    }catch(e){msg.style.color='#B4472F';msg.textContent='Could not submit: '+e.message;}
   };
 }
-TIX=load();render();
+loadAll();
 </script>
 </body>
 </html>

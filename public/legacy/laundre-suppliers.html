@@ -105,21 +105,12 @@
 </div>
 
 <script>
-const STORE_KEY='laundre_suppliers_v1';
-const SEED=[
-  {id:'s1',name:'Commercial Laundry Equipment Co.',category:'Equipment',contact:'',phone:'',email:'',website:'',notes:'Washers & dryers — 9/14/18/27kg. Service + parts.'},
-  {id:'s2',name:'Dahua / CCTV Installer',category:'Security',contact:'',phone:'',email:'',website:'',notes:'CCTV cameras + 4TB SSD, data cabinet, install.'},
-  {id:'s3',name:'Rinnai',category:'Plumbing',contact:'',phone:'',email:'',website:'https://www.rinnai.com.au',notes:'Electric HWU (32L) supply.'},
-  {id:'s4',name:'Polytec',category:'Joinery / Finishes',contact:'',phone:'',email:'',website:'https://www.polytec.com.au',notes:'Alicante Stone finish for booth seating & counters.'},
-  {id:'s5',name:'Dulux',category:'Painting',contact:'',phone:'',email:'',website:'https://www.dulux.com.au',notes:'3-coat system / Muruwash finishes.'},
-  {id:'s6',name:'Microcement Flooring Contractor',category:'Flooring',contact:'',phone:'',email:'',website:'',notes:'Decorative screed P4/P5, UltraFlake system.'},
-  {id:'s7',name:'Signage Fabricator',category:'Signage',contact:'',phone:'',email:'',website:'',notes:'Brushed stainless lettering + acrylic panels.'}
-];
-let SUP=[];
-function load(){try{const r=localStorage.getItem(STORE_KEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}const s=SEED.map(x=>({...x,locations:['global']}));save(s);return s;}
-function save(a){SUP=a||SUP;try{localStorage.setItem(STORE_KEY,JSON.stringify(SUP));}catch(e){}}
+const CSRF=(window.LAUNDRE_CSRF||'');
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+let SUP=[], LOCS=[];
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function uid(){return 'sup_'+Math.random().toString(36).slice(2,8);}
+function laundromats(){return LOCS;}
 
 const searchEl=document.getElementById('search'), catEl=document.getElementById('cat'), locFilterEl=document.getElementById('locFilter');
 function categories(){return [...new Set(SUP.map(s=>s.category).filter(Boolean))].sort();}
@@ -128,17 +119,16 @@ function refreshCats(){
   catEl.innerHTML='<option value="">All categories</option>'+cats.map(c=>'<option>'+esc(c)+'</option>').join('');
   document.getElementById('catlist').innerHTML=cats.map(c=>'<option value="'+esc(c)+'">').join('');
 }
-function laundromats(){try{const r=localStorage.getItem('laundre_sites_v1');if(r){const a=JSON.parse(r);if(Array.isArray(a))return a.map(s=>({id:s.id,name:s.name}));}}catch(e){}return [];}
-function tokenLabel(tok){if(tok==='global')return 'All laundromats';if(tok==='head-office')return 'Head Office';const l=laundromats().find(x=>x.id===tok);return l?l.name:tok;}
+function tokenLabel(tok){if(tok==='global')return 'All laundromats';if(tok==='head-office')return 'Head Office';const l=LOCS.find(x=>String(x.id)===String(tok));return l?l.name:tok;}
 function refreshLocFilter(){
-  const cur=locFilterEl.value, locs=laundromats();
+  const cur=locFilterEl.value;
   locFilterEl.innerHTML='<option value="">All locations</option><option value="global">All-laundromats (global)</option><option value="head-office">Head office</option>'
-    +locs.map(l=>'<option value="'+l.id+'">'+esc(l.name)+'</option>').join('');
+    +LOCS.map(l=>'<option value="'+l.id+'">'+esc(l.name)+'</option>').join('');
   locFilterEl.value=cur;
 }
 function locTags(s){
   const toks=s.locations||[];
-  if(!toks.length)return '<span class="muted">—</span>';
+  if(!toks.length)return '<span class="muted">\u2014</span>';
   return toks.map(t=>{const cls=t==='global'?'global':t==='head-office'?'ho':'loc';return '<span class="ltag '+cls+'">'+esc(tokenLabel(t))+'</span>';}).join('');
 }
 function view(){
@@ -146,48 +136,52 @@ function view(){
   return SUP.filter(s=>{
     if(cf && s.category!==cf) return false;
     if(lf){
-      const toks=s.locations||[];
+      const toks=(s.locations||[]).map(String);
       if(lf==='global'){ if(!toks.includes('global')) return false; }
       else if(lf==='head-office'){ if(!toks.includes('head-office')) return false; }
-      else { if(!(toks.includes(lf)||toks.includes('global'))) return false; }
+      else { if(!(toks.includes(String(lf))||toks.includes('global'))) return false; }
     }
     if(!q) return true;
-    return (s.name+' '+s.contact+' '+s.notes+' '+s.email+' '+s.category+' '+(s.locations||[]).map(tokenLabel).join(' ')).toLowerCase().includes(q);
-  }).sort((a,b)=>(a.category||'').localeCompare(b.category||'')||a.name.localeCompare(b.name));
+    return ((s.name||'')+' '+(s.contact||'')+' '+(s.notes||'')+' '+(s.email||'')+' '+(s.category||'')+' '+(s.locations||[]).map(tokenLabel).join(' ')).toLowerCase().includes(q);
+  }).sort((a,b)=>(a.category||'').localeCompare(b.category||'')||(a.name||'').localeCompare(b.name||''));
 }
 function render(){
   refreshCats(); refreshLocFilter();
   document.getElementById('count').textContent=SUP.length+' total';
   const rows=view();
   const wrap=document.getElementById('tableWrap');
-  if(!rows.length){wrap.innerHTML='<div class="empty">No suppliers match. '+(SUP.length?'Adjust your search or filters.':'Click “＋ Add supplier”.')+'</div>';return;}
+  if(!rows.length){wrap.innerHTML='<div class="empty">No suppliers match. '+(SUP.length?'Adjust your search or filters.':'Click \u201c\uFF0B Add supplier\u201d.')+'</div>';return;}
   let h='<table><thead><tr><th>Supplier</th><th>Contact</th><th>Locations</th><th>Notes</th><th style="text-align:right">Actions</th></tr></thead><tbody>';
   rows.forEach(s=>{
-    const web=s.website?'<a href="'+esc(s.website)+'" target="_blank" rel="noopener">website ↗</a>':'';
+    const web=s.website?'<a href="'+esc(s.website)+'" target="_blank" rel="noopener">website \u2197</a>':'';
     const mail=s.email?'<a href="mailto:'+esc(s.email)+'">'+esc(s.email)+'</a>':'';
     h+='<tr>'
       +'<td><div class="sname">'+esc(s.name)+'</div>'+(s.category?'<div style="margin-top:4px"><span class="scat">'+esc(s.category)+'</span></div>':'')+(web?'<div class="muted" style="margin-top:4px">'+web+'</div>':'')+'</td>'
       +'<td>'+(s.contact?esc(s.contact)+'<br>':'')+(s.phone?'<span class="muted">'+esc(s.phone)+'</span><br>':'')+(mail||'')+'</td>'
       +'<td>'+locTags(s)+'</td>'
-      +'<td class="muted">'+esc(s.notes||'—')+'</td>'
+      +'<td class="muted">'+esc(s.notes||'\u2014')+'</td>'
       +'<td><div class="rowbtns"><button class="btn btn-ghost" data-edit="'+s.id+'">Edit</button><button class="btn btn-danger" data-del="'+s.id+'">Delete</button></div></td>'
       +'</tr>';
   });
   h+='</tbody></table>';
   wrap.innerHTML=h;
   wrap.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEditor(b.dataset.edit));
-  wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const s=SUP.find(x=>x.id===b.dataset.del);if(confirm('Delete “'+s.name+'”?')){SUP=SUP.filter(x=>x.id!==b.dataset.del);save();render();}});
+  wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>delSup(b.dataset.del));
+}
+async function delSup(id){
+  const s=SUP.find(x=>String(x.id)===String(id));if(!confirm('Delete \u201c'+((s&&s.name)||'')+'\u201d?'))return;
+  try{const r=await fetch('/suppliers-api/'+id,{method:'DELETE',headers:hdrs(false),credentials:'same-origin'});if(!r.ok&&r.status!==204)throw new Error('HTTP '+r.status);await loadAll();}catch(e){alert('Could not delete: '+e.message);}
 }
 searchEl.oninput=render; catEl.onchange=render; locFilterEl.onchange=render;
 
 function renderLocPick(selected){
-  const sel=new Set(selected||[]); const locs=laundromats(); const isGlobal=sel.has('global');
-  let h='<div class="lrow"><input type="checkbox" id="tk_global" data-tok="global"'+(isGlobal?' checked':'')+'><label for="tk_global" style="font-weight:700;color:var(--green-d)">🌐 All laundromats (global)</label></div>';
-  h+='<div class="lrow"><input type="checkbox" id="tk_ho" data-tok="head-office"'+(sel.has('head-office')?' checked':'')+'><label for="tk_ho" style="font-weight:700">🏢 Head Office</label></div>';
+  const sel=new Set((selected||[]).map(String)); const isGlobal=sel.has('global');
+  let h='<div class="lrow"><input type="checkbox" id="tk_global" data-tok="global"'+(isGlobal?' checked':'')+'><label for="tk_global" style="font-weight:700;color:var(--green-d)">\ud83c\udf10 All laundromats (global)</label></div>';
+  h+='<div class="lrow"><input type="checkbox" id="tk_ho" data-tok="head-office"'+(sel.has('head-office')?' checked':'')+'><label for="tk_ho" style="font-weight:700">\ud83c\udfe2 Head Office</label></div>';
   h+='<div class="divider"></div><div class="hd">Laundromats</div>';
-  h+= locs.length
-    ? '<div class="loclist">'+locs.map(l=>'<div class="lrow"><input type="checkbox" data-tok="'+l.id+'"'+(sel.has(l.id)?' checked':'')+'><label>'+esc(l.name)+'</label></div>').join('')+'</div>'
-    : '<div class="muted" style="font-size:12px">No laundromats yet — add them in Site Locations.</div>';
+  h+= LOCS.length
+    ? '<div class="loclist">'+LOCS.map(l=>'<div class="lrow"><input type="checkbox" data-tok="'+l.id+'"'+(sel.has(String(l.id))?' checked':'')+'><label>'+esc(l.name)+'</label></div>').join('')+'</div>'
+    : '<div class="muted" style="font-size:12px">No laundromats yet.</div>';
   const pick=document.getElementById('locPick');
   pick.className='locpick'+(isGlobal?' dim':'');
   pick.innerHTML=h;
@@ -196,15 +190,15 @@ function renderLocPick(selected){
 
 let editId=null;
 function openEditor(id){
-  editId=id; const s=id?SUP.find(x=>x.id===id):null;
+  editId=id?id:null; const s=id?SUP.find(x=>String(x.id)===String(id)):null;
   document.getElementById('etitle').textContent=id?'Edit supplier':'Add supplier';
-  document.getElementById('f_name').value=s?s.name:'';
-  document.getElementById('f_category').value=s?s.category:'';
-  document.getElementById('f_contact').value=s?s.contact:'';
-  document.getElementById('f_phone').value=s?s.phone:'';
-  document.getElementById('f_email').value=s?s.email:'';
-  document.getElementById('f_website').value=s?s.website:'';
-  document.getElementById('f_notes').value=s?s.notes:'';
+  document.getElementById('f_name').value=s?(s.name||''):'';
+  document.getElementById('f_category').value=s?(s.category||''):'';
+  document.getElementById('f_contact').value=s?(s.contact||''):'';
+  document.getElementById('f_phone').value=s?(s.phone||''):'';
+  document.getElementById('f_email').value=s?(s.email||''):'';
+  document.getElementById('f_website').value=s?(s.website||''):'';
+  document.getElementById('f_notes').value=s?(s.notes||''):'';
   document.getElementById('emsg').textContent='';
   refreshCats();
   renderLocPick(s?(s.locations||[]):[]);
@@ -214,12 +208,13 @@ function closeEditor(){document.getElementById('overlay').classList.remove('show
 document.getElementById('addBtn').onclick=()=>openEditor(null);
 document.getElementById('eclose').onclick=closeEditor;
 document.getElementById('ecancel').onclick=closeEditor;
-document.getElementById('esave').onclick=()=>{
+document.getElementById('esave').onclick=async ()=>{
   const name=document.getElementById('f_name').value.trim();
-  if(!name){document.getElementById('emsg').textContent='Please enter a supplier name.';return;}
+  const msg=document.getElementById('emsg');
+  if(!name){msg.textContent='Please enter a supplier name.';return;}
   let toks=[...document.querySelectorAll('#locPick input:checked')].map(i=>i.dataset.tok);
-  if(toks.includes('global')) toks=toks.filter(t=>t==='global'||t==='head-office'); // global overrides individual laundromats
-  const rec={id:editId||uid(),name,
+  if(toks.includes('global')) toks=toks.filter(t=>t==='global'||t==='head-office');
+  const rec={name,
     category:document.getElementById('f_category').value.trim(),
     contact:document.getElementById('f_contact').value.trim(),
     phone:document.getElementById('f_phone').value.trim(),
@@ -227,8 +222,14 @@ document.getElementById('esave').onclick=()=>{
     website:document.getElementById('f_website').value.trim(),
     notes:document.getElementById('f_notes').value.trim(),
     locations:toks};
-  if(editId)SUP=SUP.map(x=>x.id===editId?rec:x); else SUP.push(rec);
-  save();render();closeEditor();
+  const url=editId?('/suppliers-api/'+editId):'/suppliers-api';
+  const method=editId?'PUT':'POST';
+  try{
+    const r=await fetch(url,{method,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(rec)});
+    if(r.status===422){const j=await r.json();msg.textContent=(j.errors?Object.values(j.errors)[0][0]:(j.message||'Check the form'));return;}
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    closeEditor();await loadAll();
+  }catch(e){msg.textContent='Could not save: '+e.message;}
 };
 document.getElementById('exportBtn').onclick=()=>{
   const blob=new Blob([JSON.stringify(SUP,null,2)],{type:'application/json'});
@@ -237,10 +238,19 @@ document.getElementById('exportBtn').onclick=()=>{
 document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();
 document.getElementById('importFile').onchange=e=>{
   const f=e.target.files[0];if(!f)return;const rd=new FileReader();
-  rd.onload=()=>{try{const a=JSON.parse(rd.result);if(Array.isArray(a)){SUP=a;save();render();alert('Imported '+a.length+' suppliers.');}else alert('Invalid file.');}catch(err){alert('Could not read file: '+err.message);}};
+  rd.onload=async ()=>{try{const a=JSON.parse(rd.result);if(!Array.isArray(a)){alert('Invalid file.');return;}
+    let n=0;for(const rec of a){const {id,...body}=rec;const r=await fetch('/suppliers-api',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(body)});if(r.ok)n++;}
+    await loadAll();alert('Imported '+n+' suppliers.');}catch(err){alert('Could not read file: '+err.message);}};
   rd.readAsText(f);e.target.value='';
 };
-SUP=load();render();
+async function loadAll(){
+  try{
+    const [locs,sup]=await Promise.all([apiGet('/locations-api'),apiGet('/suppliers-api')]);
+    LOCS=Array.isArray(locs)?locs:[]; SUP=Array.isArray(sup)?sup:[];
+    render();
+  }catch(e){document.getElementById('tableWrap').innerHTML='<div class="empty">Could not load suppliers \u2014 '+esc(e.message)+'.</div>';}
+}
+loadAll();
 </script>
 </body>
 </html>
