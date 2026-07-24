@@ -83,22 +83,23 @@
 </div></div>
 
 <script>
-const KEY='laundre_cleaning_v1';
-const ITEMS_KEY='laundre_cleaning_items_v1';
+const CSRF=(window.LAUNDRE_CSRF||'');
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+async function apiSend(u,method,body){const r=await fetch(u,{method:method,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(body)});if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();}
 const DEFAULT_ITEMS=['Bins emptied','Lint traps emptied','Floors mopped','Surfaces wiped','Machines & benches wiped'];
-function loadItems(){try{const r=localStorage.getItem(ITEMS_KEY);if(r){const a=JSON.parse(r);if(Array.isArray(a)&&a.length)return a;}}catch(e){}return DEFAULT_ITEMS.slice();}
-function saveItems(){try{localStorage.setItem(ITEMS_KEY,JSON.stringify(ITEMS));}catch(e){}}
-let ITEMS=loadItems();
+let ITEMS=DEFAULT_ITEMS.slice();
+async function saveItemsRemote(){try{await apiSend('/cleaning-items-api','POST',{items:ITEMS});}catch(e){alert('Could not save checklist items: '+e.message);}}
 function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{role:'admin'};}catch(e){return {role:'admin'};}}
-const ME=SESSION(); const ADMIN=ME.role==='admin';
-let DATA=[];
-function load(){try{const r=localStorage.getItem(KEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}return [];}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(DATA));}catch(e){alert('Storage full — try fewer/smaller photos.');}}
+const ME=SESSION(); const ADMIN=!(ME.role&&ME.role!=='admin');
+function ms(t){if(!t)return 0;var n=Date.parse(t);return isNaN(n)?0:n;}
+let DATA=[]; let LOCS=[];
+function normalize(r){return {id:r.id,locationId:r.location_id,date:(''+(r.date||'')).slice(0,10),by:r.by,items:r.items||{},labels:r.labels||[],notes:r.notes,issues:r.issues,photos:r.photos||[],geo:r.geo||null,submittedAt:ms(r.updated_at||r.created_at)};}
+async function reloadData(){DATA=(await apiGet('/cleaning-api')).map(normalize);}
 function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function uid(){return 'cl_'+Math.random().toString(36).slice(2,8);}
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-function laundromats(){try{const r=localStorage.getItem('laundre_sites_v1');if(r){const a=JSON.parse(r);if(Array.isArray(a))return a.map(s=>({id:s.id,name:s.name}));}}catch(e){}return [];}
-function locName(id){const l=laundromats().find(x=>x.id===id);return l?l.name:(id||'—');}
+function laundromats(){return LOCS;}
+function locName(id){const l=LOCS.find(x=>x.id===id);return l?l.name:(id||'—');}
 function findSub(locId,date){return DATA.find(x=>x.locationId===locId && x.date===date);}
 function dayLabel(ds){const d=new Date(ds+'T00:00');return d.toLocaleDateString('en-AU',{weekday:'short'})+' '+d.getDate();}
 
@@ -149,14 +150,15 @@ function renderPhotos(){
   document.getElementById('addphoto').onclick=()=>document.getElementById('photoInput').click();
 }
 function submitClean(){
-  const loc=ME.locationId; const items={};
+  const items={};
   document.querySelectorAll('.citem').forEach(el=>{items[+el.dataset.ci]=el.querySelector('input').checked;});
-  const rec={id:(findSub(loc,todayStr())||{}).id||uid(),locationId:loc,date:todayStr(),
-    by:ME.name||ME.email||'Cleaner',byEmail:ME.email||'',
-    items,labels:ITEMS.slice(),notes:document.getElementById('c_notes').value.trim(),issues:document.getElementById('c_issues').value.trim(),
-    photos:pendingPhotos.slice(),submittedAt:Date.now()};
-  function finish(){DATA=DATA.filter(x=>!(x.locationId===loc&&x.date===todayStr()));DATA.push(rec);save();renderCleaner();}
-  if(navigator.geolocation){var done=false;var to=setTimeout(function(){if(done)return;done=true;rec.geo={error:'timeout',at:Date.now()};finish();},9000);navigator.geolocation.getCurrentPosition(function(p){if(done)return;done=true;clearTimeout(to);rec.geo={lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy||0),at:Date.now()};finish();},function(err){if(done)return;done=true;clearTimeout(to);rec.geo={error:(err&&err.message)||'denied',at:Date.now()};finish();},{enableHighAccuracy:true,timeout:8000,maximumAge:0});}else{rec.geo={error:'unsupported',at:Date.now()};finish();}
+  const body={date:todayStr(),items,labels:ITEMS.slice(),
+    notes:document.getElementById('c_notes').value.trim(),issues:document.getElementById('c_issues').value.trim(),
+    photos:pendingPhotos.slice(),geo:null};
+  const msg=document.getElementById('msg'), btn=document.getElementById('submitBtn');
+  btn.disabled=true; msg.style.color='#6b7d73'; msg.textContent='Saving…';
+  function finish(){apiSend('/cleaning-api','POST',body).then(reloadData).then(renderCleaner).catch(e=>{btn.disabled=false;msg.style.color='#B4472F';msg.textContent='Could not submit: '+e.message;});}
+  if(navigator.geolocation){var done=false;var to=setTimeout(function(){if(done)return;done=true;body.geo={error:'timeout',at:Date.now()};finish();},9000);navigator.geolocation.getCurrentPosition(function(p){if(done)return;done=true;clearTimeout(to);body.geo={lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy||0),at:Date.now()};finish();},function(err){if(done)return;done=true;clearTimeout(to);body.geo={error:(err&&err.message)||'denied',at:Date.now()};finish();},{enableHighAccuracy:true,timeout:8000,maximumAge:0});}else{body.geo={error:'unsupported',at:Date.now()};finish();}
 }
 
 /* ============ ADMIN DASHBOARD ============ */
@@ -195,9 +197,9 @@ function renderAdmin(){
 function wireItems(){
   const el=document.getElementById('itemsList'); if(!el) return;
   el.innerHTML=ITEMS.map((it,i)=>'<div class="itemrow"><span>'+esc(it)+'</span><button data-ri="'+i+'" title="Remove">×</button></div>').join('')||'<div class="sub" style="margin:0">No items yet.</div>';
-  el.querySelectorAll('[data-ri]').forEach(b=>b.onclick=()=>{if(ITEMS.length<=1){alert('Keep at least one item.');return;}ITEMS.splice(+b.dataset.ri,1);saveItems();renderAdmin();});
+  el.querySelectorAll('[data-ri]').forEach(b=>b.onclick=async()=>{if(ITEMS.length<=1){alert('Keep at least one item.');return;}ITEMS.splice(+b.dataset.ri,1);await saveItemsRemote();renderAdmin();});
   const add=document.getElementById('addItemBtn'), inp=document.getElementById('newItem');
-  const doAdd=()=>{const v=inp.value.trim();if(!v)return;ITEMS.push(v);saveItems();renderAdmin();};
+  const doAdd=async()=>{const v=inp.value.trim();if(!v)return;ITEMS.push(v);await saveItemsRemote();renderAdmin();};
   if(add) add.onclick=doAdd;
   if(inp) inp.addEventListener('keydown',e=>{if(e.key==='Enter')doAdd();});
 }
@@ -217,8 +219,16 @@ function openDetail(locId,date){
 }
 document.getElementById('mClose').onclick=()=>document.getElementById('overlay').classList.remove('show');
 
-DATA=load();
-if(ADMIN) renderAdmin(); else renderCleaner();
+async function boot(){
+  try{
+    const [locs,data,items]=await Promise.all([apiGet('/locations-api'),apiGet('/cleaning-api'),apiGet('/cleaning-items-api')]);
+    LOCS=(locs||[]).map(s=>({id:s.id,name:s.name}));
+    DATA=(data||[]).map(normalize);
+    if(Array.isArray(items)&&items.length)ITEMS=items;
+  }catch(e){document.getElementById('main').innerHTML='<div class="empty">Could not load cleaning data — please refresh. ('+esc(e.message)+')</div>';return;}
+  if(ADMIN) renderAdmin(); else renderCleaner();
+}
+boot();
 </script>
 </body>
 </html>

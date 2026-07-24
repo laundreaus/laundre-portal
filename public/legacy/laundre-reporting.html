@@ -68,20 +68,16 @@
 </main>
 
 <script>
-const KEY='laundre_sales_v1';
-const SALES_SEED=[{"locationId":"coomera","site":"Coomera","date":"2026-06-01","revenue":760.2,"txns":57},{"locationId":"coomera","site":"Coomera","date":"2026-06-02","revenue":425.25,"txns":41},{"locationId":"coomera","site":"Coomera","date":"2026-06-03","revenue":574.35,"txns":54},{"locationId":"coomera","site":"Coomera","date":"2026-06-04","revenue":576.45,"txns":42},{"locationId":"coomera","site":"Coomera","date":"2026-06-05","revenue":715.05,"txns":65},{"locationId":"coomera","site":"Coomera","date":"2026-06-06","revenue":660.45,"txns":53},{"locationId":"coomera","site":"Coomera","date":"2026-06-07","revenue":1117.2,"txns":101},{"locationId":"coomera","site":"Coomera","date":"2026-06-08","revenue":1118.25,"txns":91},{"locationId":"coomera","site":"Coomera","date":"2026-06-09","revenue":849.45,"txns":81},{"locationId":"coomera","site":"Coomera","date":"2026-06-10","revenue":1236.9,"txns":123},{"locationId":"coomera","site":"Coomera","date":"2026-06-11","revenue":1288.35,"txns":117},{"locationId":"coomera","site":"Coomera","date":"2026-06-12","revenue":1115.1,"txns":106},{"locationId":"coomera","site":"Coomera","date":"2026-06-13","revenue":1193.85,"txns":104},{"locationId":"coomera","site":"Coomera","date":"2026-06-14","revenue":1375.5,"txns":117},{"locationId":"coomera","site":"Coomera","date":"2026-06-15","revenue":1239.0,"txns":99},{"locationId":"coomera","site":"Coomera","date":"2026-06-16","revenue":1107.75,"txns":99},{"locationId":"coomera","site":"Coomera","date":"2026-06-17","revenue":733.95,"txns":72},{"locationId":"coomera","site":"Coomera","date":"2026-06-18","revenue":583.8,"txns":54},{"locationId":"coomera","site":"Coomera","date":"2026-06-19","revenue":644.7,"txns":60},{"locationId":"coomera","site":"Coomera","date":"2026-06-20","revenue":948.15,"txns":78},{"locationId":"coomera","site":"Coomera","date":"2026-06-21","revenue":1471.05,"txns":129},{"locationId":"coomera","site":"Coomera","date":"2026-06-22","revenue":607.95,"txns":64},{"locationId":"coomera","site":"Coomera","date":"2026-06-23","revenue":655.2,"txns":50},{"locationId":"coomera","site":"Coomera","date":"2026-06-24","revenue":556.5,"txns":47},{"locationId":"coomera","site":"Coomera","date":"2026-06-25","revenue":648.9,"txns":57},{"locationId":"coomera","site":"Coomera","date":"2026-06-26","revenue":999.6,"txns":87},{"locationId":"coomera","site":"Coomera","date":"2026-06-27","revenue":847.35,"txns":78},{"locationId":"coomera","site":"Coomera","date":"2026-06-28","revenue":1346.1,"txns":130},{"locationId":"coomera","site":"Coomera","date":"2026-06-29","revenue":773.85,"txns":70},{"locationId":"coomera","site":"Coomera","date":"2026-06-30","revenue":1167.6,"txns":113},{"locationId":"sthport","site":"Southport","date":"2026-06-01","revenue":291.2,"txns":27},{"locationId":"sthport","site":"Southport","date":"2026-06-02","revenue":293.28,"txns":21},{"locationId":"sthport","site":"Southport","date":"2026-06-03","revenue":486.25,"txns":36},{"locationId":"sthport","site":"Southport","date":"2026-06-04","revenue":182.75,"txns":17},{"locationId":"sthport","site":"Southport","date":"2026-06-05","revenue":287.21,"txns":24},{"locationId":"sthport","site":"Southport","date":"2026-06-06","revenue":531.96,"txns":45},{"locationId":"sthport","site":"Southport","date":"2026-06-07","revenue":582.16,"txns":56},{"locationId":"sthport","site":"Southport","date":"2026-06-08","revenue":326.13,"txns":30},{"locationId":"sthport","site":"Southport","date":"2026-06-09","revenue":542.98,"txns":35},{"locationId":"sthport","site":"Southport","date":"2026-06-10","revenue":543.78,"txns":48},{"locationId":"sthport","site":"Southport","date":"2026-06-11","revenue":969.36,"txns":88},{"locationId":"sthport","site":"Southport","date":"2026-06-12","revenue":288.27,"txns":24},{"locationId":"sthport","site":"Southport","date":"2026-06-13","revenue":776.14,"txns":65},{"locationId":"sthport","site":"Southport","date":"2026-06-14","revenue":529.32,"txns":53},{"locationId":"sthport","site":"Southport","date":"2026-06-15","revenue":372.09,"txns":34},{"locationId":"sthport","site":"Southport","date":"2026-06-16","revenue":808.6,"txns":47},{"locationId":"sthport","site":"Southport","date":"2026-06-17","revenue":346.32,"txns":27},{"locationId":"sthport","site":"Southport","date":"2026-06-18","revenue":304.06,"txns":23},{"locationId":"sthport","site":"Southport","date":"2026-06-19","revenue":324.0,"txns":21},{"locationId":"sthport","site":"Southport","date":"2026-06-20","revenue":384.09,"txns":34},{"locationId":"sthport","site":"Southport","date":"2026-06-21","revenue":731.75,"txns":65},{"locationId":"sthport","site":"Southport","date":"2026-06-22","revenue":204.31,"txns":18},{"locationId":"sthport","site":"Southport","date":"2026-06-23","revenue":757.73,"txns":46},{"locationId":"sthport","site":"Southport","date":"2026-06-24","revenue":415.41,"txns":37},{"locationId":"sthport","site":"Southport","date":"2026-06-25","revenue":385.73,"txns":34},{"locationId":"sthport","site":"Southport","date":"2026-06-26","revenue":318.76,"txns":26},{"locationId":"sthport","site":"Southport","date":"2026-06-27","revenue":518.79,"txns":45},{"locationId":"sthport","site":"Southport","date":"2026-06-28","revenue":635.73,"txns":58},{"locationId":"sthport","site":"Southport","date":"2026-06-29","revenue":284.12,"txns":27},{"locationId":"sthport","site":"Southport","date":"2026-06-30","revenue":646.99,"txns":52},{"locationId":"tweed","site":"Tweed","date":"2026-06-01","revenue":799.05,"txns":80},{"locationId":"tweed","site":"Tweed","date":"2026-06-02","revenue":519.75,"txns":60},{"locationId":"tweed","site":"Tweed","date":"2026-06-03","revenue":354.9,"txns":36},{"locationId":"tweed","site":"Tweed","date":"2026-06-04","revenue":656.25,"txns":78},{"locationId":"tweed","site":"Tweed","date":"2026-06-05","revenue":323.4,"txns":40},{"locationId":"tweed","site":"Tweed","date":"2026-06-06","revenue":530.25,"txns":53},{"locationId":"tweed","site":"Tweed","date":"2026-06-07","revenue":1151.85,"txns":114},{"locationId":"tweed","site":"Tweed","date":"2026-06-08","revenue":1115.1,"txns":118},{"locationId":"tweed","site":"Tweed","date":"2026-06-09","revenue":1089.9,"txns":93},{"locationId":"tweed","site":"Tweed","date":"2026-06-10","revenue":936.6,"txns":104},{"locationId":"tweed","site":"Tweed","date":"2026-06-11","revenue":1026.9,"txns":108},{"locationId":"tweed","site":"Tweed","date":"2026-06-12","revenue":1227.45,"txns":114},{"locationId":"tweed","site":"Tweed","date":"2026-06-13","revenue":1088.85,"txns":99},{"locationId":"tweed","site":"Tweed","date":"2026-06-14","revenue":1295.75,"txns":131},{"locationId":"tweed","site":"Tweed","date":"2026-06-15","revenue":871.5,"txns":94},{"locationId":"tweed","site":"Tweed","date":"2026-06-16","revenue":1012.2,"txns":116},{"locationId":"tweed","site":"Tweed","date":"2026-06-17","revenue":531.3,"txns":56},{"locationId":"tweed","site":"Tweed","date":"2026-06-18","revenue":888.32,"txns":97},{"locationId":"tweed","site":"Tweed","date":"2026-06-19","revenue":764.43,"txns":74},{"locationId":"tweed","site":"Tweed","date":"2026-06-20","revenue":663.61,"txns":58},{"locationId":"tweed","site":"Tweed","date":"2026-06-21","revenue":1246.37,"txns":119},{"locationId":"tweed","site":"Tweed","date":"2026-06-22","revenue":942.91,"txns":97},{"locationId":"tweed","site":"Tweed","date":"2026-06-23","revenue":763.36,"txns":75},{"locationId":"tweed","site":"Tweed","date":"2026-06-24","revenue":811.66,"txns":74},{"locationId":"tweed","site":"Tweed","date":"2026-06-25","revenue":853.66,"txns":87},{"locationId":"tweed","site":"Tweed","date":"2026-06-26","revenue":921.91,"txns":92},{"locationId":"tweed","site":"Tweed","date":"2026-06-27","revenue":1067.86,"txns":108},{"locationId":"tweed","site":"Tweed","date":"2026-06-28","revenue":1110.9,"txns":105},{"locationId":"tweed","site":"Tweed","date":"2026-06-29","revenue":1132.97,"txns":99},{"locationId":"tweed","site":"Tweed","date":"2026-06-30","revenue":1097.26,"txns":112}];
-function loadSales(){try{const r=localStorage.getItem(KEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}const s=SALES_SEED.slice();save(s);return s;}
-function save(a){SALES=a||SALES;try{localStorage.setItem(KEY,JSON.stringify(SALES));}catch(e){alert('Storage full.');}}
-let SALES=[];
-function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+const CSRF=(window.LAUNDRE_CSRF||'');
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+let SALES=[], LOCS=[];
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function AUD(n){return '$'+(Math.round((n||0)*100)/100).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});}
-function laundromats(){try{const r=localStorage.getItem('laundre_sites_v1');if(r){const a=JSON.parse(r);if(Array.isArray(a))return a.map(s=>({id:s.id,name:s.name}));}}catch(e){}return [];}
-function locName(id){const l=laundromats().find(x=>x.id===id);return l?l.name:null;}
+function locName(id){const l=LOCS.find(x=>String(x.id)===String(id));return l?l.name:null;}
 function monthLabel(ym){const[y,m]=ym.split('-');return new Date(y,m-1,1).toLocaleDateString('en-AU',{month:'long',year:'numeric'});}
-
-/* ---- CSV parser (quoted fields) ---- */
 function parseCSV(text){
-  text=text.replace(/^﻿/,'');const rows=[];let i=0,f='',row=[],q=false;
+  text=text.replace(/^\ufeff/,'');const rows=[];let i=0,f='',row=[],q=false;
   while(i<text.length){const c=text[i];
     if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i+=2;continue;} q=false;i++;continue;} f+=c;i++;continue; }
     if(c==='"'){q=true;i++;continue;}
@@ -93,10 +89,8 @@ function parseCSV(text){
   if(f.length||row.length){row.push(f);rows.push(row);}
   return rows;
 }
-
-/* ---- Parse a transactions CSV into daily aggregates ---- */
 let staged=null;
-function guessSite(fn){const f=fn.toLowerCase();if(f.includes('southport'))return 'sthport';if(f.includes('coomera'))return 'coomera';if(f.includes('tweed'))return 'tweed';return '';}
+function guessSite(fn){const f=(fn||'').toLowerCase();const hit=LOCS.find(l=>{const n=(l.name||'').toLowerCase();return (f.includes('southport')&&n.includes('southport'))||(f.includes('coomera')&&n.includes('coomera'))||(f.includes('tweed')&&n.includes('tweed'));});return hit?String(hit.id):'';}
 function processFile(file){
   const msg=document.getElementById('msg'); msg.className='msg';
   const rd=new FileReader();
@@ -106,7 +100,7 @@ function processFile(file){
       if(rows.length<2){msg.className='msg err';msg.textContent='That file has no data rows.';return;}
       const head=rows[0].map(h=>h.trim().toLowerCase());
       const di=head.indexOf('date'), ai=head.indexOf('amount'), si=head.indexOf('status');
-      if(di<0||ai<0){msg.className='msg err';msg.textContent='Could not find “date” and “amount” columns in this CSV.';return;}
+      if(di<0||ai<0){msg.className='msg err';msg.textContent='Could not find \u201cdate\u201d and \u201camount\u201d columns in this CSV.';return;}
       const daily={}; let approved=0, total=0;
       for(let r=1;r<rows.length;r++){
         const row=rows[r]; if(!row||row.length<=di) continue;
@@ -127,57 +121,62 @@ function processFile(file){
   rd.readAsText(file);
 }
 function renderPreview(){
-  const s=staged; const locs=laundromats();
-  const opts=locs.map(l=>'<option value="'+l.id+'"'+(l.id===s.guess?' selected':'')+'>'+esc(l.name)+'</option>').join('');
+  const s=staged;
+  const opts=LOCS.map(l=>'<option value="'+l.id+'"'+(String(l.id)===String(s.guess)?' selected':'')+'>'+esc(l.name)+'</option>').join('');
   document.getElementById('preview').innerHTML=
     '<div class="prev"><div><b>'+esc(s.fileName)+'</b></div>'
     +'<div style="margin-top:8px"><span class="kpi">'+AUD(s.total)+'</span><span class="kpi">'+s.approved+' txns</span><span class="kpi">'+s.dates.length+' days</span></div>'
     +'<div style="margin-top:8px">Period: <b>'+s.months.map(monthLabel).join(', ')+'</b></div>'
-    +'<div class="grid2"><div><label>This report is for laundromat</label><select id="siteSel">'+(opts||'<option value="">— no locations —</option>')+'</select></div>'
+    +'<div class="grid2"><div><label>This report is for laundromat</label><select id="siteSel">'+(opts||'<option value="">\u2014 no locations \u2014</option>')+'</select></div>'
     +'<div style="display:flex;align-items:flex-end"><button class="btn btn-green" id="importBtn" style="width:100%">Import into dashboard</button></div></div>'
     +'<div style="font-size:11.5px;color:#8a9790;margin-top:8px">Importing replaces any existing data for this laundromat in '+s.months.map(monthLabel).join(', ')+'.</div></div>';
   document.getElementById('importBtn').onclick=doImport;
 }
-function doImport(){
+async function doImport(){
   const s=staged; const locId=document.getElementById('siteSel').value;
   const msg=document.getElementById('msg');
   if(!locId){msg.className='msg err';msg.textContent='Select which laundromat this report is for.';return;}
-  const site=locName(locId)||s.guess||locId;
-  // remove existing records for this loc + these months
-  SALES=SALES.filter(rec=>!(rec.locationId===locId && s.months.includes((rec.date||'').slice(0,7))));
-  s.dates.forEach(d=>{SALES.push({locationId:locId,site,date:d,revenue:Math.round(s.daily[d].rev*100)/100,txns:s.daily[d].txns});});
-  save();
-  staged=null; document.getElementById('preview').innerHTML=''; document.getElementById('fileInput').value='';
-  msg.className='msg ok'; msg.textContent='Imported '+AUD(s.total)+' across '+s.dates.length+' days. The dashboard is updated.';
-  renderReports();
+  const rows=s.dates.map(d=>({date:d,revenue:Math.round(s.daily[d].rev*100)/100,txns:s.daily[d].txns}));
+  msg.className='msg';msg.textContent='Importing\u2026';
+  try{
+    const r=await fetch('/sales-api/import',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({location_id:Number(locId),rows})});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    staged=null; document.getElementById('preview').innerHTML=''; document.getElementById('fileInput').value='';
+    msg.className='msg ok'; msg.textContent='Imported '+AUD(s.total)+' across '+s.dates.length+' days. The dashboard is updated.';
+    await loadAll();
+  }catch(e){msg.className='msg err';msg.textContent='Could not import: '+e.message;}
 }
-
-/* ---- Reports list (grouped by site + month) ---- */
 function renderReports(){
   const groups={};
-  SALES.forEach(r=>{const ym=(r.date||'').slice(0,7);const key=r.locationId+'|'+ym;groups[key]=groups[key]||{locationId:r.locationId,site:r.site,ym,revenue:0,txns:0,days:new Set()};groups[key].revenue+=r.revenue;groups[key].txns+=r.txns;groups[key].days.add(r.date);});
-  const rows=Object.values(groups).sort((a,b)=>b.ym.localeCompare(a.ym)||(a.site||'').localeCompare(b.site||''));
+  SALES.forEach(r=>{const ym=(''+r.date).slice(0,7);const key=r.location_id+'|'+ym;groups[key]=groups[key]||{locationId:r.location_id,ym,revenue:0,txns:0,days:new Set()};groups[key].revenue+=+r.revenue;groups[key].txns+=+r.txns;groups[key].days.add((''+r.date).slice(0,10));});
+  const rows=Object.values(groups).sort((a,b)=>b.ym.localeCompare(a.ym)||(locName(a.locationId)||'').localeCompare(locName(b.locationId)||''));
   const wrap=document.getElementById('reportsWrap');
   if(!rows.length){wrap.innerHTML='<div class="empty">No reports yet. Upload a CSV above.</div>';return;}
   let h='<table><thead><tr><th>Laundromat</th><th>Month</th><th>Revenue</th><th>Txns</th><th>Days</th><th style="text-align:right">Actions</th></tr></thead><tbody>';
-  rows.forEach(g=>{h+='<tr><td class="rt">'+esc(locName(g.locationId)||g.site||g.locationId)+'</td><td>'+monthLabel(g.ym)+'</td><td class="rev">'+AUD(g.revenue)+'</td><td>'+g.txns+'</td><td>'+g.days.size+'</td>'
+  rows.forEach(g=>{h+='<tr><td class="rt">'+esc(locName(g.locationId)||g.locationId)+'</td><td>'+monthLabel(g.ym)+'</td><td class="rev">'+AUD(g.revenue)+'</td><td>'+g.txns+'</td><td>'+g.days.size+'</td>'
     +'<td><div class="rowbtns"><button class="btn btn-danger" data-del="'+g.locationId+'|'+g.ym+'">Delete</button></div></td></tr>';});
   h+='</tbody></table>';
   wrap.innerHTML=h;
-  wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
+  wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=async ()=>{
     const [loc,ym]=b.dataset.del.split('|');
-    if(confirm('Delete this report? It will be removed from the dashboard.')){SALES=SALES.filter(r=>!(r.locationId===loc && (r.date||'').slice(0,7)===ym));save();renderReports();}
+    if(!confirm('Delete this report? It will be removed from the dashboard.'))return;
+    try{const r=await fetch('/sales-api/month',{method:'DELETE',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({location_id:Number(loc),month:ym})});if(!r.ok&&r.status!==204)throw new Error('HTTP '+r.status);await loadAll();}catch(e){alert('Could not delete: '+e.message);}
   });
 }
-
-/* ---- wire ---- */
 const drop=document.getElementById('drop'), fi=document.getElementById('fileInput');
 drop.onclick=()=>fi.click();
 fi.onchange=e=>{if(e.target.files[0])processFile(e.target.files[0]);};
 drop.addEventListener('dragover',e=>{e.preventDefault();drop.style.borderColor='#435E53';});
 drop.addEventListener('dragleave',()=>drop.style.borderColor='');
 drop.addEventListener('drop',e=>{e.preventDefault();drop.style.borderColor='';if(e.dataTransfer.files[0])processFile(e.dataTransfer.files[0]);});
-SALES=loadSales(); renderReports();
+async function loadAll(){
+  try{
+    const [locs,sales]=await Promise.all([apiGet('/locations-api'),apiGet('/sales-api')]);
+    LOCS=Array.isArray(locs)?locs:[]; SALES=Array.isArray(sales)?sales:[];
+    renderReports();
+  }catch(e){document.getElementById('reportsWrap').innerHTML='<div class="empty">Could not load \u2014 '+esc(e.message)+'.</div>';}
+}
+loadAll();
 </script>
 </body>
 </html>

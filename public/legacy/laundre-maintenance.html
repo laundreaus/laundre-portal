@@ -82,23 +82,27 @@
 </div></div>
 
 <script>
-const MKEY='laundre_maintenance_v1', GKEY='laundre_guides_v1';
 const ITEMS=['Machines inspected','Filters / lint cleaned','Water & drainage checked','Payment system checked','Faults resolved / logged','Other (see notes)'];
 function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{role:'admin'};}catch(e){return {role:'admin'};}}
-const ME=SESSION(); const ADMIN=ME.role==='admin';
-let LOGS=[], GUIDES=[];
-function loadA(){try{const r=localStorage.getItem(MKEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}return [];}
-function loadG(){try{const r=localStorage.getItem(GKEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}return [];}
-function saveA(){try{localStorage.setItem(MKEY,JSON.stringify(LOGS));}catch(e){alert('Storage full — fewer/smaller photos.');}}
-function saveG(){try{localStorage.setItem(GKEY,JSON.stringify(GUIDES));}catch(e){alert('Storage full — use links for large guides.');}}
+const ME=SESSION(); const ADMIN=!(ME.role&&ME.role!=='admin');
+const CSRF=(window.LAUNDRE_CSRF||'');
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+async function apiSend(u,method,body){const r=await fetch(u,{method:method,headers:hdrs(true),credentials:'same-origin',body:body?JSON.stringify(body):null});if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();}
+function ms(t){if(!t)return 0;var n=Date.parse(t);return isNaN(n)?0:n;}
+function uploadFile(f){return new Promise((res,rej)=>{const rd=new FileReader();rd.onerror=()=>rej(new Error('read failed'));rd.onload=async()=>{try{const j=await apiSend('/upload-api','POST',{data:rd.result,name:f.name});res(j);}catch(e){rej(e);}};rd.readAsDataURL(f);});}
+let LOGS=[], GUIDES=[], LOCS=[];
+function normLog(r){return {id:r.id,locationId:r.location_id,date:(''+(r.date||'')).slice(0,10),by:r.by,items:r.items||{},notes:r.notes,issues:r.issues,photos:r.photos||[],submittedAt:ms(r.updated_at||r.created_at)};}
+function normGuide(g){return {id:g.id,title:g.title,category:g.category,visibility:(g.visibility===''||g.visibility==null)?'all':(''+g.visibility),link:g.link,url:g.file_path,fileName:g.file_name,note:g.note,createdAt:ms(g.created_at)};}
+async function reloadLogs(){LOGS=(await apiGet('/maintenance-api')).map(normLog);}
+async function reloadGuides(){GUIDES=(await apiGet('/guides-api')).map(normGuide);}
 function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function uid(p){return p+Math.random().toString(36).slice(2,8);}
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-function laundromats(){try{const r=localStorage.getItem('laundre_sites_v1');if(r){const a=JSON.parse(r);if(Array.isArray(a))return a.map(s=>({id:s.id,name:s.name}));}}catch(e){}return [];}
-function locName(id){const l=laundromats().find(x=>x.id===id);return l?l.name:(id||'—');}
+function laundromats(){return LOCS;}
+function locName(id){const l=LOCS.find(x=>x.id==id);return l?l.name:(id||'—');}
 function findSub(locId,date){return LOGS.find(x=>x.locationId===locId && x.date===date);}
 function dayLabel(ds){const d=new Date(ds+'T00:00');return d.toLocaleDateString('en-AU',{weekday:'short'})+' '+d.getDate();}
-function guideVisible(g){ if(ADMIN) return true; return g.visibility==='all'||g.visibility===ME.locationId; }
+function guideVisible(g){ if(ADMIN) return true; return g.visibility==='all'||(''+g.visibility)===(''+ME.locationId); }
 
 /* ============ MAINTENANCE (staff) VIEW ============ */
 let pendingPhotos=[];
@@ -139,9 +143,10 @@ function renderStaff(){
 }
 function renderPhotos(){const c=document.getElementById('photos');if(!c)return;c.innerHTML=pendingPhotos.map((p,i)=>'<div class="thumb"><img src="'+p+'"><button data-rp="'+i+'">×</button></div>').join('')+'<div class="addphoto" id="addphoto">+</div>';c.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>{pendingPhotos.splice(+b.dataset.rp,1);renderPhotos();});document.getElementById('addphoto').onclick=()=>document.getElementById('photoInput').click();}
 function submitLog(){
-  const loc=ME.locationId;const items={};document.querySelectorAll('.citem').forEach(el=>{items[+el.dataset.ci]=el.querySelector('input').checked;});
-  const rec={id:(findSub(loc,todayStr())||{}).id||uid('mn_'),locationId:loc,date:todayStr(),by:ME.name||ME.email||'Maintenance',byEmail:ME.email||'',items,notes:document.getElementById('c_notes').value.trim(),issues:document.getElementById('c_issues').value.trim(),photos:pendingPhotos.slice(),submittedAt:Date.now()};
-  LOGS=LOGS.filter(x=>!(x.locationId===loc&&x.date===todayStr()));LOGS.push(rec);saveA();renderStaff();
+  const items={};document.querySelectorAll('.citem').forEach(el=>{items[+el.dataset.ci]=el.querySelector('input').checked;});
+  const body={date:todayStr(),items,notes:document.getElementById('c_notes').value.trim(),issues:document.getElementById('c_issues').value.trim(),photos:pendingPhotos.slice()};
+  const msg=document.getElementById('msg'),btn=document.getElementById('submitBtn');btn.disabled=true;msg.style.color='#6b7d73';msg.textContent='Saving…';
+  apiSend('/maintenance-api','POST',body).then(reloadLogs).then(renderStaff).catch(e=>{btn.disabled=false;msg.style.color='#B4472F';msg.textContent='Could not submit: '+e.message;});
 }
 
 /* ============ ADMIN VIEW: guides mgmt + submissions ============ */
@@ -182,16 +187,16 @@ function renderGuideList(){
       +'<div class="rowbtns"><button class="btn btn-ghost" data-ge="'+g.id+'">Edit</button><button class="btn btn-danger" data-gd="'+g.id+'">Del</button></div></div>';
   }).join('');
   el.querySelectorAll('[data-ge]').forEach(b=>b.onclick=()=>openGuideEditor(b.dataset.ge));
-  el.querySelectorAll('[data-gd]').forEach(b=>b.onclick=()=>{const g=GUIDES.find(x=>x.id===b.dataset.gd);if(confirm('Delete “'+g.title+'”?')){GUIDES=GUIDES.filter(x=>x.id!==b.dataset.gd);saveG();renderGuideList();}});
+  el.querySelectorAll('[data-gd]').forEach(b=>b.onclick=async()=>{const g=GUIDES.find(x=>x.id==b.dataset.gd);if(confirm('Delete “'+g.title+'”?')){try{await apiSend('/guides-api/'+b.dataset.gd,'DELETE');await reloadGuides();renderGuideList();}catch(e){alert('Could not delete: '+e.message);}}});
 }
 function openGuideEditor(id){
-  const g=id?GUIDES.find(x=>x.id===id):null;
+  const g=id?GUIDES.find(x=>x.id==id):null;
   document.getElementById('mTitle').textContent=id?'Edit guide':'Add guide';
   const locs=laundromats();
   document.getElementById('mBody').innerHTML=
     '<div class="mgrid"><div class="full"><label class="fld" style="margin-top:0">Title</label><input id="g_title" value="'+esc(g?g.title:'')+'"></div>'
     +'<div><label class="fld" style="margin-top:0">Category</label><input id="g_category" value="'+esc(g?g.category:'')+'" placeholder="e.g. Washer / Dryer / POS"></div>'
-    +'<div><label class="fld" style="margin-top:0">Visible to</label><select id="g_visibility"><option value="all">All laundromats</option>'+locs.map(l=>'<option value="'+l.id+'"'+(g&&g.visibility===l.id?' selected':'')+'>'+esc(l.name)+'</option>').join('')+'</select></div>'
+    +'<div><label class="fld" style="margin-top:0">Visible to</label><select id="g_visibility"><option value="all">All laundromats</option>'+locs.map(l=>'<option value="'+l.id+'"'+(g&&(''+g.visibility)===(''+l.id)?' selected':'')+'>'+esc(l.name)+'</option>').join('')+'</select></div>'
     +'<div class="full"><label class="fld" style="margin-top:0">Link (video/manual) — optional</label><input id="g_link" value="'+esc(g?g.link:'')+'" placeholder="https://"></div>'
     +'<div class="full"><label class="fld" style="margin-top:0">Or upload a file (≤3MB)</label><input id="g_file" type="file"></div>'
     +'<div class="full"><label class="fld" style="margin-top:0">Note</label><input id="g_note" value="'+esc(g?g.note:'')+'"></div></div>'
@@ -200,14 +205,22 @@ function openGuideEditor(id){
   document.getElementById('mFoot').innerHTML='<button class="btn btn-ghost" id="gCancel">Cancel</button><button class="btn btn-green" id="gSave">Save guide</button>';
   document.getElementById('overlay').classList.add('show');
   document.getElementById('gCancel').onclick=closeModal;
-  document.getElementById('gSave').onclick=()=>{
+  document.getElementById('gSave').onclick=async()=>{
     const title=document.getElementById('g_title').value.trim();const link=document.getElementById('g_link').value.trim();
-    if(!title){document.getElementById('gmsg').textContent='Please enter a title.';return;}
-    const fileInput=document.getElementById('g_file');
-    const finish=(fo)=>{const rec={id:id||uid('gd_'),title,category:document.getElementById('g_category').value.trim(),visibility:document.getElementById('g_visibility').value,link,note:document.getElementById('g_note').value.trim(),fileName:fo?fo.name:(g?g.fileName:''),url:fo?fo.url:(g?g.url:''),createdAt:g?g.createdAt:Date.now()};if(link){rec.url='';rec.fileName='';}if(id)GUIDES=GUIDES.map(x=>x.id===id?rec:x);else GUIDES.push(rec);saveG();renderGuideList();closeModal();};
-    if(fileInput.files[0]){const f=fileInput.files[0];if(f.size>3*1024*1024){document.getElementById('gmsg').textContent='File too large (max 3MB). Use a link.';return;}const rd=new FileReader();rd.onload=()=>finish({name:f.name,url:rd.result});rd.readAsDataURL(f);}
-    else if(!link && !(g&&(g.url||g.link))){document.getElementById('gmsg').textContent='Add a link or upload a file.';return;}
-    else finish(null);
+    const gmsg=document.getElementById('gmsg');
+    if(!title){gmsg.style.color='#B4472F';gmsg.textContent='Please enter a title.';return;}
+    const fileInput=document.getElementById('g_file');const f=fileInput.files[0];
+    if(f && f.size>8*1024*1024){gmsg.style.color='#B4472F';gmsg.textContent='File too large (max 8MB). Use a link.';return;}
+    if(!link && !f && !(g&&(g.url||g.link))){gmsg.style.color='#B4472F';gmsg.textContent='Add a link or upload a file.';return;}
+    const sb=document.getElementById('gSave');sb.disabled=true;gmsg.style.color='#6b7d73';gmsg.textContent='Saving…';
+    try{
+      let file_path=g?(g.url||''):'',file_name=g?(g.fileName||''):'';
+      if(f){const up=await uploadFile(f);file_path=up.url;file_name=up.name;}
+      const payload={title,category:document.getElementById('g_category').value.trim(),visibility:document.getElementById('g_visibility').value,link:link,file_path:link?'':file_path,file_name:link?'':file_name,note:document.getElementById('g_note').value.trim()};
+      if(id) await apiSend('/guides-api/'+id,'PUT',payload); else await apiSend('/guides-api','POST',payload);
+      await reloadGuides();renderGuideList();closeModal();
+    }catch(e){gmsg.style.color='#B4472F';gmsg.textContent='Could not save: '+e.message;}
+    finally{sb.disabled=false;}
   };
 }
 function openLogDetail(locId,date){
@@ -226,8 +239,15 @@ function openLogDetail(locId,date){
 function closeModal(){document.getElementById('overlay').classList.remove('show');}
 document.getElementById('mClose').onclick=closeModal;
 
-LOGS=loadA();GUIDES=loadG();
-if(ADMIN) renderAdmin(); else renderStaff();
+async function boot(){
+  try{
+    const [locs,logs,guides]=await Promise.all([apiGet('/locations-api'),apiGet('/maintenance-api'),apiGet('/guides-api')]);
+    LOCS=(locs||[]).map(s=>({id:s.id,name:s.name}));
+    LOGS=(logs||[]).map(normLog); GUIDES=(guides||[]).map(normGuide);
+  }catch(e){document.getElementById('main').innerHTML='<div class="empty">Could not load maintenance data — please refresh. ('+esc(e.message)+')</div>';return;}
+  if(ADMIN) renderAdmin(); else renderStaff();
+}
+boot();
 </script>
 </body>
 </html>

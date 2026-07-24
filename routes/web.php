@@ -3,7 +3,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\Api\{UserController, LocationController, SettingController, TicketController,
     CleaningController, MaintenanceController, DocumentController, GuideController, BookkeepingController,
-    SupplierController, SaleController, FranchiseController, UploadController};
+    SupplierController, SaleController, FranchiseController, UploadController, MaintenanceDocController};
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/documents-api', [DocumentController::class, 'index']);
     Route::get('/guides-api', [GuideController::class, 'index']);
+    Route::get('/maintenance-docs-api', [MaintenanceDocController::class, 'index']);
     Route::get('/bookkeeping-api', [BookkeepingController::class, 'index']);
     Route::post('/bookkeeping-api', [BookkeepingController::class, 'upsert']);
     Route::get('/suppliers-api', [SupplierController::class, 'index']);
@@ -53,6 +54,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/guides-api', [GuideController::class, 'store']);
         Route::match(['put','patch'], '/guides-api/{guide}', [GuideController::class, 'update']);
         Route::delete('/guides-api/{guide}', [GuideController::class, 'destroy']);
+
+        Route::post('/maintenance-docs-api', [MaintenanceDocController::class, 'store']);
+        Route::delete('/maintenance-docs-api/{maintenance_doc}', [MaintenanceDocController::class, 'destroy']);
 
         Route::post('/suppliers-api', [SupplierController::class, 'store']);
         Route::match(['put','patch'], '/suppliers-api/{supplier}', [SupplierController::class, 'update']);

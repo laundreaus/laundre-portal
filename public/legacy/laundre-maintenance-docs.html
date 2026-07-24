@@ -82,11 +82,17 @@
 </div>
 
 <script>
-var KEY='laundre_maintdocs_v1';
 var sess=null; try{sess=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}
 var isAdmin=!(sess&&sess.role&&sess.role!=='admin');
-function load(){try{var a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}}
-function saveAll(a){try{localStorage.setItem(KEY,JSON.stringify(a));}catch(e){alert('Could not save — the file may be too large for browser storage. Try a smaller file.');}}
+var CSRF=(window.LAUNDRE_CSRF||'');
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){var r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+async function apiSend(u,method,body){var r=await fetch(u,{method:method,headers:hdrs(true),credentials:'same-origin',body:body?JSON.stringify(body):null});if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();}
+function ms(t){if(!t)return 0;var n=Date.parse(t);return isNaN(n)?0:n;}
+function uploadFile(f){return new Promise(function(res,rej){var rd=new FileReader();rd.onerror=function(){rej(new Error('read failed'));};rd.onload=function(){apiSend('/upload-api','POST',{data:rd.result,name:f.name}).then(res).catch(rej);};rd.readAsDataURL(f);});}
+var DOCS=[];
+function normDoc(d){return {id:d.id,title:d.title,category:d.category,machine:d.machine,note:d.note,fileName:d.file_name,fileSize:d.file_size,fileData:d.file_path,at:ms(d.created_at)};}
+async function reloadDocs(){DOCS=(await apiGet('/maintenance-docs-api')).map(normDoc);}
 function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function fmt(d){try{return new Date(d).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});}catch(e){return '';}}
 function bytes(n){if(!n)return '';if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(0)+' KB';return (n/1048576).toFixed(1)+' MB';}
@@ -95,10 +101,10 @@ function render(){
   document.getElementById('addBtn').style.display=isAdmin?'':'none';
   document.getElementById('head').textContent=isAdmin?'Maintenance Documents':'Maintenance Documents — for your team';
   document.getElementById('hint').textContent=isAdmin
-    ? 'Uploaded files are stored in this browser for the prototype. Keep individual files small (a few MB). Move to server storage for production.'
+    ? 'Machine manuals and service docs shared with the whole team. Files up to 8 MB.'
     : 'Documents your admin has shared with the maintenance team. Tap Download to open.';
   var q=(document.getElementById('q').value||'').toLowerCase();
-  var rows=load().filter(function(d){return !q||((d.title||'')+' '+(d.category||'')+' '+(d.machine||'')).toLowerCase().indexOf(q)>=0;});
+  var rows=DOCS.filter(function(d){return !q||((d.title||'')+' '+(d.category||'')+' '+(d.machine||'')).toLowerCase().indexOf(q)>=0;});
   rows.sort(function(a,b){return (b.at||0)-(a.at||0);});
   var host=document.getElementById('list');
   if(!rows.length){host.innerHTML='<div class="empty">'+(isAdmin?'No documents yet. Click “+ Upload doc”.':'No documents shared yet.')+'</div>';return;}
@@ -110,29 +116,32 @@ function render(){
       +'<td>'+fmt(d.at)+'</td>'
       +'<td><div class="rowbtns">'
       +(d.fileData?'<a class="dl" href="'+d.fileData+'" download="'+esc(d.fileName||'document')+'">Download</a>':'')
-      +(isAdmin?'<button class="btn btn-danger" onclick="del(\''+d.id+'\')">Delete</button>':'')
+      +(isAdmin?'<button class="btn btn-danger" data-del="'+d.id+'">Delete</button>':'')
       +'</div></td></tr>';
   });
   h+='</tbody></table>';
   host.innerHTML=h;
+  host.querySelectorAll('[data-del]').forEach(function(b){b.onclick=function(){del(b.dataset.del);};});
 }
 function openEd(){document.getElementById('f_title').value='';document.getElementById('f_cat').value='Machine manual';document.getElementById('f_machine').value='';document.getElementById('f_note').value='';document.getElementById('f_file').value='';document.getElementById('emsg').textContent='';document.getElementById('overlay').classList.add('show');}
 function closeEd(){document.getElementById('overlay').classList.remove('show');}
-function save(){
+async function save(){
   var title=document.getElementById('f_title').value.trim();
-  if(!title){document.getElementById('emsg').textContent='Please enter a title.';return;}
-  var rec={id:'d'+Date.now()+Math.random().toString(36).slice(2,6),title:title,category:document.getElementById('f_cat').value,machine:document.getElementById('f_machine').value.trim(),note:document.getElementById('f_note').value.trim(),at:Date.now(),fileName:'',fileSize:0,fileData:''};
+  var emsg=document.getElementById('emsg');
+  if(!title){emsg.style.color='#B4472F';emsg.textContent='Please enter a title.';return;}
   var f=document.getElementById('f_file').files[0];
-  function commit(){var a=load();a.push(rec);saveAll(a);closeEd();render();}
-  if(f){
-    if(f.size>8*1048576){document.getElementById('emsg').textContent='File is larger than 8 MB — please use a smaller file for the prototype.';return;}
-    rec.fileName=f.name;rec.fileSize=f.size;
-    var rd=new FileReader();rd.onload=function(){rec.fileData=rd.result;commit();};rd.onerror=function(){document.getElementById('emsg').textContent='Could not read the file.';};rd.readAsDataURL(f);
-  } else { commit(); }
+  if(f && f.size>8*1048576){emsg.style.color='#B4472F';emsg.textContent='File is larger than 8 MB — please use a smaller file.';return;}
+  emsg.style.color='#6b7d73';emsg.textContent='Saving…';
+  try{
+    var file_path='',file_name='',file_size=0;
+    if(f){var up=await uploadFile(f);file_path=up.url;file_name=up.name;file_size=up.size||f.size;}
+    await apiSend('/maintenance-docs-api','POST',{title:title,category:document.getElementById('f_cat').value,machine:document.getElementById('f_machine').value.trim(),note:document.getElementById('f_note').value.trim(),file_path:file_path,file_name:file_name,file_size:file_size});
+    await reloadDocs();closeEd();render();
+  }catch(e){emsg.style.color='#B4472F';emsg.textContent='Could not save: '+e.message;}
 }
-function del(id){if(!confirm('Delete this document?'))return;saveAll(load().filter(function(d){return d.id!==id;}));render();}
+async function del(id){if(!confirm('Delete this document?'))return;try{await apiSend('/maintenance-docs-api/'+id,'DELETE');await reloadDocs();render();}catch(e){alert('Could not delete: '+e.message);}}
 document.getElementById('addBtn').onclick=openEd;
-render();
+(async function(){try{await reloadDocs();}catch(e){document.getElementById('list').innerHTML='<div class="empty">Could not load documents — please refresh.</div>';return;}render();})();
 </script>
 </body>
 </html>

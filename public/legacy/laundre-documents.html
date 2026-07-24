@@ -82,19 +82,23 @@
 </div>
 
 <script>
-const KEY='laundre_documents_v1';
 function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{role:'admin'};}catch(e){return {role:'admin'};}}
-const ME=SESSION(); const ADMIN=ME.role==='admin';
-let DOCS=[], pendingFile=null;
-function load(){try{const r=localStorage.getItem(KEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}return [];}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(DOCS));}catch(e){alert('Storage full — use links instead of large uploads.');}}
+const ME=SESSION(); const ADMIN=!(ME.role&&ME.role!=='admin');
+const CSRF=(window.LAUNDRE_CSRF||'');
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+async function apiSend(u,method,body){const r=await fetch(u,{method:method,headers:hdrs(true),credentials:'same-origin',body:body?JSON.stringify(body):null});if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();}
+function ms(t){if(!t)return 0;var n=Date.parse(t);return isNaN(n)?0:n;}
+function uploadFile(f){return new Promise((res,rej)=>{const rd=new FileReader();rd.onerror=()=>rej(new Error('read failed'));rd.onload=async()=>{try{const j=await apiSend('/upload-api','POST',{data:rd.result,name:f.name});res(j);}catch(e){rej(e);}};rd.readAsDataURL(f);});}
+let DOCS=[], LOCS=[];
+function normDoc(d){return {id:d.id,title:d.title,category:d.category,visibility:(d.visibility===''||d.visibility==null)?'all':(''+d.visibility),link:d.link,url:d.file_path,fileName:d.file_name,note:d.note,createdAt:ms(d.created_at)};}
+async function reloadDocs(){DOCS=(await apiGet('/documents-api')).map(normDoc);}
 function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function uid(){return 'doc_'+Math.random().toString(36).slice(2,8);}
-function laundromats(){try{const r=localStorage.getItem('laundre_sites_v1');if(r){const a=JSON.parse(r);if(Array.isArray(a))return a.map(s=>({id:s.id,name:s.name}));}}catch(e){}return [];}
-function locName(id){const l=laundromats().find(x=>x.id===id);return l?l.name:id;}
+function laundromats(){return LOCS;}
+function locName(id){const l=LOCS.find(x=>x.id==id);return l?l.name:id;}
 function visLabel(v){return v==='all'?'All franchises':locName(v);}
 
-function visibleToMe(d){ if(ADMIN) return true; return d.visibility==='all' || d.visibility===ME.locationId; }
+function visibleToMe(d){ if(ADMIN) return true; return d.visibility==='all' || (''+d.visibility)===(''+ME.locationId); }
 
 function render(){
   const cats=[...new Set(DOCS.map(d=>d.category).filter(Boolean))].sort();
@@ -128,7 +132,7 @@ function render(){
   wrap.innerHTML=h;
   if(ADMIN){
     wrap.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEditor(b.dataset.edit));
-    wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const d=DOCS.find(x=>x.id===b.dataset.del);if(confirm('Delete “'+d.title+'”?')){DOCS=DOCS.filter(x=>x.id!==b.dataset.del);save();render();}});
+    wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{const d=DOCS.find(x=>x.id==b.dataset.del);if(confirm('Delete “'+d.title+'”?')){try{await apiSend('/documents-api/'+b.dataset.del,'DELETE');await reloadDocs();render();}catch(e){alert('Could not delete: '+e.message);}}});
   }
 }
 
@@ -138,7 +142,7 @@ function fillVis(sel){
   if(sel) document.getElementById('f_visibility').value=sel;
 }
 function openEditor(id){
-  editId=id;const d=id?DOCS.find(x=>x.id===id):null;pendingFile=null;
+  editId=id;const d=id?DOCS.find(x=>x.id==id):null;
   document.getElementById('etitle').textContent=id?'Edit document':'Add document';
   document.getElementById('f_title').value=d?d.title:'';
   document.getElementById('f_category').value=d?(d.category||''):'';
@@ -155,35 +159,40 @@ if(ADMIN){
   document.getElementById('eclose').onclick=closeEditor;
   document.getElementById('ecancel').onclick=closeEditor;
   document.getElementById('vf').onchange=render;
-  document.getElementById('esave').onclick=()=>{
+  document.getElementById('esave').onclick=async()=>{
     const title=document.getElementById('f_title').value.trim();
     const link=document.getElementById('f_link').value.trim();
     const msg=document.getElementById('emsg');
-    if(!title){msg.textContent='Please enter a title.';return;}
+    if(!title){msg.style.color='#B4472F';msg.textContent='Please enter a title.';return;}
     const fileInput=document.getElementById('f_file');
-    const existing=editId?DOCS.find(x=>x.id===editId):null;
-    const finish=(fileObj)=>{
-      const rec={id:editId||uid(),title,
+    const existing=editId?DOCS.find(x=>x.id==editId):null;
+    const f=fileInput.files[0];
+    if(f && f.size>8*1024*1024){msg.style.color='#B4472F';msg.textContent='File too large (max 8MB). Use a link instead.';return;}
+    if(!link && !f && !(existing&&(existing.url||existing.link))){msg.style.color='#B4472F';msg.textContent='Add a link or upload a file.';return;}
+    const btn=document.getElementById('esave'); btn.disabled=true; msg.style.color='#6b7d73'; msg.textContent='Saving…';
+    try{
+      let file_path=existing?(existing.url||''):'', file_name=existing?(existing.fileName||''):'';
+      if(f){const up=await uploadFile(f); file_path=up.url; file_name=up.name;}
+      const payload={title,
         category:document.getElementById('f_category').value.trim(),
         visibility:document.getElementById('f_visibility').value,
-        link, note:document.getElementById('f_note').value.trim(),
-        fileName: fileObj?fileObj.name:(existing?existing.fileName:''),
-        url: fileObj?fileObj.url:(existing?existing.url:''),
-        createdAt: existing?existing.createdAt:Date.now()};
-      if(link){rec.url='';rec.fileName='';}   // link takes precedence
-      if(editId)DOCS=DOCS.map(x=>x.id===editId?rec:x); else DOCS.push(rec);
-      save();render();closeEditor();
-    };
-    if(fileInput.files[0]){
-      const f=fileInput.files[0];
-      if(f.size>3*1024*1024){msg.textContent='File too large (max 3MB). Use a link instead.';return;}
-      const rd=new FileReader();rd.onload=()=>finish({name:f.name,url:rd.result});rd.readAsDataURL(f);
-    } else if(!link && !(existing&&(existing.url||existing.link))){
-      msg.textContent='Add a link or upload a file.';return;
-    } else finish(null);
+        link:link, file_path:link?'':file_path, file_name:link?'':file_name,
+        note:document.getElementById('f_note').value.trim()};
+      if(editId) await apiSend('/documents-api/'+editId,'PUT',payload); else await apiSend('/documents-api','POST',payload);
+      await reloadDocs(); render(); closeEditor();
+    }catch(e){msg.style.color='#B4472F';msg.textContent='Could not save: '+e.message;}
+    finally{btn.disabled=false;}
   };
 }
-DOCS=load();render();
+async function boot(){
+  try{
+    const [locs,docs]=await Promise.all([apiGet('/locations-api'),apiGet('/documents-api')]);
+    LOCS=(locs||[]).map(s=>({id:s.id,name:s.name}));
+    DOCS=(docs||[]).map(normDoc);
+  }catch(e){document.getElementById('tableWrap').innerHTML='<div class="empty">Could not load documents — please refresh. ('+esc(e.message)+')</div>';return;}
+  render();
+}
+boot();
 </script>
 </body>
 </html>
