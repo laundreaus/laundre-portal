@@ -1,14 +1,20 @@
 <?php
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PortalController;
+use App\Http\Controllers\InviteController;
 use App\Http\Controllers\Api\{UserController, LocationController, SettingController, TicketController,
     CleaningController, MaintenanceController, DocumentController, GuideController, BookkeepingController,
-    SupplierController, SaleController, FranchiseController, UploadController, MaintenanceDocController};
+    SupplierController, SaleController, FranchiseController, UploadController, MaintenanceDocController,
+    OnboardingController};
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// ---- Public invite / set-password (token) ----
+Route::get('/welcome/{token}', [InviteController::class, 'show'])->where('token','[A-Za-z0-9]+');
+Route::post('/welcome/{token}', [InviteController::class, 'store'])->where('token','[A-Za-z0-9]+')->middleware('throttle:20,1');
 
 Route::middleware('auth')->group(function () {
     Route::get('/', [PortalController::class, 'index'])->name('portal');
@@ -40,12 +46,23 @@ Route::middleware('auth')->group(function () {
     Route::get('/franchises-api', [FranchiseController::class, 'index']);
     Route::match(['put','patch'], '/franchises-api/{franchise}', [FranchiseController::class, 'update']);
 
+    // ---- Onboarding (potential franchisee / investor) ----
+    Route::get('/onboarding-api', [OnboardingController::class, 'state']);
+    Route::post('/onboarding-api/sign', [OnboardingController::class, 'sign']);
+    Route::post('/onboarding-api/track', [OnboardingController::class, 'track']);
+    Route::post('/onboarding-api/interest', [OnboardingController::class, 'interest']);
+
     // ---- Admin-only writes ----
     Route::middleware('role:admin')->group(function () {
         Route::get('/users-api', [UserController::class, 'index']);
         Route::post('/users-api', [UserController::class, 'store']);
         Route::match(['put','patch'], '/users-api/{user}', [UserController::class, 'update']);
+        Route::post('/users-api/{user}/reinvite', [UserController::class, 'reinvite']);
         Route::delete('/users-api/{user}', [UserController::class, 'destroy']);
+
+        Route::get('/onboarding-admin-api', [OnboardingController::class, 'adminIndex']);
+        Route::match(['put','patch'], '/onboarding-admin-api/{onboarding}/stage', [OnboardingController::class, 'moveStage']);
+        Route::get('/investors-api', [OnboardingController::class, 'investors']);
 
         Route::post('/documents-api', [DocumentController::class, 'store']);
         Route::match(['put','patch'], '/documents-api/{document}', [DocumentController::class, 'update']);

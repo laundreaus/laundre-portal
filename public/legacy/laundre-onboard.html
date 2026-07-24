@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Welcome</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;--muted:#8a9790;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  header{background:var(--green-d);color:#EAF0EC;padding:16px 24px;display:flex;align-items:center;gap:12px;}
+  header .brand{font-family:Georgia,serif;font-size:22px;} header .spacer{flex:1;} header .who{font-size:13px;color:#bcd0c3;}
+  header a{color:#cfe0d5;font-size:13px;text-decoration:none;margin-left:16px;}
+  main{max-width:1120px;margin:0 auto;padding:26px 24px 80px;}
+  .hero{margin-bottom:22px;} .hero h1{font-size:24px;color:var(--green-d);margin:0 0 4px;} .hero .sub{color:#6b7d73;font-size:14px;}
+  .cols{display:grid;grid-template-columns:1.1fr .9fr;gap:22px;align-items:start;}
+  @media(max-width:820px){.cols{grid-template-columns:1fr;}}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:15px;padding:20px 22px;margin-bottom:20px;}
+  .card h3{margin:0 0 14px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);}
+  .video{position:relative;border-radius:12px;overflow:hidden;background:#22302a;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .video .play{width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.3);}
+  .video .play:after{content:'';border-style:solid;border-width:14px 0 14px 22px;border-color:transparent transparent transparent var(--green-d);margin-left:5px;}
+  .video .cap{position:absolute;bottom:14px;left:16px;color:#eaf0ec;font-size:13px;background:rgba(30,42,36,.55);padding:4px 10px;border-radius:20px;}
+  .video iframe{width:100%;height:100%;border:0;position:absolute;inset:0;}
+  .ph{font-size:11px;color:#B4472F;background:#F5E3DB;border-radius:20px;padding:2px 9px;font-weight:700;display:inline-block;margin-left:8px;}
+  .doc{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid #f0ece2;text-decoration:none;color:inherit;}
+  .doc:last-child{border-bottom:none;} .doc:hover{background:#F8F5EE;border-radius:8px;}
+  .doc .ic{width:38px;height:38px;border-radius:9px;background:#EDF1EC;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+  .doc .t{flex:1;} .doc .t b{display:block;color:var(--green-d);font-size:14.5px;} .doc .t span{color:var(--muted);font-size:12px;}
+  .doc .go{color:var(--accent);font-size:13px;font-weight:700;}
+  .empty{color:var(--muted);font-size:13.5px;padding:8px 4px;}
+  label{display:block;font-size:12px;font-weight:700;color:#5f7469;margin:12px 0 5px;}
+  input,textarea{width:100%;font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:8px;padding:10px 12px;font-family:inherit;}
+  input:focus,textarea:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(67,94,83,.18);}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .btn{border:none;border-radius:9px;padding:11px 20px;font-size:14px;font-weight:700;cursor:pointer;background:var(--green);color:#fff;}
+  .btn:disabled{opacity:.55;cursor:default;}
+  .msg{font-size:13px;min-height:16px;margin-top:10px;} .done{background:#E1EDE4;color:#2f6b46;border-radius:10px;padding:12px 14px;font-size:14px;font-weight:600;}
+  .invite-note{background:#FBF9F4;border:1px solid var(--cream-line);border-radius:10px;padding:12px 14px;font-size:13px;color:#6b7d73;line-height:1.5;}
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">Laundré</span>
+  <span class="spacer"></span>
+  <span class="who" id="who"></span>
+  <a href="#" id="logoutBtn">Log out</a>
+</header>
+<main>
+  <div class="hero"><h1 id="h1">Welcome to Laundré</h1><div class="sub" id="hsub">Watch the welcome video and explore the documents below.</div></div>
+  <div class="cols">
+    <div>
+      <div class="card">
+        <h3>Welcome video <span class="ph">Placeholder</span></h3>
+        <div class="video" id="video">
+          <div class="play"></div>
+          <div class="cap">Play the Laundré welcome video</div>
+        </div>
+      </div>
+      <div class="card" id="investorCard" style="display:none">
+        <h3>Register your interest</h3>
+        <div id="investorBody"></div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Document library</h3>
+        <div id="docs"><div class="empty">Loading documents…</div></div>
+      </div>
+      <div class="card"><div class="invite-note">These materials are confidential and shared under the agreement you signed. A member of the Laundré team will be in touch within 14 days.</div></div>
+    </div>
+  </div>
+</main>
+<script>
+var CSRF=(window.LAUNDRE_CSRF||'');
+var VIDEO_EMBED='';/* PLACEHOLDER: put a YouTube/Vimeo embed URL here, e.g. https://www.youtube.com/embed/XXXX */
+function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{};}catch(e){return {};}}
+var ME=SESSION(); var KIND=(ME.role==='investor')?'investor':'franchisee';
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){var r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+async function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(b)});}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function track(ev){apiSend('/onboarding-api/track','POST',{event:ev}).catch(function(){});}
+
+document.getElementById('video').onclick=function(){
+  track('video');
+  if(VIDEO_EMBED){ this.innerHTML='<iframe src="'+VIDEO_EMBED+'?autoplay=1" allow="autoplay; fullscreen" allowfullscreen></iframe>'; }
+  else { this.innerHTML='<div class="cap" style="position:static;background:none;color:#eaf0ec;text-align:center;padding:20px">▶ Welcome video would play here.<br><span style="opacity:.7">(Placeholder — add the real video embed in the tool.)</span></div>'; }
+};
+
+function renderDocs(list){
+  var host=document.getElementById('docs');
+  if(!list.length){host.innerHTML='<div class="empty">No documents have been shared yet.</div>';return;}
+  host.innerHTML=list.map(function(d){
+    var href=d.link||d.file_path||'#';
+    return '<a class="doc" href="'+esc(href)+'" target="_blank" rel="noopener" data-doc="1">'
+      +'<div class="ic">'+(d.link?'🔗':'📄')+'</div>'
+      +'<div class="t"><b>'+esc(d.title)+'</b><span>'+esc(d.category||'Document')+(d.note?' · '+esc(d.note):'')+'</span></div>'
+      +'<div class="go">Open →</div></a>';
+  }).join('');
+  host.querySelectorAll('[data-doc]').forEach(function(a){a.addEventListener('click',function(){track('doc');});});
+}
+
+function renderInvestor(o){
+  var card=document.getElementById('investorCard'); card.style.display='';
+  var b=document.getElementById('investorBody');
+  if(o && o.interest_submitted_at){
+    var amt = o.interest_min && o.interest_max ? ('$'+(+o.interest_min).toLocaleString()+' – $'+(+o.interest_max).toLocaleString())
+              : (o.interest_min ? '$'+(+o.interest_min).toLocaleString() : 'Amount to discuss');
+    b.innerHTML='<div class="done">✓ Interest registered ('+esc(amt)+'). The Laundré team will be in touch.</div>';
+    return;
+  }
+  b.innerHTML=''
+    +'<p style="margin:0 0 6px;color:#6b7d73;font-size:13.5px">Formally express your interest to invest. Enter an amount or a range.</p>'
+    +'<div class="two"><div><label>Amount (min) A$</label><input id="i_min" type="number" min="0" step="1000" placeholder="e.g. 50000"></div>'
+    +'<div><label>Amount (max) A$ — optional</label><input id="i_max" type="number" min="0" step="1000" placeholder="e.g. 100000"></div></div>'
+    +'<label>Note (optional)</label><textarea id="i_note" rows="2" placeholder="Anything you’d like us to know"></textarea>'
+    +'<div style="text-align:right"><button class="btn" id="i_go" style="margin-top:14px">Submit interest</button></div>'
+    +'<div class="msg" id="i_msg"></div>';
+  document.getElementById('i_go').onclick=async function(){
+    var mn=document.getElementById('i_min').value, mx=document.getElementById('i_max').value, note=document.getElementById('i_note').value.trim();
+    var msg=document.getElementById('i_msg');
+    if(!mn && !mx){msg.style.color='#B4472F';msg.textContent='Please enter an amount or range.';return;}
+    this.disabled=true; msg.style.color='#6b7d73'; msg.textContent='Submitting…';
+    var r=await apiSend('/onboarding-api/interest','POST',{min:mn||null,max:mx||null,note:note||null});
+    if(r.ok){ var s=await apiGet('/onboarding-api'); renderInvestor(s.onboarding); }
+    else { msg.style.color='#B4472F'; msg.textContent='Could not submit — please try again.'; this.disabled=false; }
+  };
+}
+
+async function boot(){
+  document.getElementById('who').textContent=(ME.name||ME.email||'')+(KIND==='investor'?' · Investor':' · Franchise prospect');
+  if(KIND==='investor'){ document.getElementById('h1').textContent='Welcome, '+((ME.name||'').split(' ')[0]||'investor'); document.getElementById('hsub').textContent='Watch the overview, review the documents, then register your interest.'; }
+  else { document.getElementById('h1').textContent='Welcome, '+((ME.name||'').split(' ')[0]||''); }
+  try{
+    var state=await apiGet('/onboarding-api');
+    var docs=await apiGet('/documents-api');
+    renderDocs(docs||[]);
+    if(KIND==='investor') renderInvestor(state.onboarding);
+  }catch(e){ document.getElementById('docs').innerHTML='<div class="empty">Could not load documents — please refresh.</div>'; }
+}
+boot();
+</script>
+</body>
+</html>

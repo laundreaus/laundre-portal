@@ -2,8 +2,21 @@
 namespace App\Http\Controllers;
 use App\Models\{Location, User, Document, Ticket, Franchise};
 class PortalController extends Controller {
-    public function index() { return $this->serve('laundre-portal', true); }
-    public function tool(string $page) { return $this->serve($page, false); }
+    public function index() {
+        $u = auth()->user();
+        if ($u->isOnboarding()) {
+            $signed = optional($u->onboarding)->nda_signed_at;
+            return $this->serve($signed ? 'laundre-onboard' : 'laundre-nda', false);
+        }
+        return $this->serve('laundre-portal', true);
+    }
+    public function tool(string $page) {
+        $u = auth()->user();
+        if ($u->isOnboarding() && !in_array($page, ['laundre-onboard','laundre-nda'])) {
+            return redirect('/');
+        }
+        return $this->serve($page, false);
+    }
     private function serve(string $page, bool $isHome = false) {
         $path = public_path('legacy/'.basename($page).'.html');
         abort_unless(is_file($path), 404);
