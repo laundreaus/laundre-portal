@@ -711,38 +711,47 @@ const DEFAULT_TEMPLATE = [
   }
 ];
 
-/* ----------  STORE  (swap out for backend later)  ---------- */
-const STORAGE_KEY = "laundre_franchises_v1";
-
+/* ----------  STORE  (DB-backed via /franchises-api)  ---------- */
+const CSRF=(window.LAUNDRE_CSRF||'');
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+async function apiSend(u,method,body){const r=await fetch(u,{method:method,headers:hdrs(true),credentials:'same-origin',body:body?JSON.stringify(body):null});if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();}
+function ms(t){if(!t)return 0;var n=Date.parse(t);return isNaN(n)?0:n;}
+let CACHE = {};   // id(string) -> franchise
+let LOCS = [];
+function buildTemplateSections(){
+  return DEFAULT_TEMPLATE.map(s => ({
+    id: uid('s'), title: s.title,
+    tasks: s.tasks.map(t => ({ id: uid('t'), label: t.label, note: t.note || '', done: false, custom: false, doneAt: null }))
+  }));
+}
+function normFr(r){
+  return {
+    id: r.id, name: r.name, location: r.location || '', contact: r.contact || '',
+    sourceLocationId: r.source_location_id ?? null,
+    createdAt: ms(r.created_at), updatedAt: ms(r.updated_at),
+    sections: (Array.isArray(r.sections) && r.sections.length) ? r.sections : buildTemplateSections()
+  };
+}
 const Store = {
-  _load() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
-    catch (e) { return {}; }
+  _load() { return CACHE; },
+  list() { return Object.values(CACHE).sort((a,b) => (b.createdAt||0) - (a.createdAt||0)); },
+  get(id) { return CACHE[String(id)] || null; },
+  exists(id) { return Boolean(CACHE[String(id)]); },
+  async save(f) {
+    const payload = { name: f.name || 'Unnamed', location: f.location || '', contact: f.contact || '', source_location_id: f.sourceLocationId ?? null, sections: f.sections || [] };
+    f.updatedAt = Date.now();
+    if (f.id != null && CACHE[String(f.id)] && !f._new) {
+      CACHE[String(f.id)] = f;
+      try { await apiSend('/franchises-api/'+f.id, 'PUT', payload); }
+      catch (e) { toast('Save failed — check your connection'); }
+      return f;
+    } else {
+      const rec = await apiSend('/franchises-api', 'POST', payload);
+      const nf = normFr(rec); CACHE[String(nf.id)] = nf; return nf;
+    }
   },
-  _save(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  },
-  list() {
-    const all = this._load();
-    return Object.values(all).sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
-  },
-  get(id) {
-    return this._load()[id] || null;
-  },
-  save(franchise) {
-    const all = this._load();
-    franchise.updatedAt = Date.now();
-    all[franchise.id] = franchise;
-    this._save(all);
-  },
-  remove(id) {
-    const all = this._load();
-    delete all[id];
-    this._save(all);
-  },
-  exists(id) {
-    return Boolean(this._load()[id]);
-  }
+  async remove(id) { await apiSend('/franchises-api/'+id, 'DELETE'); delete CACHE[String(id)]; }
 };
 
 /* ----------  HELPERS  ---------- */
@@ -761,24 +770,13 @@ function toast(msg) {
 }
 function newFranchise(name, location, contact) {
   return {
-    id: uid(),
-    name: name.trim(),
+    id: uid(), _new: true,
+    name: (name||'').trim(),
     location: (location||'').trim(),
     contact: (contact||'').trim(),
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    sections: DEFAULT_TEMPLATE.map(s => ({
-      id: uid('s'),
-      title: s.title,
-      tasks: s.tasks.map(t => ({
-        id: uid('t'),
-        label: t.label,
-        note: t.note || '',
-        done: false,
-        custom: false,
-        doneAt: null
-      }))
-    }))
+    sections: buildTemplateSections()
   };
 }
 function franchiseProgress(f) {
@@ -795,29 +793,20 @@ function fmtDate(ts) {
 /* ----------  SYNC FROM APPROVED LOCATIONS  ---------- */
 /* Each approved location in the Site Locations tool (laundre_sites_v1) automatically
    gets a matching onboarding checklist here, linked by sourceLocationId. */
-function syncFromLocations() {
-  let sites = [];
-  try { const r = localStorage.getItem('laundre_sites_v1'); if (r) { const a = JSON.parse(r); if (Array.isArray(a)) sites = a; } }
-  catch (e) { return; }
-  if (!sites.length) return;
-  const all = Store._load();
-  const linked = new Set(Object.values(all).map(f => f.sourceLocationId).filter(Boolean));
-  let added = 0;
-  sites.forEach(s => {
-    if (!s || !s.id || linked.has(s.id)) return;
+async function syncFromLocations() {
+  if (!LOCS.length) return;
+  const linked = new Set(Object.values(CACHE).map(f => f.sourceLocationId).filter(v => v != null).map(String));
+  for (const s of LOCS) {
+    if (!s || s.id == null || linked.has(String(s.id))) continue;
     const f = newFranchise(s.name || 'Unnamed location', s.address || '', '');
     f.sourceLocationId = s.id;
-    if (s.dateApproved) { const t = new Date(s.dateApproved + 'T00:00').getTime(); if (!isNaN(t)) { f.createdAt = t; f.updatedAt = t; } }
-    all[f.id] = f;
-    added++;
-  });
-  if (added) Store._save(all);
+    try { await Store.save(f); linked.add(String(s.id)); } catch (e) { /* skip on error */ }
+  }
 }
 
 /* ----------  ROUTING  ---------- */
 function currentSession(){ try { return JSON.parse(localStorage.getItem('laundre_session')||'null'); } catch(e){ return null; } }
 function route() {
-  syncFromLocations();
   const app = document.getElementById('app');
   app.innerHTML = '';
   const sess = currentSession();
@@ -842,7 +831,21 @@ function route() {
   else { renderAdmin(app); }
 }
 window.addEventListener('hashchange', route);
-window.addEventListener('DOMContentLoaded', route);
+async function boot(){
+  const app = document.getElementById('app');
+  try {
+    const [locs, frs] = await Promise.all([apiGet('/locations-api'), apiGet('/franchises-api')]);
+    LOCS = (locs||[]).map(s => ({ id: s.id, name: s.name, address: s.address }));
+    CACHE = {}; (frs||[]).forEach(r => { const nf = normFr(r); CACHE[String(nf.id)] = nf; });
+    const sess = currentSession();
+    if (!(sess && sess.role && sess.role !== 'admin')) { await syncFromLocations(); }
+  } catch (e) {
+    if (app) app.innerHTML = '<div style="max-width:640px;margin:26px auto;padding:22px;background:#fff;border:1px solid var(--line);border-radius:12px;color:var(--sage-soft);">Could not load franchise data — please refresh.</div>';
+    return;
+  }
+  route();
+}
+window.addEventListener('DOMContentLoaded', boot);
 
 /* ----------  ADMIN VIEW  ---------- */
 function renderAdmin(app) {
@@ -856,7 +859,7 @@ function renderAdmin(app) {
     </div>
 
     <div class="backend-banner">
-      <div><strong>Note:</strong> This prototype stores data in your browser only. Each franchisee's progress is visible to them on their own device. When ready, swap the <code>Store</code> layer for a shared backend so progress syncs centrally.</div>
+      <div><strong>Shared database:</strong> Franchise progress is stored centrally and syncs across all admins and devices. Each franchisee sees only their own store's checklist.</div>
     </div>
 
     <div class="toolbar">
@@ -902,7 +905,7 @@ function renderAdmin(app) {
   document.getElementById('export-btn').onclick = exportAll;
   document.getElementById('import-btn').onclick = importAll;
 
-  document.getElementById('grid').addEventListener('click', (e) => {
+  document.getElementById('grid').addEventListener('click', async (e) => {
     const stop = e.target.closest('[data-stop]');
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
@@ -913,12 +916,11 @@ function renderAdmin(app) {
       navigator.clipboard.writeText(url).then(() => toast('Franchise link copied'));
       e.stopPropagation();
     } else if (action === 'delete') {
-      if (confirm('Delete this franchise and all its progress? This cannot be undone.')) {
-        Store.remove(id);
-        toast('Franchise deleted');
-        route();
-      }
       e.stopPropagation();
+      if (confirm('Delete this franchise and all its progress? This cannot be undone.')) {
+        try { await Store.remove(id); toast('Franchise deleted'); route(); }
+        catch (er) { toast('Delete failed — check your connection'); }
+      }
     } else if (action === 'open' && !stop) {
       location.hash = '/f/' + id;
     }
@@ -947,16 +949,14 @@ function openNewModal() {
   const close = () => mask.remove();
   mask.addEventListener('click', (e) => { if (e.target === mask) close(); });
   document.getElementById('m-cancel').onclick = close;
-  document.getElementById('m-create').onclick = () => {
+  document.getElementById('m-create').onclick = async () => {
     const name = document.getElementById('m-name').value.trim();
     if (!name) { document.getElementById('m-name').focus(); return; }
     const loc = document.getElementById('m-loc').value;
     const contact = document.getElementById('m-contact').value;
     const f = newFranchise(name, loc, contact);
-    Store.save(f);
-    close();
-    toast('Franchise created');
-    location.hash = '/f/' + f.id;
+    try { const nf = await Store.save(f); close(); toast('Franchise created'); location.hash = '/f/' + nf.id; }
+    catch (e) { toast('Could not create — check your connection'); }
   };
   document.getElementById('m-name').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('m-create').click(); });
 }
@@ -984,11 +984,14 @@ function importAll() {
       try {
         const data = JSON.parse(r.result);
         if (typeof data !== 'object') throw new Error();
-        const current = Store._load();
-        const merged = { ...current, ...data };
-        Store._save(merged);
-        toast('Import complete');
-        route();
+        const items = Array.isArray(data) ? data : Object.values(data);
+        (async () => {
+          for (const it of items) {
+            const f = { _new:true, name: it.name||'Imported', location: it.location||'', contact: it.contact||'', sourceLocationId: it.sourceLocationId ?? null, sections: (Array.isArray(it.sections)&&it.sections.length)?it.sections:buildTemplateSections() };
+            try { await Store.save(f); } catch(er){}
+          }
+          toast('Import complete'); route();
+        })();
       } catch(e) { alert('Could not read that file.'); }
     };
     r.readAsText(file);
