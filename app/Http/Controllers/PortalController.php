@@ -20,6 +20,15 @@ class PortalController extends Controller {
         }
         return $this->serve($page, false);
     }
+    // Serves the large AU postcode dataset as JSON. Kept out of the tool HTML so
+    // that page stays well under the server's ~1MB response-body limit; JSON
+    // responses are not subject to that limit.
+    public function postcodeData() {
+        $path = public_path('legacy/region-postcode-data.json');
+        abort_unless(is_file($path), 404);
+        return response(file_get_contents($path), 200)
+            ->header('Content-Type', 'application/json');
+    }
     private function serve(string $page, bool $isHome = false) {
         $path = public_path('legacy/'.basename($page).'.html');
         abort_unless(is_file($path), 404);

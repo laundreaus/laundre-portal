@@ -21,6 +21,8 @@ Route::middleware('auth')->group(function () {
 
     // ---- Shared read + scoped-write APIs (any authenticated user; controllers enforce store scoping) ----
     Route::get('/locations-api', [LocationController::class, 'index']);
+    // Postcode dataset served as JSON (large; kept out of the tool HTML to stay under the server response limit)
+    Route::get('/postcode-data', [PortalController::class, 'postcodeData']);
     Route::get('/settings-api/{key}', [SettingController::class, 'show'])->where('key', '[A-Za-z0-9_\-]+');
     Route::put('/settings-api/{key}', [SettingController::class, 'put'])->where('key', '[A-Za-z0-9_\-]+');
 
