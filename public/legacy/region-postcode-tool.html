@@ -381,11 +381,24 @@ document.getElementById('showSites').addEventListener('change',e=>{
   if(e.target.checked) sitesLayer.addTo(map); else map.removeLayer(sitesLayer);
 });
 
-// ---- Init: load approved sites and display ----
-SITES=loadSites();
-renderSites();
-fitSites();
-renderSiteList();
+// ---- Init: load approved sites from the live database (fallback to local) ----
+async function initSites(){
+  try{
+    var CSRF=(window.LAUNDRE_CSRF||'');
+    var r=await fetch('/locations-api',{headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'});
+    if(r.ok){
+      var a=await r.json();
+      if(Array.isArray(a)&&a.length){
+        SITES=a.map(function(s){return {id:String(s.id),name:s.name,address:s.address||'',lat:(s.lat!=null?+s.lat:null),lng:(s.lng!=null?+s.lng:null),status:s.status||'active',radius:s.radius,unit:s.unit};})
+               .filter(function(s){return s.lat!=null&&s.lng!=null&&!isNaN(s.lat)&&!isNaN(s.lng);});
+      } else { SITES=loadSites(); }
+    } else { SITES=loadSites(); }
+  }catch(e){ SITES=loadSites(); }
+  renderSites();
+  fitSites();
+  renderSiteList();
+}
+initSites();
 </script>
 </body>
 </html>

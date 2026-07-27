@@ -66,6 +66,12 @@
   .mbody{padding:18px 20px;} .kv{font-size:13.5px;line-height:1.6;margin-bottom:6px;} .kv b{color:var(--green-d);}
   .chk{font-size:13.5px;padding:3px 0;} .chk .y{color:#2f6b46;font-weight:700;} .chk .n{color:#B4472F;font-weight:700;}
   .close{background:transparent;border:none;font-size:22px;color:#8a9790;}
+  .vidbox{position:relative;border-radius:12px;overflow:hidden;background:#22302a;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .vplay{width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;}
+  .vplay:after{content:'';border-style:solid;border-width:12px 0 12px 20px;border-color:transparent transparent transparent #33473D;margin-left:5px;}
+  .vcap{position:absolute;bottom:12px;left:14px;color:#eaf0ec;font-size:12.5px;background:rgba(30,42,36,.55);padding:4px 10px;border-radius:20px;}
+  .vph{font-size:11px;color:#B4472F;background:#F5E3DB;border-radius:20px;padding:2px 9px;font-weight:700;margin-left:8px;}
+  .vidbox iframe{width:100%;height:100%;border:0;position:absolute;inset:0;}
 </style>
 </head>
 <body>
@@ -83,6 +89,11 @@
 </div></div>
 
 <script>
+/* ---- Intro video (placeholder — set INTRO_VIDEO to a YouTube/Vimeo embed URL) ---- */
+var INTRO_VIDEO='';
+function videoCard(cap){return '<div class="card"><h3>Intro video <span class="vph">Placeholder</span></h3><div class="vidbox" onclick="playIntro(this)"><div class="vplay"></div><div class="vcap">'+cap+'</div></div></div>';}
+function playIntro(el){var u=INTRO_VIDEO;if(u){el.innerHTML='<iframe src="'+u+(u.indexOf('?')>=0?'&':'?')+'autoplay=1" allow="autoplay;fullscreen" allowfullscreen></iframe>';}else{el.innerHTML='<div class="vcap" style="position:static;background:none;color:#eaf0ec;text-align:center;padding:22px">\u25B6 Intro video would play here.<br><span style="opacity:.7">(Placeholder \u2014 add the video embed in the tool.)</span></div>';}}
+
 const CSRF=(window.LAUNDRE_CSRF||'');
 function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
 async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
@@ -111,6 +122,7 @@ function renderCleaner(){
   const done = existing ? existing.items : {};
   const main=document.getElementById('main');
   let h='<h2>Daily Cleaning</h2><div class="sub">'+esc(locName(loc))+' · '+new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</div>';
+  h+=videoCard('Watch the daily cleaning intro video');
   h+='<div class="card">';
   if(existing) h+='<div class="submitted">✓ Submitted today at '+new Date(existing.submittedAt).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+' — you can update and resubmit.</div>';
   h+='<h3>Checklist</h3>';

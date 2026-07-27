@@ -328,11 +328,12 @@ function drawSales(sales,sites){
   const single=selSites.length===1;
   const datasets=selSites.map((s,idx)=>{const byKey={};rows.filter(r=>r.locationId===s.id).forEach(r=>{const k=keyFn(r);byKey[k]=(byKey[k]||0)+r.revenue;});const color=PALETTE[idx%PALETTE.length];
     return {label:s.name,data:keys.map(k=>Math.round(byKey[k]||0)),backgroundColor:dashGran==='daily'?(single?color+'33':color):color,borderColor:color,borderWidth:2,fill:dashGran==='daily'&&single,tension:.3,pointRadius:dashGran==='daily'?2:0,order:2};});
-  // Average line: mean combined revenue per period across the shown selection
-  if(keys.length){
-    const bucketTotals=keys.map((k,i)=>datasets.reduce((s,ds)=>s+(ds.data[i]||0),0));
-    const avg=Math.round(bucketTotals.reduce((a,b)=>a+b,0)/bucketTotals.length);
-    datasets.push({type:'line',label:'Average ('+AUD(avg)+')',data:keys.map(()=>avg),borderColor:'#C4703F',borderDash:[6,5],borderWidth:2,pointRadius:0,fill:false,tension:0,order:0});
+  // Average line: mean revenue per store per period (sits among the store lines)
+  if(keys.length && selSites.length){
+    const allVals=datasets.reduce((arr,ds)=>arr.concat(ds.data),[]);
+    const avg=allVals.length?Math.round(allVals.reduce((a,b)=>a+b,0)/allVals.length):0;
+    const avgLabel=selSites.length>1?'Average / store ('+AUD(avg)+')':'Average ('+AUD(avg)+')';
+    datasets.push({type:'line',label:avgLabel,data:keys.map(()=>avg),borderColor:'#C4703F',borderDash:[6,5],borderWidth:2,pointRadius:0,fill:false,tension:0,order:0});
   }
   const totRev=rows.reduce((s,r)=>s+r.revenue,0), totTx=rows.reduce((s,r)=>s+r.txns,0), dayCount=new Set(rows.map(r=>r.date)).size;
   document.getElementById('kpis').innerHTML=
