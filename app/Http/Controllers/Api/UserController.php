@@ -28,6 +28,9 @@ class UserController extends Controller {
         $user = User::create($data);
         if ($onboarding) {
             Onboarding::firstOrCreate(['user_id'=>$user->id], ['type'=>$data['role']==='investor'?'investor':'franchisee','crm_stage'=>'invited']);
+            if ($data['role']==='potential_franchisee') {
+                \App\Models\PipelineCard::create(['name'=>$user->name,'email'=>$user->email,'phone'=>$user->phone,'stage'=>'nda_sent','user_id'=>$user->id]);
+            }
             $user->makeVisible('invite_token');
             $arr = $user->toArray();
             $arr['invite_url'] = url('/welcome/'.$user->invite_token);

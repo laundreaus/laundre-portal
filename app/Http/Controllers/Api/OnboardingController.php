@@ -38,6 +38,9 @@ class OnboardingController extends Controller {
         ]);
         if ($o->crm_stage === 'invited') $o->crm_stage = 'onboarding';
         $o->save();
+        if ($u->role === 'potential_franchisee') {
+            \App\Models\PipelineCard::where('user_id',$u->id)->where('stage','nda_sent')->update(['stage'=>'reviewing_documents']);
+        }
         return response()->json(['ok'=>true,'onboarding'=>$o]);
     }
 

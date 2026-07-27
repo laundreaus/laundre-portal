@@ -5,7 +5,7 @@ use App\Http\Controllers\InviteController;
 use App\Http\Controllers\Api\{UserController, LocationController, SettingController, TicketController,
     CleaningController, MaintenanceController, DocumentController, GuideController, BookkeepingController,
     SupplierController, SaleController, FranchiseController, UploadController, MaintenanceDocController,
-    OnboardingController, TaskController};
+    OnboardingController, TaskController, CrmController};
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -73,6 +73,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/tasks-api', [TaskController::class, 'store']);
         Route::match(['put','patch'], '/tasks-api/{task}', [TaskController::class, 'update']);
         Route::delete('/tasks-api/{task}', [TaskController::class, 'destroy']);
+
+        Route::get('/pipeline-api', [CrmController::class, 'index']);
+        Route::post('/pipeline-api', [CrmController::class, 'storeCard']);
+        Route::match(['put','patch'], '/pipeline-api/{card}', [CrmController::class, 'updateCard']);
+        Route::patch('/pipeline-api/{card}/move', [CrmController::class, 'moveCard']);
+        Route::delete('/pipeline-api/{card}', [CrmController::class, 'destroyCard']);
+        Route::put('/pipeline-columns-api', [CrmController::class, 'saveColumns']);
 
         Route::post('/documents-api', [DocumentController::class, 'store']);
         Route::match(['put','patch'], '/documents-api/{document}', [DocumentController::class, 'update']);
