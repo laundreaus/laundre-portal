@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Welcome</title>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--green-d);display:flex;align-items:center;justify-content:center;}
+  .card{background:var(--cream);border-radius:18px;padding:38px 34px;width:390px;max-width:94vw;box-shadow:0 22px 60px rgba(0,0,0,.34);}
+  .brand{font-family:Georgia,"Times New Roman",serif;font-size:34px;color:var(--green-d);text-align:center;letter-spacing:.5px;}
+  .sub{text-align:center;color:#7c8a80;font-size:13px;margin:2px 0 22px;}
+  h2{font-size:18px;color:var(--green-d);margin:0 0 4px;}
+  p.lead{color:#6b7d73;font-size:13.5px;margin:0 0 18px;line-height:1.5;}
+  label{display:block;font-size:12px;font-weight:700;color:#5f7469;margin:14px 0 5px;}
+  input{width:100%;font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:9px;padding:11px 13px;}
+  input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 2px rgba(67,94,83,.18);}
+  .btn{width:100%;margin-top:20px;border:none;border-radius:9px;padding:12px;font-size:14.5px;font-weight:700;background:var(--green);color:#fff;cursor:pointer;}
+  .btn:hover{filter:brightness(1.08);} .btn:disabled{opacity:.6;cursor:default;}
+  .msg{font-size:13px;min-height:16px;margin-top:12px;text-align:center;}
+  .err{color:#B4472F;} .ok{color:#2f6b46;}
+  .hint{font-size:11.5px;color:#8a9790;margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">Laundré</div>
+  <div class="sub">Franchise Network</div>
+  <div id="body"></div>
+  <div class="msg" id="msg"></div>
+</div>
+<script>
+var INV = window.LAUNDRE_INVITE || {valid:false};
+var CSRF = window.LAUNDRE_CSRF || '';
+var body = document.getElementById('body'), msg = document.getElementById('msg');
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+if(!INV.valid){
+  body.innerHTML='<h2>Link expired</h2><p class="lead">This invite link is no longer valid — it may have already been used. Please ask your Laundré contact to send a fresh link.</p>';
+}else{
+  body.innerHTML=''
+    +'<h2>Welcome'+(INV.name?', '+esc(INV.name.split(' ')[0]):'')+'</h2>'
+    +'<p class="lead">Create a password to set up your '+(INV.kind==='investor'?'investor':'franchise')+' access for <b>'+esc(INV.email)+'</b>.</p>'
+    +'<label>New password</label><input id="p1" type="password" autocomplete="new-password" placeholder="At least 8 characters">'
+    +'<label>Confirm password</label><input id="p2" type="password" autocomplete="new-password" placeholder="Re-enter password">'
+    +'<div class="hint">Use at least 8 characters.</div>'
+    +'<button class="btn" id="go">Create password &amp; continue</button>';
+  document.getElementById('go').onclick=submit;
+  document.getElementById('p2').addEventListener('keydown',function(e){if(e.key==='Enter')submit();});
+}
+async function submit(){
+  var p1=document.getElementById('p1').value, p2=document.getElementById('p2').value;
+  msg.className='msg';
+  if(p1.length<8){msg.className='msg err';msg.textContent='Password must be at least 8 characters.';return;}
+  if(p1!==p2){msg.className='msg err';msg.textContent='Passwords do not match.';return;}
+  var btn=document.getElementById('go'); btn.disabled=true; msg.className='msg'; msg.textContent='Setting up…';
+  try{
+    var r=await fetch('/welcome/'+encodeURIComponent(INV.token),{
+      method:'POST',
+      headers:{'Accept':'application/json','Content-Type':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'},
+      credentials:'same-origin',
+      body:JSON.stringify({password:p1,password_confirmation:p2})
+    });
+    if(r.status===422){var j=await r.json();msg.className='msg err';msg.textContent=(j.message||'Please check your password');btn.disabled=false;return;}
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var j=await r.json();
+    msg.className='msg ok';msg.textContent='All set — taking you in…';
+    location.href=j.redirect||'/';
+  }catch(e){msg.className='msg err';msg.textContent='Something went wrong. Please try again.';btn.disabled=false;}
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Onboarding Tracker</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;--muted:#8a9790;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;}
+  header .brand{font-family:Georgia,serif;font-size:20px;color:var(--green-d);} header .spacer{flex:1;}
+  a.chip{font-size:12.5px;font-weight:700;color:var(--green);text-decoration:none;border:1px solid var(--cream-line);border-radius:7px;padding:8px 12px;}
+  main{max-width:1200px;margin:0 auto;padding:22px 22px 70px;}
+  h2{font-size:20px;margin:0 0 4px;color:var(--green-d);} .sub{color:#6b7d73;font-size:13px;margin-bottom:18px;}
+  .tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .tab{border:1px solid var(--cream-line);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:700;color:var(--green);cursor:pointer;}
+  .tab.on{background:var(--green);color:#fff;border-color:var(--green);}
+  .matrix{overflow-x:auto;background:#fff;border:1px solid var(--cream-line);border-radius:14px;}
+  table{border-collapse:collapse;width:100%;} th,td{padding:11px 12px;font-size:13px;text-align:left;border-bottom:1px solid #f0ece2;white-space:nowrap;}
+  th{background:var(--green-d);color:#EAF0EC;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;}
+  td .nm{font-weight:700;color:var(--green-d);} td .em{color:var(--muted);font-size:12px;}
+  .steps{display:flex;gap:6px;}
+  .step{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;background:#F1ECE1;color:#c9c1b0;}
+  .step.on{background:#E1EDE4;color:#2f6b46;}
+  .cd{font-weight:700;} .cd.warn{color:#B4472F;} .cd.ok{color:#2f6b46;} .cd.mut{color:var(--muted);font-weight:600;}
+  .stg{display:inline-block;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;background:#EEE7DA;color:#7c6a4f;}
+  .stg.onboarding{background:#E7EFE9;color:#2f6b46;} .stg.pending_approval{background:#FBE9E2;color:#9a3a22;} .stg.approved{background:#E1EDE4;color:#2f6b46;}
+  .btn{border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;background:var(--green);color:#fff;}
+  .btn.ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  .empty{padding:36px;text-align:center;color:var(--muted);}
+  .legend{font-size:12px;color:var(--muted);margin-top:12px;line-height:1.6;}
+  .amt{font-weight:700;color:var(--green-d);}
+</style>
+</head>
+<body>
+<header><span class="brand">Laundré</span><span style="font-weight:700;font-size:14px">· Onboarding Tracker</span><span class="spacer"></span><a class="chip" href="laundre-portal.html">⌂ Portal</a></header>
+<main>
+  <h2>Onboarding Tracker</h2>
+  <div class="sub">Potential franchisees &amp; investors — where each one is in the journey, with a 14-day contact countdown from signing.</div>
+  <div class="tabs"><div class="tab on" data-f="all">All</div><div class="tab" data-f="franchisee">Franchisees</div><div class="tab" data-f="investor">Investors</div></div>
+  <div id="wrap"></div>
+  <div class="legend">Steps: <b>1</b> logged in · <b>2</b> read (not signed) · <b>3</b> signed NDA · <b>4</b> watched video · <b>5</b> opened a document. Countdown = days until the 14-day follow-up after signing.</div>
+</main>
+<script>
+var CSRF=(window.LAUNDRE_CSRF||'');
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){var r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+async function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(b)});}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+var DATA=[], FILTER='all';
+var ME=(function(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{};}catch(e){return {};}})();
+var ADMIN=(ME.role==='admin');
+
+function days(ts){ if(!ts) return null; return Math.ceil((new Date(ts)-new Date())/864e5); }
+function fmt(ts){ if(!ts) return '—'; return new Date(ts).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}); }
+function stepEl(on,n){ return '<div class="step'+(on?' on':'')+'">'+(on?'✓':n)+'</div>'; }
+
+function render(){
+  var rows=DATA.filter(function(o){return FILTER==='all'||o.type===FILTER;});
+  var wrap=document.getElementById('wrap');
+  if(!rows.length){wrap.innerHTML='<div class="empty">No '+(FILTER==='all'?'potential franchisees or investors':FILTER+'s')+' yet. Create one in User Management.</div>';return;}
+  var h='<div class="matrix"><table><thead><tr><th>Person</th><th>Type</th><th>Progress</th><th>Signed</th><th>Countdown</th><th>Interest</th><th>Stage</th><th>Actions</th></tr></thead><tbody>';
+  rows.forEach(function(o){
+    var u=o.user||{};
+    var loggedIn=!!o.first_login_at, signed=!!o.nda_signed_at, video=!!o.video_watched_at, doc=!!o.first_doc_opened_at;
+    var readNotSigned=loggedIn && !signed;
+    var steps='<div class="steps">'+stepEl(loggedIn,1)+stepEl(readNotSigned||signed,2)+stepEl(signed,3)+stepEl(video,4)+stepEl(doc,5)+'</div>';
+    var cd='<span class="cd mut">—</span>';
+    if(signed){ var d=days(o.contact_due_at); if(d===null){cd='<span class="cd mut">—</span>';} else if(d<0){cd='<span class="cd warn">overdue '+(-d)+'d</span>';} else if(d<=3){cd='<span class="cd warn">'+d+'d left</span>';} else {cd='<span class="cd ok">'+d+'d left</span>';} }
+    var interest='—';
+    if(o.type==='investor' && o.interest_submitted_at){
+      interest='<span class="amt">'+(o.interest_min?('$'+(+o.interest_min).toLocaleString()):'?')+(o.interest_max?(' – $'+(+o.interest_max).toLocaleString()):'')+'</span>';
+    }
+    var stg='<span class="stg '+esc(o.crm_stage)+'">'+esc((o.crm_stage||'').replace('_',' '))+'</span>';
+    var act='';
+    if(ADMIN && o.crm_stage!=='pending_approval' && o.crm_stage!=='approved'){ act='<button class="btn" data-approve="'+o.id+'">→ Pending Approval</button>'; }
+    else if(ADMIN && o.crm_stage==='pending_approval'){ act='<button class="btn ghost" data-back="'+o.id+'">Back to onboarding</button>'; }
+    h+='<tr><td><div class="nm">'+esc(u.name||'—')+'</div><div class="em">'+esc(u.email||'')+(u.phone?' · '+esc(u.phone):'')+'</div></td>'
+      +'<td>'+(o.type==='investor'?'Investor':'Franchisee')+'</td>'
+      +'<td>'+steps+'</td>'
+      +'<td>'+fmt(o.nda_signed_at)+'</td>'
+      +'<td>'+cd+'</td>'
+      +'<td>'+interest+'</td>'
+      +'<td>'+stg+'</td>'
+      +'<td>'+act+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  wrap.innerHTML=h;
+  wrap.querySelectorAll('[data-approve]').forEach(function(b){b.onclick=function(){move(b.dataset.approve,'pending_approval');};});
+  wrap.querySelectorAll('[data-back]').forEach(function(b){b.onclick=function(){move(b.dataset.back,'onboarding');};});
+}
+async function move(id,stage){
+  var r=await apiSend('/onboarding-admin-api/'+id+'/stage','PATCH',{crm_stage:stage});
+  if(r.ok){ await load(); } else { alert('Could not update stage.'); }
+}
+async function load(){
+  try{ DATA=await apiGet('/onboarding-admin-api'); render(); }
+  catch(e){ document.getElementById('wrap').innerHTML='<div class="empty">Could not load — please refresh.</div>'; }
+}
+document.querySelectorAll('.tab').forEach(function(t){t.onclick=function(){document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on');});t.classList.add('on');FILTER=t.dataset.f;render();};});
+load();
+</script>
+</body>
+</html>

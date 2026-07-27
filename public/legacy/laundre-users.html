@@ -30,6 +30,11 @@
   .uname{font-weight:700;color:var(--green-d);} .uemail{color:#8a9790;font-size:12.5px;}
   .role{display:inline-block;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;}
   .role.admin{background:#F5E3DB;color:#B4472F;} .role.franchisee{background:#E1EDE4;color:#2f6b46;}
+  .role.potential_franchisee{background:#EAE3F1;color:#6a4fa0;} .role.investor{background:#DDE9F1;color:#356089;}
+  .role.cleaner,.role.maintenance{background:#EEE7DA;color:#7c6a4f;}
+  .invitebar{position:fixed;left:0;right:0;bottom:0;background:var(--green-d);color:#EAF0EC;padding:14px 20px;display:flex;gap:12px;align-items:center;z-index:200;box-shadow:0 -6px 24px rgba(0,0,0,.25);}
+  .invitebar input{flex:1;background:#2b3d34;border:1px solid #4a5f54;color:#eaf0ec;border-radius:7px;padding:9px 11px;font-size:13px;}
+  .invitebar .btn{background:var(--accent);color:#fff;} .invitebar .x{background:transparent;border:none;color:#cfe0d5;font-size:20px;cursor:pointer;}
   .loc{color:#6b5a43;} .rowbtns{display:flex;gap:6px;justify-content:flex-end;} .rowbtns button{padding:6px 11px;font-size:12px;border-radius:6px;}
   .empty{padding:40px;text-align:center;color:#8a9790;background:#fff;border-radius:12px;}
   #overlay{position:fixed;inset:0;background:rgba(30,42,36,.55);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow-y:auto;padding:40px 16px;}
@@ -74,9 +79,12 @@
     <div class="ebody">
       <div class="full"><label>Full name</label><input id="f_name" /></div>
       <div><label>Email / username</label><input id="f_email" type="text" autocomplete="off" /></div>
-      <div><label>Password</label><input id="f_password" type="text" autocomplete="new-password" /></div>
-      <div><label>Role</label><select id="f_role"><option value="franchisee">Franchisee</option><option value="cleaner">Cleaner</option><option value="maintenance">Maintenance</option><option value="admin">Admin</option></select></div>
+      <div><label>Phone</label><input id="f_phone" type="text" autocomplete="off" placeholder="Optional" /></div>
+      <div><label>Role</label><select id="f_role"><option value="franchisee">Franchisee</option><option value="cleaner">Cleaner</option><option value="maintenance">Maintenance</option><option value="user">User (staff)</option><option value="potential_franchisee">Potential Franchisee</option><option value="investor">Investor</option><option value="admin">Admin</option></select></div>
+      <div id="pwWrap"><label>Password</label><input id="f_password" type="text" autocomplete="new-password" /></div>
       <div id="locWrap"><label>Assigned laundromat</label><select id="f_location"></select></div>
+      <div class="full" id="onbHint" style="display:none;font-size:12px;color:#6b7d73;background:#FBF9F4;border:1px solid var(--cream-line);border-radius:8px;padding:10px 12px;line-height:1.5">No password needed — after you save you’ll get a unique invite link to send them. They set their own password, sign the NDA, then land in their onboarding portal.</div>
+      <div class="full" id="secWrap" style="display:none"><label>Sections this staff user can access</label><div id="secList" style="display:grid;grid-template-columns:1fr 1fr;gap:7px 16px;margin-top:4px"></div></div>
     </div>
     <div class="msg" id="emsg"></div>
     <div class="efoot"><button class="btn btn-ghost" id="ecancel">Cancel</button><button class="btn btn-green" id="esave">Save user</button></div>
@@ -103,6 +111,22 @@ async function loadAll(){
   }
 }
 
+function roleLabel(r){return ({admin:'Admin',franchisee:'Franchisee',cleaner:'Cleaner',maintenance:'Maintenance',potential_franchisee:'Potential Franchisee',investor:'Investor',user:'Staff'})[r]||r;}
+function isOnb(r){return r==='potential_franchisee'||r==='investor';}
+function isStaff(r){return r==='user';}
+var SECTIONS=[
+  {k:'laundre-tasks',l:'Task List'},{k:'laundre-onboarding',l:'Onboarding Tracker'},{k:'laundre-investors',l:'Investors'},
+  {k:'laundre-documents',l:'Documents'},{k:'laundre-support',l:'Support Queue'},{k:'laundre-suppliers',l:'Suppliers & Contacts'},
+  {k:'laundre-reporting',l:'Reporting'},{k:'laundre-maintenance-docs',l:'Maintenance Docs'},{k:'laundre-crm',l:'Franchise CRM'},
+  {k:'laundre-checklist',l:'Franchise Checklist'},{k:'laundre-bookkeeping',l:'Bookkeeping'},{k:'laundre-cleaning',l:'Cleaning'},{k:'laundre-maintenance',l:'Maintenance'}
+];
+function renderSecList(sel){
+  var have=Array.isArray(sel)?sel.map(String):[];
+  document.getElementById('secList').innerHTML=SECTIONS.map(function(s){
+    return '<label style="display:flex;align-items:center;gap:8px;font-weight:500;font-size:13px;margin:0;color:var(--ink)"><input type="checkbox" data-sec="'+s.k+'" '+(have.indexOf(s.k)>=0?'checked':'')+' style="width:auto"> '+esc(s.l)+'</label>';
+  }).join('');
+}
+function selectedSections(){return [].slice.call(document.querySelectorAll('#secList [data-sec]')).filter(function(c){return c.checked;}).map(function(c){return c.dataset.sec;});}
 function render(){
   document.getElementById('count').textContent=USERS.length+(USERS.length===1?' user':' users');
   const wrap=document.getElementById('tableWrap');
@@ -110,17 +134,30 @@ function render(){
   let h='<table><thead><tr><th>User</th><th>Role</th><th>Laundromat</th><th style="text-align:right">Actions</th></tr></thead><tbody>';
   USERS.forEach(u=>{
     const role=u.role||'franchisee';
+    const onb=isOnb(role);
+    let locCell;
+    var nsec=(u.sections&&u.sections.length)||0;
+    if(onb) locCell='<span class="uemail">Onboarding</span>';
+    else if(role==='user') locCell='<span class="uemail">'+nsec+' section'+(nsec===1?'':'s')+'</span>';
+    else if(role==='admin') locCell='<span class="uemail">All (admin)</span>';
+    else locCell=esc(locName(u.location_id)||'')||'<span class="uemail">\u2014 unassigned \u2014</span>';
+    let invBtn='';
+    if(onb){ invBtn = u.invite_url
+        ? '<button class="btn btn-ghost" data-invite="'+u.id+'">Copy invite</button>'
+        : '<button class="btn btn-ghost" data-reinvite="'+u.id+'">New invite</button>'; }
     h+='<tr>'
-      +'<td><div class="uname">'+esc(u.name||'\u2014')+'</div><div class="uemail">'+esc(u.email||'')+'</div></td>'
-      +'<td><span class="role '+(role==='admin'?'admin':'franchisee')+'">'+esc(role.charAt(0).toUpperCase()+role.slice(1))+'</span></td>'
-      +'<td class="loc">'+(role==='admin'?'<span class="uemail">All (admin)</span>':esc(locName(u.location_id)||'')||'<span class="uemail">\u2014 unassigned \u2014</span>')+'</td>'
-      +'<td><div class="rowbtns"><button class="btn btn-ghost" data-edit="'+u.id+'">Edit</button><button class="btn btn-danger" data-del="'+u.id+'">Delete</button></div></td>'
+      +'<td><div class="uname">'+esc(u.name||'\u2014')+'</div><div class="uemail">'+esc(u.email||'')+(u.phone?' \u00B7 '+esc(u.phone):'')+'</div></td>'
+      +'<td><span class="role '+esc(role)+'">'+esc(roleLabel(role))+'</span></td>'
+      +'<td class="loc">'+locCell+'</td>'
+      +'<td><div class="rowbtns">'+invBtn+'<button class="btn btn-ghost" data-edit="'+u.id+'">Edit</button><button class="btn btn-danger" data-del="'+u.id+'">Delete</button></div></td>'
       +'</tr>';
   });
   h+='</tbody></table>';
   wrap.innerHTML=h;
   wrap.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEditor(b.dataset.edit));
   wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>delUser(b.dataset.del));
+  wrap.querySelectorAll('[data-invite]').forEach(b=>b.onclick=()=>{const u=USERS.find(x=>String(x.id)===b.dataset.invite);showInvite(u.name,u.invite_url);});
+  wrap.querySelectorAll('[data-reinvite]').forEach(b=>b.onclick=()=>reinvite(b.dataset.reinvite));
 }
 
 async function delUser(id){
@@ -137,16 +174,24 @@ let editId=null;
 function fillLocations(sel){
   document.getElementById('f_location').innerHTML='<option value="">\u2014 select laundromat \u2014</option>'+LOCS.map(l=>'<option value="'+l.id+'"'+(String(l.id)===String(sel)?' selected':'')+'>'+esc(l.name)+'</option>').join('');
 }
-function toggleLocWrap(){document.getElementById('locWrap').style.display=document.getElementById('f_role').value!=='admin'?'block':'none';}
+function toggleLocWrap(){
+  var role=document.getElementById('f_role').value; var onb=isOnb(role); var staff=isStaff(role);
+  document.getElementById('locWrap').style.display=(role!=='admin'&&!onb&&!staff)?'block':'none';
+  document.getElementById('pwWrap').style.display=onb?'none':'block';
+  document.getElementById('onbHint').style.display=onb?'block':'none';
+  document.getElementById('secWrap').style.display=staff?'block':'none';
+}
 function openEditor(id){
   editId=id?id:null;const u=id?USERS.find(x=>String(x.id)===String(id)):null;
   document.getElementById('etitle').textContent=id?'Edit user':'Add user';
   document.getElementById('f_name').value=u?(u.name||''):'';
   document.getElementById('f_email').value=u?(u.email||''):'';
+  document.getElementById('f_phone').value=u?(u.phone||''):'';
   document.getElementById('f_password').value='';
   document.getElementById('f_password').placeholder=id?'Leave blank to keep current':'Set a password';
   document.getElementById('f_role').value=u?(u.role||'franchisee'):'franchisee';
   fillLocations(u?u.location_id:'');
+  renderSecList(u?u.sections:[]);
   toggleLocWrap();
   document.getElementById('emsg').textContent='';
   document.getElementById('overlay').classList.add('show');
@@ -159,25 +204,52 @@ document.getElementById('ecancel').onclick=closeEditor;
 document.getElementById('esave').onclick=async ()=>{
   const name=document.getElementById('f_name').value.trim();
   const email=document.getElementById('f_email').value.trim();
+  const phone=document.getElementById('f_phone').value.trim();
   const password=document.getElementById('f_password').value;
   const role=document.getElementById('f_role').value;
   const location_id=document.getElementById('f_location').value;
+  const onb=isOnb(role); const staff=isStaff(role);
   const msg=document.getElementById('emsg');
   if(!name){msg.textContent='Full name is required.';return;}
   if(!email){msg.textContent='Email is required.';return;}
-  if(!editId && !password){msg.textContent='Please set a password.';return;}
-  if(role!=='admin' && !location_id){msg.textContent='Assign a laundromat for '+role+' accounts.';return;}
-  const payload={name,email,role,location_id:role!=='admin'?Number(location_id):null};
-  if(password)payload.password=password;
+  if(!onb){
+    if(!editId && !password){msg.textContent='Please set a password.';return;}
+    if(role!=='admin' && !staff && !location_id){msg.textContent='Assign a laundromat for '+role+' accounts.';return;}
+  }
+  const payload={name,email,phone,role,location_id:(!onb&&!staff&&role!=='admin')?Number(location_id):null};
+  if(password && !onb)payload.password=password;
+  if(staff)payload.sections=selectedSections();
   const url=editId?(API+'/'+editId):API;
   const method=editId?'PUT':'POST';
   try{
     const r=await fetch(url,{method,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(payload)});
     if(r.status===422){const j=await r.json();const first=j.errors?Object.values(j.errors)[0][0]:(j.message||'Validation failed');msg.textContent=first;return;}
     if(!r.ok)throw new Error('HTTP '+r.status);
+    let created=null; if(method==='POST'){try{created=await r.json();}catch(e){}}
     closeEditor();await loadAll();
+    if(created&&created.invite_url)showInvite(created.name,created.invite_url);
   }catch(e){msg.textContent='Could not save: '+e.message;}
 };
+function showInvite(name,url){
+  var old=document.getElementById('invitebar'); if(old)old.remove();
+  var bar=document.createElement('div'); bar.className='invitebar'; bar.id='invitebar';
+  bar.innerHTML='<span style="font-size:13px">Invite link for <b>'+esc(name||'')+'</b> — send it to them:</span><input id="invUrl" readonly><button class="btn" id="invCopy">Copy</button><button class="x" id="invClose">×</button>';
+  document.body.appendChild(bar);
+  var inp=document.getElementById('invUrl'); inp.value=url; inp.select&&inp.select();
+  try{navigator.clipboard.writeText(url);}catch(e){}
+  document.getElementById('invCopy').onclick=function(){inp.select();try{navigator.clipboard.writeText(url);}catch(e){}this.textContent='Copied';};
+  document.getElementById('invClose').onclick=function(){bar.remove();};
+}
+async function reinvite(id){
+  try{
+    const r=await fetch(API+'/'+id+'/reinvite',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:'{}'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const j=await r.json();
+    await loadAll();
+    const u=USERS.find(x=>String(x.id)===String(id));
+    showInvite(u?u.name:'',j.invite_url);
+  }catch(e){alert('Could not create invite link: '+e.message);}
+}
 document.getElementById('exportBtn').onclick=()=>{
   const blob=new Blob([JSON.stringify(USERS.map(u=>({name:u.name,email:u.email,role:u.role,location:locName(u.location_id)})),null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='laundre-users.json';a.click();URL.revokeObjectURL(a.href);

@@ -2,8 +2,24 @@
 namespace App\Http\Controllers;
 use App\Models\{Location, User, Document, Ticket, Franchise};
 class PortalController extends Controller {
-    public function index() { return $this->serve('laundre-portal', true); }
-    public function tool(string $page) { return $this->serve($page, false); }
+    public function index() {
+        $u = auth()->user();
+        if ($u->isOnboarding()) {
+            $signed = optional($u->onboarding)->nda_signed_at;
+            return $this->serve($signed ? 'laundre-onboard' : 'laundre-nda', false);
+        }
+        return $this->serve('laundre-portal', true);
+    }
+    public function tool(string $page) {
+        $u = auth()->user();
+        if ($u->isOnboarding() && !in_array($page, ['laundre-onboard','laundre-nda'])) {
+            return redirect('/');
+        }
+        if ($u->role === 'user' && $page !== 'laundre-portal' && !in_array($page, (array)$u->sections)) {
+            return redirect('/');
+        }
+        return $this->serve($page, false);
+    }
     private function serve(string $page, bool $isHome = false) {
         $path = public_path('legacy/'.basename($page).'.html');
         abort_unless(is_file($path), 404);
@@ -11,7 +27,7 @@ class PortalController extends Controller {
         $html = preg_replace('/(["\'])laundre-portal\.html\1/', '$1/$1', $html);
         $html = preg_replace('/(["\'])([A-Za-z0-9_\-]+)\.html\1/', '$1/$2$1', $html);
         $u = auth()->user();
-        $sessionJson = json_encode(['role'=>$u->role,'locationId'=>$u->location_id,'name'=>$u->name,'email'=>$u->email], JSON_UNESCAPED_SLASHES);
+        $sessionJson = json_encode(['role'=>$u->role,'locationId'=>$u->location_id,'name'=>$u->name,'email'=>$u->email,'sections'=>$u->sections ?? []], JSON_UNESCAPED_SLASHES);
         $bridge = '<style>#login{display:none!important}#app{display:block!important}</style><script>try{localStorage.setItem("laundre_auth","1");localStorage.setItem("laundre_session",'.json_encode($sessionJson).');}catch(e){}window.LAUNDRE_CSRF='.json_encode(csrf_token()).';</script>';
         $html = str_ireplace('<head>', '<head>'.$bridge, $html);
         $logout = '<form id="__llogout" method="POST" action="/logout" style="display:none">'.csrf_field().'</form><script>document.addEventListener("DOMContentLoaded",function(){var b=document.getElementById("logoutBtn");if(b){b.onclick=function(e){e.preventDefault();document.getElementById("__llogout").submit();};}});</script>';
