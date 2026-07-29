@@ -35,7 +35,7 @@
   <span class="tag">🔒 Confidential · View only</span>
   <span class="spacer"></span>
   <span id="dtitle" style="font-size:13px;color:#bcd0c3;"></span>
-  <a href="laundre-onboard.html">Back</a>
+  <a id="backLink" href="laundre-onboard.html">Back</a>
 </header>
 <div id="stage"><div id="pages"></div></div>
 <div class="wm" id="wm"></div>
@@ -43,8 +43,13 @@
 <div id="shield"><div class="lk">🔒</div><div>Viewing paused</div><div style="opacity:.7;font-size:13px;margin-top:6px">This confidential document is hidden while the window is not in focus.</div></div>
 <script>
 function qs(k){var m=new RegExp('[?&]'+k+'=([^&]*)').exec(location.search);return m?decodeURIComponent(m[1]):'';}
-var ID=qs('id');
+var ID=qs('id'), DOC=qs('doc');
+// ?id= => onboarding document library ; ?doc= => general Documents module
+var KEY = ID || DOC;
+var SRC = ID ? ('/onboarding-doc/'+encodeURIComponent(ID)) : (DOC ? ('/documents-doc/'+encodeURIComponent(DOC)) : '');
+var LIST = ID ? '/onboarding-docs' : '/documents-api';
 var CSRF=(window.LAUNDRE_CSRF||'');
+document.getElementById('backLink').href = DOC ? 'laundre-documents.html' : 'laundre-onboard.html';
 function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{};}catch(e){return {};}}
 var who=(SESSION().email||SESSION().name||'');
 
@@ -59,19 +64,19 @@ var who=(SESSION().email||SESSION().name||'');
 var pages=document.getElementById('pages'), stage=document.getElementById('stage');
 function fail(msg){var l=document.getElementById('loading');if(l){l.querySelector('.spin').style.display='none';document.getElementById('lmsg').textContent=msg||'Could not load this document.';}}
 
-if(!ID){ fail('No document specified.'); }
+if(!SRC){ fail('No document specified.'); }
 else if(!window.pdfjsLib){ fail('Viewer failed to load — please refresh.'); }
 else{
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
   // set the doc title in the header
-  fetch('/onboarding-docs',{headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'})
+  fetch(LIST,{headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'})
     .then(function(r){return r.ok?r.json():[];})
-    .then(function(list){var d=(list||[]).find(function(x){return String(x.id)===String(ID);});document.getElementById('dtitle').textContent=d?d.title:'';})
+    .then(function(list){var d=(list||[]).find(function(x){return String(x.id)===String(KEY);});document.getElementById('dtitle').textContent=d?d.title:'';})
     .catch(function(){});
 
   var pdfDoc=null, pageEls=[], rendered={}, ratio=1.414;
-  fetch('/onboarding-doc/'+encodeURIComponent(ID),{credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}})
+  fetch(SRC,{credentials:'same-origin',headers:{'X-Requested-With':'XMLHttpRequest'}})
     .then(function(r){ if(!r.ok) throw new Error('http'); return r.arrayBuffer(); })
     .then(function(buf){ return pdfjsLib.getDocument({data:buf}).promise; })
     .then(function(doc){

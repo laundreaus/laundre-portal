@@ -74,6 +74,7 @@
       <div><label>Visible to</label><select id="f_visibility"></select></div>
       <div class="full"><label>Link (Drive/Dropbox) — optional if uploading a file</label><input id="f_link" placeholder="https://" /></div>
       <div class="full"><label>Or upload a file (≤3MB)</label><input id="f_file" type="file" /></div>
+      <div class="full"><label style="display:flex;align-items:center;gap:9px;font-weight:600;color:var(--ink)"><input type="checkbox" id="f_protected" style="width:auto"> 🔒 View-only — no download, opens in the secure watermarked viewer (best-effort screenshot protection). For an uploaded PDF.</label></div>
       <div class="full"><label>Note (optional)</label><input id="f_note" /></div>
     </div>
     <div class="msg" id="emsg"></div>
@@ -91,7 +92,7 @@ async function apiSend(u,method,body){const r=await fetch(u,{method:method,heade
 function ms(t){if(!t)return 0;var n=Date.parse(t);return isNaN(n)?0:n;}
 function uploadFile(f){return new Promise((res,rej)=>{const rd=new FileReader();rd.onerror=()=>rej(new Error('read failed'));rd.onload=async()=>{try{const j=await apiSend('/upload-api','POST',{data:rd.result,name:f.name});res(j);}catch(e){rej(e);}};rd.readAsDataURL(f);});}
 let DOCS=[], LOCS=[];
-function normDoc(d){return {id:d.id,title:d.title,category:d.category,visibility:(d.visibility===''||d.visibility==null)?'all':(''+d.visibility),link:d.link,url:d.file_path,fileName:d.file_name,note:d.note,createdAt:ms(d.created_at)};}
+function normDoc(d){return {id:d.id,title:d.title,category:d.category,visibility:(d.visibility===''||d.visibility==null)?'all':(''+d.visibility),link:d.link,url:d.file_path,fileName:d.file_name,note:d.note,protected:!!d.protected,createdAt:ms(d.created_at)};}
 async function reloadDocs(){DOCS=(await apiGet('/documents-api')).map(normDoc);}
 function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function laundromats(){return LOCS;}
@@ -119,8 +120,9 @@ function render(){
   if(!rows.length){wrap.innerHTML='<div class="empty">'+(ADMIN?'No documents yet. Click “＋ Add document”.':'No documents have been shared with your store yet.')+'</div>';return;}
   let h='<table><thead><tr><th>Document</th><th>'+(ADMIN?'Visible to':'Category')+'</th><th>File</th>'+(ADMIN?'<th style="text-align:right">Actions</th>':'')+'</tr></thead><tbody>';
   rows.forEach(d=>{
-    const file=d.link?'<a class="dl" href="'+esc(d.link)+'" target="_blank" rel="noopener">🔗 Open link</a>'
-      :(d.url?'<a class="dl" href="'+d.url+'" download="'+esc(d.fileName||'document')+'">📄 '+esc(d.fileName||'Download')+'</a>':'<span class="dcat">—</span>');
+    const file=d.protected?'<a class="dl" href="laundre-doc-viewer.html?doc='+d.id+'" target="_blank" rel="noopener">🔒 View only</a>'
+      :(d.link?'<a class="dl" href="'+esc(d.link)+'" target="_blank" rel="noopener">🔗 Open link</a>'
+      :(d.url?'<a class="dl" href="'+d.url+'" download="'+esc(d.fileName||'document')+'">📄 '+esc(d.fileName||'Download')+'</a>':'<span class="dcat">—</span>'));
     h+='<tr>'
       +'<td><div class="dtitle">'+esc(d.title)+'</div>'+(d.note?'<div class="dcat">'+esc(d.note)+'</div>':'')+(ADMIN&&d.category?'<div class="dcat">'+esc(d.category)+'</div>':'')+'</td>'
       +'<td>'+(ADMIN?'<span class="vis '+(d.visibility==='all'?'all':'one')+'">'+esc(visLabel(d.visibility))+'</span>':'<span class="dcat">'+esc(d.category||'—')+'</span>')+'</td>'
@@ -150,6 +152,7 @@ function openEditor(id){
   document.getElementById('f_link').value=d?(d.link||''):'';
   document.getElementById('f_file').value='';
   document.getElementById('f_note').value=d?(d.note||''):'';
+  document.getElementById('f_protected').checked=d?!!d.protected:false;
   document.getElementById('emsg').textContent='';
   document.getElementById('overlay').classList.add('show');
 }
@@ -177,7 +180,8 @@ if(ADMIN){
         category:document.getElementById('f_category').value.trim(),
         visibility:document.getElementById('f_visibility').value,
         link:link, file_path:link?'':file_path, file_name:link?'':file_name,
-        note:document.getElementById('f_note').value.trim()};
+        note:document.getElementById('f_note').value.trim(),
+        protected:document.getElementById('f_protected').checked};
       if(editId) await apiSend('/documents-api/'+editId,'PUT',payload); else await apiSend('/documents-api','POST',payload);
       await reloadDocs(); render(); closeEditor();
     }catch(e){msg.style.color='#B4472F';msg.textContent='Could not save: '+e.message;}

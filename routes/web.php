@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/maintenance-api', [MaintenanceController::class, 'submit']);
 
     Route::get('/documents-api', [DocumentController::class, 'index']);
+    Route::get('/documents-doc/{document}', [DocumentController::class, 'open']);
     Route::get('/guides-api', [GuideController::class, 'index']);
     Route::get('/maintenance-docs-api', [MaintenanceDocController::class, 'index']);
     Route::get('/bookkeeping-api', [BookkeepingController::class, 'index']);
