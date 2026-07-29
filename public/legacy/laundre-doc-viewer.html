@@ -59,8 +59,8 @@ else{
       document.getElementById('dtitle').textContent=d?d.title:'';})
     .catch(function(){});
   var f=document.createElement('iframe');
-  f.id='frame'; f.setAttribute('sandbox','allow-scripts allow-same-origin');
-  f.src='/onboarding-doc/'+encodeURIComponent(ID)+'#toolbar=0&navpanes=0&scrollbar=0';
+  f.id='frame'; f.setAttribute('allow','fullscreen');
+  f.src='/onboarding-doc/'+encodeURIComponent(ID)+'#toolbar=0&navpanes=0&scrollbar=0&view=FitH';
   f.onload=function(){var l=document.getElementById('loading');if(l)l.remove();};
   document.getElementById('stage').appendChild(f);
 }
