@@ -13,10 +13,10 @@ class MaintenanceController extends Controller {
     public function submit(Request $r) {
         $u = $r->user();
         abort_if(!$u->location_id, 422, 'No store assigned');
-        $data = $r->validate(['date'=>'required|date_format:Y-m-d','items'=>'array','notes'=>'nullable|string','issues'=>'nullable|string','photos'=>'array']);
+        $data = $r->validate(['date'=>'required|date_format:Y-m-d','items'=>'array','notes'=>'nullable|string','issues'=>'nullable|string','photos'=>'array','geo'=>'nullable|array']);
         return MaintenanceLog::updateOrCreate(
             ['location_id'=>$u->location_id,'date'=>$data['date']],
-            ['user_id'=>$u->id,'by'=>$u->name,'items'=>$data['items']??[], 'notes'=>$data['notes']??null,'issues'=>$data['issues']??null,'photos'=>$data['photos']??[]]
+            ['user_id'=>$u->id,'by'=>$u->name,'items'=>$data['items']??[], 'notes'=>$data['notes']??null,'issues'=>$data['issues']??null,'photos'=>$data['photos']??[],'geo'=>$data['geo']??null]
         );
     }
 }

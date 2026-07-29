@@ -103,7 +103,7 @@ async function apiSend(u,method,body){const r=await fetch(u,{method:method,heade
 function ms(t){if(!t)return 0;var n=Date.parse(t);return isNaN(n)?0:n;}
 function uploadFile(f){return new Promise((res,rej)=>{const rd=new FileReader();rd.onerror=()=>rej(new Error('read failed'));rd.onload=async()=>{try{const j=await apiSend('/upload-api','POST',{data:rd.result,name:f.name});res(j);}catch(e){rej(e);}};rd.readAsDataURL(f);});}
 let LOGS=[], GUIDES=[], LOCS=[];
-function normLog(r){return {id:r.id,locationId:r.location_id,date:(''+(r.date||'')).slice(0,10),by:r.by,items:r.items||{},notes:r.notes,issues:r.issues,photos:r.photos||[],submittedAt:ms(r.updated_at||r.created_at)};}
+function normLog(r){return {id:r.id,locationId:r.location_id,date:(''+(r.date||'')).slice(0,10),by:r.by,items:r.items||{},notes:r.notes,issues:r.issues,photos:r.photos||[],geo:r.geo||null,submittedAt:ms(r.updated_at||r.created_at)};}
 function normGuide(g){return {id:g.id,title:g.title,category:g.category,visibility:(g.visibility===''||g.visibility==null)?'all':(''+g.visibility),link:g.link,url:g.file_path,fileName:g.file_name,note:g.note,createdAt:ms(g.created_at)};}
 async function reloadLogs(){LOGS=(await apiGet('/maintenance-api')).map(normLog);}
 async function reloadGuides(){GUIDES=(await apiGet('/guides-api')).map(normGuide);}
@@ -157,8 +157,9 @@ function renderPhotos(){const c=document.getElementById('photos');if(!c)return;c
 function submitLog(){
   const items={};document.querySelectorAll('.citem').forEach(el=>{items[+el.dataset.ci]=el.querySelector('input').checked;});
   const body={date:todayStr(),items,notes:document.getElementById('c_notes').value.trim(),issues:document.getElementById('c_issues').value.trim(),photos:pendingPhotos.slice()};
-  const msg=document.getElementById('msg'),btn=document.getElementById('submitBtn');btn.disabled=true;msg.style.color='#6b7d73';msg.textContent='Saving…';
-  apiSend('/maintenance-api','POST',body).then(reloadLogs).then(renderStaff).catch(e=>{btn.disabled=false;msg.style.color='#B4472F';msg.textContent='Could not submit: '+e.message;});
+  const msg=document.getElementById('msg'),btn=document.getElementById('submitBtn');btn.disabled=true;msg.style.color='#6b7d73';msg.textContent='Capturing location…';
+  function finish(){msg.textContent='Saving…';apiSend('/maintenance-api','POST',body).then(reloadLogs).then(renderStaff).catch(e=>{btn.disabled=false;msg.style.color='#B4472F';msg.textContent='Could not submit: '+e.message;});}
+  if(navigator.geolocation){var done=false;var to=setTimeout(function(){if(done)return;done=true;body.geo={error:'timeout',at:Date.now()};finish();},9000);navigator.geolocation.getCurrentPosition(function(p){if(done)return;done=true;clearTimeout(to);body.geo={lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy||0),at:Date.now()};finish();},function(err){if(done)return;done=true;clearTimeout(to);body.geo={error:(err&&err.message)||'denied',at:Date.now()};finish();},{enableHighAccuracy:true,timeout:8000,maximumAge:0});}else{body.geo={error:'unsupported',at:Date.now()};finish();}
 }
 
 /* ============ ADMIN VIEW: guides mgmt + submissions ============ */
@@ -243,6 +244,7 @@ function openLogDetail(locId,date){
   h+='</div>';
   if(s.notes)h+='<div class="kv"><b>Notes:</b> '+esc(s.notes)+'</div>';
   if(s.issues)h+='<div class="kv"><b>Issues:</b> '+esc(s.issues)+'</div>';
+  if(s.geo){h+='<div class="kv"><b>Location:</b> '+(s.geo.lat?('<a href="https://maps.google.com/?q='+s.geo.lat+','+s.geo.lng+'" target="_blank" rel="noopener">'+s.geo.lat+', '+s.geo.lng+'</a> (±'+(s.geo.acc||0)+'m)'):('not captured'+(s.geo.error?' — '+esc(s.geo.error):'')))+(s.geo.at?(' at '+new Date(s.geo.at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})):'')+'</div>';}
   if(s.photos&&s.photos.length)h+='<div class="kv"><b>Photos:</b></div><div class="photos">'+s.photos.map(p=>'<a class="thumb" href="'+p+'" target="_blank"><img src="'+p+'"></a>').join('')+'</div>';
   document.getElementById('mBody').innerHTML=h;
   document.getElementById('mFoot').innerHTML='';

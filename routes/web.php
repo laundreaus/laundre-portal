@@ -54,9 +54,21 @@ Route::middleware('auth')->group(function () {
     Route::post('/onboarding-api/track', [OnboardingController::class, 'track']);
     Route::post('/onboarding-api/interest', [OnboardingController::class, 'interest']);
 
+    // Onboarding portal content (current user) + document viewer/tracking
+    Route::get('/onboarding-content', [OnboardingController::class, 'content']);
+    Route::get('/onboarding-docs', [OnboardingController::class, 'myDocuments']);
+    Route::get('/onboarding-doc/{doc}', [OnboardingController::class, 'openDocument']);
+
     // Admin-or-granted-section reads (controllers self-gate via canSection)
     Route::get('/onboarding-admin-api', [OnboardingController::class, 'adminIndex']);
     Route::get('/investors-api', [OnboardingController::class, 'investors']);
+
+    // Admin content manager: videos + documents + view analytics (self-gated via canSection laundre-onboarding-content)
+    Route::get('/onboarding-content-admin', [OnboardingController::class, 'adminContent']);
+    Route::put('/onboarding-content-admin/video', [OnboardingController::class, 'setVideos']);
+    Route::post('/onboarding-content-admin/doc', [OnboardingController::class, 'storeDoc']);
+    Route::delete('/onboarding-content-admin/doc/{doc}', [OnboardingController::class, 'destroyDoc']);
+    Route::get('/onboarding-content-admin/doc/{doc}/views', [OnboardingController::class, 'docViews']);
 
     // ---- Tasks (admin CRUD; assignees see + update status of their own) ----
     Route::get('/tasks-api', [TaskController::class, 'index']);

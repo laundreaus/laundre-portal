@@ -4,15 +4,15 @@ use App\Models\{Location, User, Document, Ticket, Franchise};
 class PortalController extends Controller {
     public function index() {
         $u = auth()->user();
-        if ($u->isOnboarding()) {
-            $signed = optional($u->onboarding)->nda_signed_at;
-            return $this->serve($signed ? 'laundre-onboard' : 'laundre-nda', false);
-        }
+        if ($u->isAccessLocked()) return $this->serve('laundre-locked', false);
+        if ($u->needsNda())       return $this->serve('laundre-nda', false);
+        if ($u->isOnboarding())   return $this->serve('laundre-onboard', false);
         return $this->serve('laundre-portal', true);
     }
     public function tool(string $page) {
         $u = auth()->user();
-        if ($u->isOnboarding() && !in_array($page, ['laundre-onboard','laundre-nda'])) {
+        if ($u->isAccessLocked() || $u->needsNda()) return redirect('/');
+        if ($u->isOnboarding() && !in_array($page, ['laundre-onboard','laundre-nda','laundre-doc-viewer'])) {
             return redirect('/');
         }
         if ($u->role === 'user' && $page !== 'laundre-portal' && !in_array($page, (array)$u->sections)) {

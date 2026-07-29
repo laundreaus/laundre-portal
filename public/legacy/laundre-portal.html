@@ -50,7 +50,9 @@
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px;}
   a.tile{display:block;background:#fff;border:1px solid var(--cream-line);border-radius:15px;padding:22px;text-decoration:none;color:inherit;transition:.15s;position:relative;overflow:hidden;}
   a.tile:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(52,73,61,.14);border-color:var(--green-l);}
-  a.tile .ic{width:46px;height:46px;border-radius:11px;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px;}
+  a.tile .ic{width:46px;height:46px;border-radius:11px;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px;position:relative;}
+  a.tile .ic .dot{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:9px;background:var(--accent);border:2px solid #fff;box-shadow:0 2px 6px rgba(196,112,63,.4);}
+  a.tile .newtag{position:absolute;bottom:20px;right:22px;background:#F5E7DC;color:var(--accent);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;border-radius:20px;padding:3px 9px;}
   a.tile h3{margin:0 0 6px;font-size:16px;color:var(--green-d);}
   a.tile p{margin:0;font-size:13px;color:#6b7d73;line-height:1.5;}
   a.tile .arrow{position:absolute;top:22px;right:22px;color:var(--cream-line);font-size:20px;transition:.15s;}
@@ -184,35 +186,36 @@ document.getElementById('logoutBtn').onclick=()=>{localStorage.removeItem(AUTH_K
 
 /* ---------- Tools (role-scoped) ---------- */
 const TOOLS=[
-  {icon:'📐',name:'Layout Tool',href:'laundre-layout.html',roles:['admin'],desc:'To-scale drag-and-drop fit-out designer: draw the floor, place Fuego washers/dryers and fixtures, and get live area and cost.'},
-  {icon:'📹',name:'CCTV',href:'laundre-cctv.html',roles:['admin','franchisee'],desc:'Enter 4 camera feed embeds per laundromat; each franchisee sees only their store.',fname:'CCTV',fdesc:'Live camera feeds for your laundromat.'},
-  {icon:'📘',name:'Maintenance Docs',href:'laundre-maintenance-docs.html',roles:['admin','maintenance'],desc:'Upload manuals, service guides and technical docs for the maintenance team.',fname:'Maintenance Docs',fdesc:'Manuals, guides and technical docs for your maintenance work.'},
-  {icon:'📍',name:'Site Locations',href:'laundre-admin.html',roles:['admin'],desc:'Manage approved laundromat locations, radii and active status.'},
-  {icon:'👤',name:'User Management',href:'laundre-users.html',roles:['admin'],desc:'Create franchisee logins and assign each to a laundromat.'},
   {icon:'🗒️',name:'Task List',href:'laundre-tasks.html',roles:['admin'],desc:'Create, assign and track team tasks across To Do, In Progress, To Review and Completed.'},
-  {icon:'🚀',name:'Onboarding Tracker',href:'laundre-onboarding.html',roles:['admin'],desc:'Track potential franchisees and investors through set-up, NDA signing, video and document activity, with a 14-day follow-up countdown.'},
-  {icon:'💼',name:'Investors',href:'laundre-investors.html',roles:['admin'],desc:'Investor prospects and the interest amounts they have formally registered.'},
-  {icon:'📈',name:'Reporting',href:'laundre-reporting.html',roles:['admin'],desc:'Upload monthly sales reports (CSV) that feed the dashboard.'},
-  {icon:'🗺️',name:'Postcode & Radius Tool',href:'region-postcode-tool.html',roles:['admin'],desc:'Draw a radius around any address and list the postcodes and suburbs it covers.'},
-  {icon:'📊',name:'Prospective Site Analyzer',href:'laundre-site-analyzer.html',roles:['admin'],desc:'Score potential sites on population, parking, size and footfall.'},
-  {icon:'🧮',name:'Cost Analysis',href:'laundre-cost-analysis.html',roles:['admin'],desc:'Fit-out estimator with trade line items, builder margin, GST and price per m².'},
-  {icon:'👥',name:'Franchise CRM',href:'laundre-crm.html',roles:['admin'],desc:'Prospect pipeline: NDA, fees, documents, calls and franchise decisions.'},
-  {icon:'🔧',name:'Suppliers & Contacts',href:'laundre-suppliers.html',roles:['admin'],desc:'Key supplier directory — equipment, fit-out, signage and services.'},
-  {icon:'📒',name:'Bookkeeping Checker',href:'laundre-bookkeeping.html',roles:['admin','franchisee'],desc:'Track quarterly BAS lodgements and annual returns for every laundromat.',
-     fname:'Bookkeeping',fdesc:'Track your store’s quarterly BAS and annual return, and attach the records.'},
-  {icon:'✅',name:'Franchise Checklist',href:'laundre-checklist.html',roles:['admin','franchisee'],desc:'Onboarding checklists across all franchisees.',
-     fname:'My Franchise Checklist',fdesc:'Work through your store’s onboarding checklist and track progress.'},
+  {icon:'👥',name:'Franchise CRM',href:'laundre-crm.html',roles:['admin'],updated:true,desc:'Prospect pipeline: NDA, fees, documents, calls and franchise decisions.'},
+  {icon:'🚀',name:'Onboarding Tracker',href:'laundre-onboarding.html',roles:['admin'],updated:true,desc:'Track potential franchisees and investors through set-up, NDA signing, video and document activity, with a 14-day follow-up countdown.'},
+  {icon:'🎬',name:'Onboarding Content',href:'laundre-onboarding-content.html',roles:['admin'],updated:true,desc:'Control the franchisee and investor welcome videos and document libraries, and see who has opened each document.'},
+  {icon:'💼',name:'Investors',href:'laundre-investors.html',roles:['admin'],updated:true,desc:'Investor prospects and the interest amounts they have formally registered.'},
   {icon:'📄',name:'Documents',href:'laundre-documents.html',roles:['admin','franchisee'],desc:'Manage key documents and control which franchises can see them.',
      fdesc:'Key documents and resources shared with your store.'},
+  {icon:'✅',name:'Franchise Checklist',href:'laundre-checklist.html',roles:['admin','franchisee'],desc:'Onboarding checklists across all franchisees.',
+     fname:'My Franchise Checklist',fdesc:'Work through your store’s onboarding checklist and track progress.'},
+  {icon:'📐',name:'Layout Tool',href:'laundre-layout.html',roles:['admin'],desc:'To-scale drag-and-drop fit-out designer: draw the floor, place Fuego washers/dryers and fixtures, and get live area and cost.'},
+  {icon:'📍',name:'Site Locations',href:'laundre-admin.html',roles:['admin'],desc:'Manage approved laundromat locations, radii and active status.'},
+  {icon:'🗺️',name:'Postcode & Radius Tool',href:'region-postcode-tool.html',roles:['admin'],updated:true,desc:'Draw a radius around any address and list the postcodes and suburbs it covers.'},
+  {icon:'📊',name:'Prospective Site Analyzer',href:'laundre-site-analyzer.html',roles:['admin'],desc:'Score potential sites on population, parking, size and footfall.'},
+  {icon:'🧮',name:'Cost Analysis',href:'laundre-cost-analysis.html',roles:['admin'],desc:'Fit-out estimator with trade line items, builder margin, GST and price per m².'},
+  {icon:'🔧',name:'Suppliers & Contacts',href:'laundre-suppliers.html',roles:['admin'],desc:'Key supplier directory — equipment, fit-out, signage and services.'},
+  {icon:'📈',name:'Reporting',href:'laundre-reporting.html',roles:['admin'],desc:'Upload monthly sales reports (CSV) that feed the dashboard.'},
+  {icon:'📘',name:'Maintenance Docs',href:'laundre-maintenance-docs.html',roles:['admin','maintenance'],desc:'Upload manuals, service guides and technical docs for the maintenance team.',fname:'Maintenance Docs',fdesc:'Manuals, guides and technical docs for your maintenance work.'},
   {icon:'🆘',name:'Support Queue',href:'laundre-support.html',roles:['admin','franchisee'],desc:'Review incidents and questions submitted by franchisees.',
      fname:'Submit / Ask',fdesc:'Report an incident or ask the franchise team a question.'},
-  {icon:'🧹',name:'Cleaning',href:'laundre-cleaning.html',roles:['admin','cleaner'],desc:'Daily cleaning submissions across all laundromats — ticks, notes and photos.',
+  {icon:'📒',name:'Bookkeeping Checker',href:'laundre-bookkeeping.html',roles:['admin','franchisee'],desc:'Track quarterly BAS lodgements and annual returns for every laundromat.',
+     fname:'Bookkeeping',fdesc:'Track your store’s quarterly BAS and annual return, and attach the records.'},
+  {icon:'🧹',name:'Cleaning',href:'laundre-cleaning.html',roles:['admin','cleaner'],updated:true,desc:'Daily cleaning submissions across all laundromats — ticks, notes and photos.',
      fname:'Daily Cleaning',fdesc:'Complete today’s cleaning checklist — bins, lint traps, notes, issues and photos.'},
-  {icon:'🛠️',name:'Maintenance',href:'laundre-maintenance.html',roles:['admin','maintenance'],desc:'Machine &amp; tech guides plus maintenance logs across all laundromats.',
-     fname:'Maintenance',fdesc:'Machine guides &amp; instructions, and log your maintenance checks.'},
+  {icon:'🛠️',name:'Maintenance',href:'laundre-maintenance.html',roles:['admin','maintenance'],updated:true,desc:'Machine &amp; tech guides plus maintenance logs across all laundromats.',
+     fname:'Maintenance',fdesc:'Machine guides &amp; instructions, and log your maintenance checks, with location capture.'},
   {icon:'💳',name:'Bubble Pay',href:'https://www.bubblepayportal.com/my-dashboard',roles:['admin','franchisee'],ext:true,
      desc:'Open the Bubble Pay dashboard for payments and machine management.',
-     fdesc:'Open your Bubble Pay dashboard for payments and machine management.'}
+     fdesc:'Open your Bubble Pay dashboard for payments and machine management.'},
+  {icon:'👤',name:'User Management',href:'laundre-users.html',roles:['admin'],updated:true,desc:'Create franchisee, staff and prospect logins, assign stores and sections, and send invite links.'},
+  {icon:'📹',name:'CCTV',href:'laundre-cctv.html',roles:['admin','franchisee'],desc:'Enter 4 camera feed embeds per laundromat; each franchisee sees only their store.',fname:'CCTV',fdesc:'Live camera feeds for your laundromat.'}
 ];
 function renderTiles(role){
   let list;
@@ -227,7 +230,9 @@ function renderTiles(role){
     const desc=(role==='franchisee'&&t.fdesc)?t.fdesc:t.desc;
     const ext=t.ext?' target="_blank" rel="noopener"':'';
     const arrow=t.ext?'↗':'→';
-    return '<a class="tile" href="'+t.href+'"'+ext+'><span class="arrow">'+arrow+'</span><div class="ic">'+t.icon+'</div><h3>'+esc(name)+'</h3><p>'+esc(desc)+'</p></a>';
+    const dot=t.updated?'<span class="dot"></span>':'';
+    const tag=t.updated?'<span class="newtag">Updated</span>':'';
+    return '<a class="tile" href="'+t.href+'"'+ext+'><span class="arrow">'+arrow+'</span><div class="ic">'+t.icon+dot+'</div><h3>'+esc(name)+'</h3><p>'+esc(desc)+'</p>'+tag+'</a>';
   }).join('');
 }
 

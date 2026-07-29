@@ -53,7 +53,7 @@
   <div class="cols">
     <div>
       <div class="card">
-        <h3>Welcome video <span class="ph">Placeholder</span></h3>
+        <h3>Welcome video</h3>
         <div class="video" id="video">
           <div class="play"></div>
           <div class="cap">Play the Laundré welcome video</div>
@@ -75,7 +75,16 @@
 </main>
 <script>
 var CSRF=(window.LAUNDRE_CSRF||'');
-var VIDEO_EMBED='';/* PLACEHOLDER: put a YouTube/Vimeo embed URL here, e.g. https://www.youtube.com/embed/XXXX */
+var VIDEO_EMBED='';/* set from /onboarding-content (admin-controlled) */
+function ytEmbed(u){
+  if(!u) return '';
+  u=(''+u).trim();
+  if(/youtube\.com\/embed\//.test(u)||/player\.vimeo\.com/.test(u)) return u;
+  var m=u.match(/[?&]v=([A-Za-z0-9_\-]{6,})/)||u.match(/youtu\.be\/([A-Za-z0-9_\-]{6,})/)||u.match(/youtube\.com\/shorts\/([A-Za-z0-9_\-]{6,})/);
+  if(m) return 'https://www.youtube.com/embed/'+m[1];
+  if(/^[A-Za-z0-9_\-]{6,15}$/.test(u)) return 'https://www.youtube.com/embed/'+u;
+  return u;
+}
 function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{};}catch(e){return {};}}
 var ME=SESSION(); var KIND=(ME.role==='investor')?'investor':'franchisee';
 function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
@@ -86,21 +95,28 @@ function track(ev){apiSend('/onboarding-api/track','POST',{event:ev}).catch(func
 
 document.getElementById('video').onclick=function(){
   track('video');
-  if(VIDEO_EMBED){ this.innerHTML='<iframe src="'+VIDEO_EMBED+'?autoplay=1" allow="autoplay; fullscreen" allowfullscreen></iframe>'; }
-  else { this.innerHTML='<div class="cap" style="position:static;background:none;color:#eaf0ec;text-align:center;padding:20px">▶ Welcome video would play here.<br><span style="opacity:.7">(Placeholder — add the real video embed in the tool.)</span></div>'; }
+  var src=ytEmbed(VIDEO_EMBED);
+  if(src){ this.innerHTML='<iframe src="'+src+(src.indexOf('?')>=0?'&':'?')+'autoplay=1" allow="autoplay; fullscreen" allowfullscreen></iframe>'; }
+  else { this.innerHTML='<div class="cap" style="position:static;background:none;color:#eaf0ec;text-align:center;padding:20px">The welcome video hasn’t been added yet.<br><span style="opacity:.7">Please check back soon.</span></div>'; }
 };
 
 function renderDocs(list){
   var host=document.getElementById('docs');
   if(!list.length){host.innerHTML='<div class="empty">No documents have been shared yet.</div>';return;}
   host.innerHTML=list.map(function(d){
-    var href=d.link||d.file_path||'#';
-    return '<a class="doc" href="'+esc(href)+'" target="_blank" rel="noopener" data-doc="1">'
-      +'<div class="ic">'+(d.link?'🔗':'📄')+'</div>'
-      +'<div class="t"><b>'+esc(d.title)+'</b><span>'+esc(d.category||'Document')+(d.note?' · '+esc(d.note):'')+'</span></div>'
-      +'<div class="go">Open →</div></a>';
+    if(d.protected){
+      return '<a class="doc" href="laundre-doc-viewer.html?id='+encodeURIComponent(d.id)+'" target="_blank" rel="noopener">'
+        +'<div class="ic">🔒</div>'
+        +'<div class="t"><b>'+esc(d.title)+'</b><span>View only · confidential</span></div>'
+        +'<div class="go">View →</div></a>';
+    }
+    var ic=d.inline?'📄':'⬇️';
+    var sub=(d.ext?d.ext.toUpperCase():'FILE')+(d.inline?' · opens in viewer':' · download');
+    return '<a class="doc" href="'+esc(d.url)+'" target="_blank" rel="noopener">'
+      +'<div class="ic">'+ic+'</div>'
+      +'<div class="t"><b>'+esc(d.title)+'</b><span>'+esc(sub)+'</span></div>'
+      +'<div class="go">'+(d.inline?'Open →':'Download →')+'</div></a>';
   }).join('');
-  host.querySelectorAll('[data-doc]').forEach(function(a){a.addEventListener('click',function(){track('doc');});});
 }
 
 function renderInvestor(o){
@@ -135,8 +151,9 @@ async function boot(){
   if(KIND==='investor'){ document.getElementById('h1').textContent='Welcome, '+((ME.name||'').split(' ')[0]||'investor'); document.getElementById('hsub').textContent='Watch the overview, review the documents, then register your interest.'; }
   else { document.getElementById('h1').textContent='Welcome, '+((ME.name||'').split(' ')[0]||''); }
   try{
+    var content=await apiGet('/onboarding-content'); VIDEO_EMBED=content.video||'';
     var state=await apiGet('/onboarding-api');
-    var docs=await apiGet('/documents-api');
+    var docs=await apiGet('/onboarding-docs');
     renderDocs(docs||[]);
     if(KIND==='investor') renderInvestor(state.onboarding);
   }catch(e){ document.getElementById('docs').innerHTML='<div class="empty">Could not load documents — please refresh.</div>'; }

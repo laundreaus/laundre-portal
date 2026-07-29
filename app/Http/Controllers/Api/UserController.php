@@ -15,10 +15,12 @@ class UserController extends Controller {
                 return $arr;
             });
     }
+    private const INVITE_ROLES = ['potential_franchisee','investor','cleaner','maintenance'];
     public function store(Request $r) {
         $data = $this->rules($r, true);
+        $invite = in_array($data['role'], self::INVITE_ROLES);
         $onboarding = in_array($data['role'], ['potential_franchisee','investor']);
-        if ($onboarding) {
+        if ($invite) {
             $data['invite_token'] = bin2hex(random_bytes(24));
             $data['password'] = Hash::make(bin2hex(random_bytes(16))); // placeholder until they set their own
         } else {
@@ -31,6 +33,8 @@ class UserController extends Controller {
             if ($data['role']==='potential_franchisee') {
                 \App\Models\PipelineCard::create(['name'=>$user->name,'email'=>$user->email,'phone'=>$user->phone,'stage'=>'nda_sent','user_id'=>$user->id]);
             }
+        }
+        if ($invite) {
             $user->makeVisible('invite_token');
             $arr = $user->toArray();
             $arr['invite_url'] = url('/welcome/'.$user->invite_token);
@@ -45,7 +49,7 @@ class UserController extends Controller {
         return $user;
     }
     public function reinvite(Request $r, User $user) {
-        abort_unless($user->isOnboarding(), 422, 'Only potential franchisees or investors have invite links.');
+        abort_unless(in_array($user->role, self::INVITE_ROLES), 422, 'Only invited accounts (prospects, investors, cleaners, maintenance) have invite links.');
         $user->invite_token = bin2hex(random_bytes(24));
         $user->save();
         return response()->json(['ok'=>true,'invite_url'=>url('/welcome/'.$user->invite_token)]);

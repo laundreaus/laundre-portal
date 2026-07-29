@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Secure Document</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;}
+  *{box-sizing:border-box;-webkit-user-select:none;user-select:none;}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#22302a;color:#EAF0EC;overflow:hidden;}
+  header{background:var(--green-d);padding:11px 18px;display:flex;align-items:center;gap:12px;height:52px;}
+  header .logo svg{height:22px;width:auto;display:block;} header .spacer{flex:1;}
+  header .tag{font-size:12px;color:#E4A66F;font-weight:700;border:1px solid rgba(228,166,111,.4);border-radius:20px;padding:3px 10px;}
+  header a{color:#cfe0d5;font-size:13px;text-decoration:none;margin-left:14px;}
+  #stage{position:absolute;top:52px;left:0;right:0;bottom:0;background:#333;}
+  #frame{width:100%;height:100%;border:0;}
+  .wm{position:absolute;inset:52px 0 0 0;pointer-events:none;z-index:5;opacity:.10;background-repeat:repeat;display:flex;align-items:center;justify-content:center;}
+  #shield{position:fixed;inset:0;background:#000;z-index:9999;display:none;color:#EAF0EC;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:30px;}
+  #shield.show{display:flex;}
+  #shield .lk{font-size:40px;margin-bottom:14px;}
+  .loading{position:absolute;inset:52px 0 0 0;display:flex;align-items:center;justify-content:center;color:#bcd0c3;font-size:14px;}
+  @media print{ html,body{display:none!important;} }
+</style>
+</head>
+<body oncontextmenu="return false" ondragstart="return false" oncopy="return false">
+<header>
+  <span class="logo"><svg xmlns="http://www.w3.org/2000/svg" width="145" height="28.506" viewBox="0 0 145 28.506"><g transform="translate(-1862.4 -927.506)"><path d="M552.01,324.131a12.885,12.885,0,0,1-.315-2.94,8.664,8.664,0,0,1,.145-1.512,6.607,6.607,0,0,1,.484-1.561,3.343,3.343,0,0,1,.907-1.222,2.106,2.106,0,0,1,1.392-.472,1.843,1.843,0,0,1,1.222.435,3.381,3.381,0,0,1,.859,1.126,5.977,5.977,0,0,1,.5,1.5,8.317,8.317,0,0,1,.157,1.585,8.712,8.712,0,0,1-.218,1.911,5.654,5.654,0,0,1-.726,1.778,3.856,3.856,0,0,1-1.331,1.295,3.951,3.951,0,0,1-2.033.484h-.145A9.542,9.542,0,0,1,552.01,324.131Zm6.449,11.447a8.445,8.445,0,0,0,2.492-1.27,6.5,6.5,0,0,0,1.742-1.911,4.547,4.547,0,0,0,.641-2.348,8.254,8.254,0,0,1-1.5.472,7.648,7.648,0,0,1-1.572.157,8.856,8.856,0,0,1-4.126-.944A7.593,7.593,0,0,1,553.172,327h2.178q4.38,0,6.341-1.234a4.02,4.02,0,0,0,1.96-3.63,5.294,5.294,0,0,0-1-3.133,6.884,6.884,0,0,0-2.916-2.263,11.513,11.513,0,0,0-4.671-.847,9.232,9.232,0,0,0-6.9,2.953,9.832,9.832,0,0,0-1.984,3.206,10.8,10.8,0,0,0-.7,3.908,9.773,9.773,0,0,0,.787,3.908,10.177,10.177,0,0,0,5.372,5.372,9.838,9.838,0,0,0,3.933.787,9.389,9.389,0,0,0,2.892-.448Z" transform="translate(1443.75 619.986)" fill="#EAF0EC"/></g></svg></span>
+  <span class="tag">🔒 Confidential · View only</span>
+  <span class="spacer"></span>
+  <span id="dtitle" style="font-size:13px;color:#bcd0c3;"></span>
+  <a href="laundre-onboard.html">Back</a>
+</header>
+<div id="stage">
+  <div class="loading" id="loading">Loading secure document…</div>
+</div>
+<div class="wm" id="wm"></div>
+<div id="shield"><div class="lk">🔒</div><div>Viewing paused</div><div style="opacity:.7;font-size:13px;margin-top:6px">This confidential document is hidden while the window is not in focus.</div></div>
+<script>
+function qs(k){var m=new RegExp('[?&]'+k+'=([^&]*)').exec(location.search);return m?decodeURIComponent(m[1]):'';}
+var ID=qs('id');
+var CSRF=(window.LAUNDRE_CSRF||'');
+function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{};}catch(e){return {};}}
+var who=(SESSION().email||SESSION().name||'');
+
+// watermark with the viewer's identity (deters photographing)
+(function(){
+  var c=document.createElement('canvas');c.width=320;c.height=180;var x=c.getContext('2d');
+  x.translate(160,90);x.rotate(-0.35);x.font='13px -apple-system,Arial';x.fillStyle='#000';x.textAlign='center';
+  x.fillText('Laundré · Confidential',0,-8);x.fillText(who||'',0,12);
+  document.getElementById('wm').style.backgroundImage='url('+c.toDataURL()+')';
+})();
+
+if(!ID){ document.getElementById('loading').textContent='No document specified.'; }
+else{
+  fetch('/onboarding-docs',{headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'})
+    .then(function(r){return r.ok?r.json():[];})
+    .then(function(list){var d=(list||[]).find(function(x){return String(x.id)===String(ID);});
+      document.getElementById('dtitle').textContent=d?d.title:'';})
+    .catch(function(){});
+  var f=document.createElement('iframe');
+  f.id='frame'; f.setAttribute('sandbox','allow-scripts allow-same-origin');
+  f.src='/onboarding-doc/'+encodeURIComponent(ID)+'#toolbar=0&navpanes=0&scrollbar=0';
+  f.onload=function(){var l=document.getElementById('loading');if(l)l.remove();};
+  document.getElementById('stage').appendChild(f);
+}
+
+// screenshot / screen-share deterrents (best-effort — cannot be fully guaranteed in a browser)
+var shield=document.getElementById('shield');
+function cover(){shield.classList.add('show');}
+function uncover(){shield.classList.remove('show');}
+document.addEventListener('visibilitychange',function(){document.hidden?cover():uncover();});
+window.addEventListener('blur',cover);
+window.addEventListener('focus',uncover);
+window.addEventListener('beforeprint',cover);
+document.addEventListener('keydown',function(e){
+  var k=(e.key||'').toLowerCase();
+  if(k==='printscreen'){cover();setTimeout(uncover,1200);}
+  if((e.ctrlKey||e.metaKey)&&(k==='s'||k==='p')){e.preventDefault();cover();setTimeout(uncover,1200);}
+});
+</script>
+</body>
+</html>
