@@ -54,8 +54,10 @@
   <div class="card">
     <h3>Welcome videos (YouTube)</h3>
     <div class="grid2">
-      <div><label>Franchisee video — YouTube link or embed URL</label><input id="v_fr" placeholder="https://www.youtube.com/watch?v=…"></div>
-      <div><label>Investor video — YouTube link or embed URL</label><input id="v_inv" placeholder="https://www.youtube.com/watch?v=…"></div>
+      <div><label>Franchisee welcome video — YouTube link or embed URL</label><input id="v_fr" placeholder="https://www.youtube.com/watch?v=…"></div>
+      <div><label>Investor welcome video — YouTube link or embed URL</label><input id="v_inv" placeholder="https://www.youtube.com/watch?v=…"></div>
+      <div><label>Cleaner intro video — YouTube link or embed URL</label><input id="v_cln" placeholder="https://www.youtube.com/watch?v=…"></div>
+      <div><label>Maintenance intro video — YouTube link or embed URL</label><input id="v_mnt" placeholder="https://www.youtube.com/watch?v=…"></div>
     </div>
     <div style="text-align:right;margin-top:14px"><button class="btn" id="saveVid">Save videos</button></div>
     <div class="hint">Paste any YouTube link (watch, share, shorts or embed) — it’s converted to an embed automatically. Leave blank to hide the video.</div>
@@ -94,6 +96,8 @@ async function load(){
     var d=await apiGet('/onboarding-content-admin');
     document.getElementById('v_fr').value=d.videos.franchisee||'';
     document.getElementById('v_inv').value=d.videos.investor||'';
+    document.getElementById('v_cln').value=(d.videos.cleaner||'');
+    document.getElementById('v_mnt').value=(d.videos.maintenance||'');
     renderDocs(d.documents||[]);
   }catch(e){ document.getElementById('docsTable').innerHTML='<div class="empty">Could not load — please refresh.</div>'; }
 }
@@ -118,7 +122,7 @@ function renderDocs(list){
 
 document.getElementById('saveVid').onclick=async function(){
   var msg=document.getElementById('vmsg'); this.disabled=true; msg.className='msg'; msg.textContent='Saving…';
-  var r=await apiSend('/onboarding-content-admin/video','PUT',{franchisee:document.getElementById('v_fr').value.trim(),investor:document.getElementById('v_inv').value.trim()});
+  var r=await apiSend('/onboarding-content-admin/video','PUT',{franchisee:document.getElementById('v_fr').value.trim(),investor:document.getElementById('v_inv').value.trim(),cleaner:document.getElementById('v_cln').value.trim(),maintenance:document.getElementById('v_mnt').value.trim()});
   this.disabled=false;
   if(r.ok){msg.className='msg ok';msg.textContent='Saved.';}else{msg.className='msg err';msg.textContent='Could not save.';}
 };

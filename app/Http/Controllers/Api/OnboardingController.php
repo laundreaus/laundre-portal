@@ -160,15 +160,17 @@ class OnboardingController extends Controller {
                         'url'=>url('/onboarding-doc/'.$d->id)];
             });
         return response()->json([
-            'videos'=>['franchisee'=>(string)Setting::get('onboarding_video_franchisee',''),'investor'=>(string)Setting::get('onboarding_video_investor','')],
+            'videos'=>['franchisee'=>(string)Setting::get('onboarding_video_franchisee',''),'investor'=>(string)Setting::get('onboarding_video_investor',''),'cleaner'=>(string)Setting::get('intro_video_cleaner',''),'maintenance'=>(string)Setting::get('intro_video_maintenance','')],
             'documents'=>$docs,
         ]);
     }
     public function setVideos(Request $r) {
         $this->gateContent($r);
-        $d = $r->validate(['franchisee'=>'nullable|string','investor'=>'nullable|string']);
-        if (array_key_exists('franchisee',$d)) Setting::put('onboarding_video_franchisee', (string)($d['franchisee']??''));
-        if (array_key_exists('investor',$d))   Setting::put('onboarding_video_investor',   (string)($d['investor']??''));
+        $d = $r->validate(['franchisee'=>'nullable|string','investor'=>'nullable|string','cleaner'=>'nullable|string','maintenance'=>'nullable|string']);
+        if (array_key_exists('franchisee',$d))  Setting::put('onboarding_video_franchisee', (string)($d['franchisee']??''));
+        if (array_key_exists('investor',$d))    Setting::put('onboarding_video_investor',   (string)($d['investor']??''));
+        if (array_key_exists('cleaner',$d))     Setting::put('intro_video_cleaner',         (string)($d['cleaner']??''));
+        if (array_key_exists('maintenance',$d)) Setting::put('intro_video_maintenance',     (string)($d['maintenance']??''));
         return response()->json(['ok'=>true]);
     }
     public function storeDoc(Request $r) {

@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Laundré · Welcome</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
 <style>
   :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;--muted:#8a9790;}
@@ -39,6 +40,14 @@
   .msg{font-size:13px;min-height:16px;margin-top:10px;} .done{background:#E1EDE4;color:#2f6b46;border-radius:10px;padding:12px 14px;font-size:14px;font-weight:600;}
   .invite-note{background:#FBF9F4;border:1px solid var(--cream-line);border-radius:10px;padding:12px 14px;font-size:13px;color:#6b7d73;line-height:1.5;}
   .logo svg{height:24px;width:auto;display:block;}
+  .datacard{background:#fff;border:1px solid var(--cream-line);border-radius:15px;padding:22px;margin-top:2px;}
+  .datacard .dtitle{font-size:18px;font-weight:700;color:var(--green-d);}
+  .datacard .dsub{font-size:13px;color:#6b7d73;margin-top:2px;}
+  .datacard .charts{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px;}
+  @media(max-width:760px){.datacard .charts{grid-template-columns:1fr;}}
+  .datacard .chartbox{min-width:0;}
+  .datacard .ct{font-size:12.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+  .datacard canvas{width:100%!important;height:240px!important;}
 </style>
 </head>
 <body>
@@ -71,6 +80,14 @@
         <div id="docs"><div class="empty">Loading documents…</div></div>
       </div>
       <div class="card"><div class="invite-note">These materials are confidential and shared under the agreement you signed. A member of the Laundré team will be in touch within 14 days.</div></div>
+    </div>
+  </div>
+  <div class="datacard" id="dataShowcase" style="display:none">
+    <div class="dtitle">See the data from one of our live laundromats</div>
+    <div class="dsub">Actual trading revenue from an operating Laundré store.</div>
+    <div class="charts">
+      <div class="chartbox"><div class="ct">Monthly revenue — last 12 months</div><canvas id="chMonthly"></canvas></div>
+      <div class="chartbox"><div class="ct">Annual revenue — last 3 years</div><canvas id="chAnnual"></canvas></div>
     </div>
   </div>
 </main>
@@ -147,6 +164,16 @@ function renderInvestor(o){
   };
 }
 
+var MONTHLY={labels:['Jul 25','Aug 25','Sep 25','Oct 25','Nov 25','Dec 25','Jan 26','Feb 26','Mar 26','Apr 26','May 26','Jun 26'],values:[25071.49,22771.45,18502.52,18798.77,18072.65,18473.56,18690.86,14922.02,20927.85,17702.11,18240.08,23476.52]};
+var ANNUAL={labels:['FY2024','FY2025','FY2026'],values:[227559.47,313597.00,268534.81]};
+function AUD(n){return '$'+Math.round(n).toLocaleString();}
+function renderShowcase(){
+  if(!window.Chart) return;
+  var green='#435E53', greenFill='rgba(67,94,83,.12)', terra='#C4703F', greenL='#6E8B7B';
+  var yfmt=function(v){return AUD(v);}, tfmt=function(c){return AUD(c.parsed.y);};
+  new Chart(document.getElementById('chMonthly'),{type:'line',data:{labels:MONTHLY.labels,datasets:[{label:'Revenue',data:MONTHLY.values,borderColor:green,backgroundColor:greenFill,fill:true,tension:.35,pointRadius:3,pointBackgroundColor:green,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:tfmt}}},scales:{y:{ticks:{callback:yfmt},grid:{color:'#eee'}},x:{grid:{display:false}}}}});
+  new Chart(document.getElementById('chAnnual'),{type:'bar',data:{labels:ANNUAL.labels,datasets:[{label:'Revenue',data:ANNUAL.values,backgroundColor:[terra,green,greenL],borderRadius:8,maxBarThickness:90}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:tfmt}}},scales:{y:{ticks:{callback:yfmt},grid:{color:'#eee'}},x:{grid:{display:false}}}}});
+}
 async function boot(){
   document.getElementById('who').textContent=(ME.name||ME.email||'')+(KIND==='investor'?' · Investor':' · Franchise prospect');
   if(KIND==='investor'){ document.getElementById('h1').textContent='Welcome, '+((ME.name||'').split(' ')[0]||'investor'); document.getElementById('hsub').textContent='Watch the overview, review the documents, then register your interest.'; var cl=document.getElementById('cardLink'); if(cl) cl.style.display='inline-block'; }
@@ -156,6 +183,7 @@ async function boot(){
     var state=await apiGet('/onboarding-api');
     var docs=await apiGet('/onboarding-docs');
     renderDocs(docs||[]);
+    if(KIND==='franchisee'){ document.getElementById('dataShowcase').style.display='block'; renderShowcase(); }
     if(KIND==='investor') renderInvestor(state.onboarding);
   }catch(e){ document.getElementById('docs').innerHTML='<div class="empty">Could not load documents — please refresh.</div>'; }
 }

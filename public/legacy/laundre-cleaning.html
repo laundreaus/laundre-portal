@@ -97,8 +97,10 @@
 <script>
 /* ---- Intro video (placeholder — set INTRO_VIDEO to a YouTube/Vimeo embed URL) ---- */
 var INTRO_VIDEO='';
-function videoCard(cap){return '<div class="card"><h3>Intro video <span class="vph">Placeholder</span></h3><div class="vidbox" onclick="playIntro(this)"><div class="vplay"></div><div class="vcap">'+cap+'</div></div></div>';}
-function playIntro(el){var u=INTRO_VIDEO;if(u){el.innerHTML='<iframe src="'+u+(u.indexOf('?')>=0?'&':'?')+'autoplay=1" allow="autoplay;fullscreen" allowfullscreen></iframe>';}else{el.innerHTML='<div class="vcap" style="position:static;background:none;color:#eaf0ec;text-align:center;padding:22px">\u25B6 Intro video would play here.<br><span style="opacity:.7">(Placeholder \u2014 add the video embed in the tool.)</span></div>';}}
+function ytEmbed(u){if(!u)return '';u=(''+u).trim();if(/youtube\.com\/embed\//.test(u)||/player\.vimeo\.com/.test(u))return u;var m=u.match(/[?&]v=([A-Za-z0-9_\-]{6,})/)||u.match(/youtu\.be\/([A-Za-z0-9_\-]{6,})/)||u.match(/youtube\.com\/shorts\/([A-Za-z0-9_\-]{6,})/);if(m)return 'https://www.youtube.com/embed/'+m[1];if(/^[A-Za-z0-9_\-]{6,15}$/.test(u))return 'https://www.youtube.com/embed/'+u;return u;}
+(function(){try{fetch('/settings-api/intro_video_cleaner',{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'}).then(function(r){return r.ok?r.json():null;}).then(function(v){if(typeof v==='string'&&v)INTRO_VIDEO=v;}).catch(function(){});}catch(e){}})();
+function videoCard(cap){return '<div class="card"><h3>Intro video</h3><div class="vidbox" onclick="playIntro(this)"><div class="vplay"></div><div class="vcap">'+cap+'</div></div></div>';}
+function playIntro(el){var u=ytEmbed(INTRO_VIDEO);if(u){el.innerHTML='<iframe src="'+u+(u.indexOf('?')>=0?'&':'?')+'autoplay=1" allow="autoplay;fullscreen" allowfullscreen></iframe>';}else{el.innerHTML='<div class="vcap" style="position:static;background:none;color:#eaf0ec;text-align:center;padding:22px">\u25B6 Intro video would play here.<br><span style="opacity:.7">(Placeholder \u2014 add the video embed in the tool.)</span></div>';}}
 
 const CSRF=(window.LAUNDRE_CSRF||'');
 function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
