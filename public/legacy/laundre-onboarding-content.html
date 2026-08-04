@@ -135,8 +135,8 @@ document.getElementById('addDoc').onclick=async function(){
   if(f.size>12*1024*1024){msg.className='msg err';msg.textContent='File too large (max 12 MB).';return;}
   var btn=this; btn.disabled=true; msg.className='msg'; msg.textContent='Uploading…';
   try{
-    var dataUrl=await new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(){res(rd.result);};rd.onerror=rej;rd.readAsDataURL(f);});
-    var up=await apiSend('/upload-api','POST',{data:dataUrl,name:f.name});
+    var fd=new FormData(); fd.append('file', f, f.name);
+    var up=await fetch('/upload-api',{method:'POST',headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin',body:fd});
     if(!up.ok){throw new Error('upload');}
     var uj=await up.json();
     var r=await apiSend('/onboarding-content-admin/doc','POST',{title:title,file_path:uj.url,file_name:f.name,mime:f.type||'',audience:aud,protected:document.getElementById('d_protected').checked});
