@@ -5,7 +5,7 @@ use App\Http\Controllers\InviteController;
 use App\Http\Controllers\Api\{UserController, LocationController, SettingController, TicketController,
     CleaningController, MaintenanceController, DocumentController, GuideController, BookkeepingController,
     SupplierController, SaleController, FranchiseController, UploadController, MaintenanceDocController,
-    OnboardingController, TaskController, CrmController};
+    OnboardingController, TaskController, CrmController, MembershipController};
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -23,6 +23,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/locations-api', [LocationController::class, 'index']);
     // Postcode dataset served as JSON (large; kept out of the tool HTML to stay under the server response limit)
     Route::get('/postcode-data', [PortalController::class, 'postcodeData']);
+
+    // ---- Digital membership card ----
+    Route::get('/membership-card', [MembershipController::class, 'show']);
+    Route::get('/membership-card/apple', [MembershipController::class, 'applePass']);
+    Route::get('/membership-card/google', [MembershipController::class, 'googleSave']);
     Route::get('/settings-api/{key}', [SettingController::class, 'show'])->where('key', '[A-Za-z0-9_\-]+');
     Route::put('/settings-api/{key}', [SettingController::class, 'put'])->where('key', '[A-Za-z0-9_\-]+');
 

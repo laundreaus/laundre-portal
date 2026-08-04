@@ -28,6 +28,7 @@ class UserController extends Controller {
             $data['password'] = Hash::make($data['password']);
         }
         $user = User::create($data);
+        $user->assignMemberNo(); // issues LDR-000000 for card-eligible roles (investor/franchisee/user/admin)
         if ($onboarding) {
             Onboarding::firstOrCreate(['user_id'=>$user->id], ['type'=>$data['role']==='investor'?'investor':'franchisee','crm_stage'=>'invited']);
             if ($data['role']==='potential_franchisee') {

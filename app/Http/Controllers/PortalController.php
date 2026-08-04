@@ -12,7 +12,7 @@ class PortalController extends Controller {
     public function tool(string $page) {
         $u = auth()->user();
         if ($u->isAccessLocked() || $u->needsNda()) return redirect('/');
-        if ($u->isOnboarding() && !in_array($page, ['laundre-onboard','laundre-nda','laundre-doc-viewer'])) {
+        if ($u->isOnboarding() && !in_array($page, ['laundre-onboard','laundre-nda','laundre-doc-viewer','laundre-card'])) {
             return redirect('/');
         }
         if ($u->role === 'user' && $page !== 'laundre-portal' && !in_array($page, (array)$u->sections)) {

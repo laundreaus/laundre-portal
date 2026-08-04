@@ -49,7 +49,8 @@
   <a href="#" id="logoutBtn">Log out</a>
 </header>
 <main>
-  <div class="hero"><h1 id="h1">Welcome to Laundré</h1><div class="sub" id="hsub">Watch the welcome video and explore the documents below.</div></div>
+  <div class="hero"><h1 id="h1">Welcome to Laundré</h1><div class="sub" id="hsub">Watch the welcome video and explore the documents below.</div>
+    <a id="cardLink" href="laundre-card.html" style="display:none;margin-top:8px;font-size:13.5px;font-weight:700;color:var(--accent);text-decoration:none;">💳 View your membership card →</a></div>
   <div class="cols">
     <div>
       <div class="card">
@@ -148,7 +149,7 @@ function renderInvestor(o){
 
 async function boot(){
   document.getElementById('who').textContent=(ME.name||ME.email||'')+(KIND==='investor'?' · Investor':' · Franchise prospect');
-  if(KIND==='investor'){ document.getElementById('h1').textContent='Welcome, '+((ME.name||'').split(' ')[0]||'investor'); document.getElementById('hsub').textContent='Watch the overview, review the documents, then register your interest.'; }
+  if(KIND==='investor'){ document.getElementById('h1').textContent='Welcome, '+((ME.name||'').split(' ')[0]||'investor'); document.getElementById('hsub').textContent='Watch the overview, review the documents, then register your interest.'; var cl=document.getElementById('cardLink'); if(cl) cl.style.display='inline-block'; }
   else { document.getElementById('h1').textContent='Welcome, '+((ME.name||'').split(' ')[0]||''); }
   try{
     var content=await apiGet('/onboarding-content'); VIDEO_EMBED=content.video||'';
