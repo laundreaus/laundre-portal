@@ -105,7 +105,7 @@ function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Re
 async function apiGet(u){var r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
 async function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:b?JSON.stringify(b):null});}
 function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-function uploadFile(f){return new Promise(function(res,rej){var rd=new FileReader();rd.onerror=function(){rej(new Error('read failed'));};rd.onload=function(){apiSend('/upload-api','POST',{data:rd.result,name:f.name}).then(function(r){return r.ok?r.json():Promise.reject(new Error('upload HTTP '+r.status));}).then(res).catch(rej);};rd.readAsDataURL(f);});}
+function uploadFile(f){var fd=new FormData();fd.append('file',f,f.name);return fetch('/upload-api',{method:'POST',headers:hdrs(false),credentials:'same-origin',body:fd}).then(function(r){if(!r.ok)throw new Error('upload HTTP '+r.status);return r.json();});}
 function fmtDue(d){if(!d)return null;var dt=new Date((''+d).slice(0,10)+'T00:00');return dt.toLocaleDateString('en-AU',{day:'numeric',month:'short'});}
 function fmtDate(d){if(!d)return '—';return new Date(d).toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});}
 function dueClass(d){if(!d)return '';var days=Math.ceil((new Date((''+d).slice(0,10)+'T00:00')-new Date())/864e5);if(days<0)return 'over';if(days<=2)return 'soon';return '';}

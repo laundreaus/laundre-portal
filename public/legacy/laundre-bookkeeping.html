@@ -172,10 +172,10 @@ fileInput.onchange=()=>{
   const f=fileInput.files[0];if(!f||!pendingTarget)return;
   if(f.size>8*1024*1024){alert('File too large (max 8MB).');fileInput.value='';return;}
   const tgt=pendingTarget; pendingTarget=null;
-  const rd=new FileReader();
-  rd.onload=async ()=>{
+  (async ()=>{
     try{
-      const up=await fetch('/upload-api',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({data:rd.result,name:f.name})});
+      const fd=new FormData();fd.append('file',f,f.name);
+      const up=await fetch('/upload-api',{method:'POST',headers:hdrs(false),credentials:'same-origin',body:fd});
       if(!up.ok)throw new Error('upload HTTP '+up.status);
       const info=await up.json();
       const r=rec(tgt.row);r.files=r.files||{};
@@ -183,8 +183,7 @@ fileInput.onchange=()=>{
       render(); await upsert(tgt.row);
     }catch(e){alert('Could not attach: '+e.message);}
     fileInput.value='';
-  };
-  rd.readAsDataURL(f);
+  })();
 };
 document.getElementById('fySel').onchange=async e=>{FY=+e.target.value;render();};
 var addB=document.getElementById('addBtn'); if(addB) addB.style.display='none';
