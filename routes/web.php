@@ -5,7 +5,7 @@ use App\Http\Controllers\InviteController;
 use App\Http\Controllers\Api\{UserController, LocationController, SettingController, TicketController,
     CleaningController, MaintenanceController, DocumentController, GuideController, BookkeepingController,
     SupplierController, SaleController, FranchiseController, UploadController, MaintenanceDocController,
-    OnboardingController, TaskController, CrmController, MembershipController};
+    OnboardingController, TaskController, CrmController, MembershipController, NdaController};
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -89,6 +89,10 @@ Route::middleware('auth')->group(function () {
         Route::delete('/users-api/{user}', [UserController::class, 'destroy']);
 
         Route::match(['put','patch'], '/onboarding-admin-api/{onboarding}/stage', [OnboardingController::class, 'moveStage']);
+
+        // ---- NDA register: signers list + downloadable executed PDF ----
+        Route::get('/nda-admin-api', [NdaController::class, 'list']);
+        Route::get('/nda-admin/{user}/pdf', [NdaController::class, 'pdf']);
 
         Route::post('/tasks-api', [TaskController::class, 'store']);
         Route::match(['put','patch'], '/tasks-api/{task}', [TaskController::class, 'update']);
