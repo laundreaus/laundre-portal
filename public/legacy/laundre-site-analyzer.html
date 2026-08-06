@@ -60,6 +60,13 @@
   .close{background:transparent;border:none;font-size:22px;color:#8a9790;}
   .msg{font-size:12px;color:#B4472F;padding:0 20px;min-height:15px;}
   .hintnote{font-size:11.5px;color:#8a9790;margin-top:16px;line-height:1.6;}
+  .calcbox{background:#fff;border:1px solid var(--cream-line);border-radius:10px;padding:6px 14px;margin-top:12px;}
+  .calcrow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f4efe4;font-size:13px;}
+  .calcrow:last-child{border-bottom:none;}
+  .calcrow span{flex:1;color:#5f7469;}
+  .calcrow b{width:120px;text-align:right;color:var(--green-d);}
+  .calcrow i{width:92px;text-align:right;color:#8a9790;font-style:normal;font-size:12px;}
+  .calcrow.tot b,.calcrow.tot span{color:var(--green);font-weight:800;}
 </style>
 </head>
 <body>
@@ -89,15 +96,21 @@
     <div class="ehead"><h3 id="etitle">Add site</h3><span class="spacer"></span><button class="close" id="eclose">×</button></div>
     <div class="ebody">
       <div class="grid2">
-        <div class="full"><label>Site name / label</label><input id="f_name" placeholder="e.g. Northpoint SC, Toowoomba" /></div>
-        <div class="full"><label>Address</label><input id="f_address" /></div>
-        <div><label>Suburb</label><input id="f_suburb" /></div>
+        <div class="full"><label>Site name / label</label><input id="f_name" placeholder="e.g. North Belmont (Lake Macq.)" /></div>
+        <div><label>Premises</label><input id="f_premises" placeholder="e.g. Shop 1.12" /></div>
+        <div><label>Location / suburb</label><input id="f_location" /></div>
+        <div><label>Area (m²)</label><input id="f_area" type="number" step="any" oninput="recalc()" /></div>
+        <div><label>Term (years)</label><input id="f_term" type="number" step="any" /></div>
+        <div><label>Handover</label><input id="f_handover" placeholder="e.g. Q3 2027" /></div>
         <div><label>Status</label><select id="f_status"><option>Prospect</option><option>Shortlisted</option><option>Under offer</option><option>Rejected</option><option>Secured</option></select></div>
-        <div><label>Size (m²)</label><input id="f_sqm" type="number" /></div>
-        <div><label>Rent ($/week)</label><input id="f_rent" type="number" /></div>
-        <div><label>Parking spaces (nearby)</label><input id="f_parking" type="number" /></div>
-        <div><label>Est. catchment population</label><input id="f_pop" type="number" /></div>
+        <div><label>Base Rent ($ p.a.)</label><input id="f_base" type="number" step="any" oninput="recalc()" /></div>
+        <div><label>Outgoings ($ p.a.)</label><input id="f_outgoings" type="number" step="any" oninput="recalc()" /></div>
+        <div><label>Promo (% of base rent p.a.)</label><input id="f_promo" type="number" step="any" oninput="recalc()" /></div>
+        <div><label>Rent Reviews (% p.a.)</label><input id="f_reviews" type="number" step="any" /></div>
+        <div class="full"><label>Lease Security</label><input id="f_security" placeholder="e.g. 4 months BG and Director's Guarantees" /></div>
+        <div class="full"><label>Incentive</label><input id="f_incentive" placeholder="e.g. $36,300 plus GST fit-out contribution and/or rent-abatement" /></div>
       </div>
+      <div class="calcbox" id="calcBox"></div>
       <div class="scorebox">
         <h4>Factor scores (0–10)</h4>
         <div class="srow"><span>Population / density</span><input type="range" min="0" max="10" step="0.5" id="s_population" /><span class="val" id="v_population">5</span></div>
@@ -106,7 +119,7 @@
         <div class="srow"><span>Footfall &amp; rent value</span><input type="range" min="0" max="10" step="0.5" id="s_footfall" /><span class="val" id="v_footfall">5</span></div>
         <div class="ovbig">Overall score<b id="ovDisplay">5.0</b></div>
       </div>
-      <label>Notes (competition, transit, demographics, observations)</label>
+      <label>Description (centre / development notes, tenancy mix, timing)</label>
       <textarea id="f_notes" rows="3"></textarea>
       <div class="grid2">
         <div><label>Attach a link (Drive/Dropbox/report)</label><input id="f_link" placeholder="https://" /></div>
@@ -129,37 +142,57 @@ function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;
 function uid(){return 'site_'+Math.random().toString(36).slice(2,7);}
 function overall(sc){const v=FACTORS.map(f=>+sc[f[0]]||0);return Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10;}
 function ovColor(o){if(o>=7.5)return '#2f6b46';if(o>=5)return '#b0862f';return '#B4472F';}
+function num(id){return parseFloat(document.getElementById(id).value)||0;}
+function money(n){return '$'+Math.round(n).toLocaleString();}
+function psm(total,area){return area>0?'$'+Math.round(total/area).toLocaleString()+'/m²':'—';}
+function grossOf(s){var base=+s.base||0,out=+s.outgoings||0;return base+out+base*((+s.promo||0)/100);}
+function recalc(){
+  var area=num('f_area'),base=num('f_base'),out=num('f_outgoings'),promoPct=num('f_promo');
+  var promo=base*promoPct/100, gross=base+out+promo;
+  document.getElementById('calcBox').innerHTML=
+     '<div class="calcrow"><span>Base rent</span><b>'+money(base)+'</b><i>'+psm(base,area)+'</i></div>'
+    +'<div class="calcrow"><span>Outgoings</span><b>'+money(out)+'</b><i>'+psm(out,area)+'</i></div>'
+    +'<div class="calcrow"><span>Promo ('+(promoPct||0)+'% of base)</span><b>'+money(promo)+'</b><i></i></div>'
+    +'<div class="calcrow tot"><span>Gross rent</span><b>'+money(gross)+'</b><i>'+psm(gross,area)+'</i></div>';
+}
 
 /* ---- table ---- */
 function render(){
   const wrap=document.getElementById('tableWrap');
   if(!DATA.length){wrap.innerHTML='<div class="empty">No sites yet. Click “＋ Add site” to score your first prospect.</div>';return;}
+  const sv=s=>sortKey==='overall'?s.overall:(sortKey==='gross'?grossOf(s):((s.scores&&sortKey in s.scores)?s.scores[sortKey]:s[sortKey]));
   const rows=[...DATA].sort((a,b)=>{
-    let x=sortKey==='overall'?a.overall:(sortKey in a.scores?a.scores[sortKey]:a[sortKey]);
-    let y=sortKey==='overall'?b.overall:(sortKey in b.scores?b.scores[sortKey]:b[sortKey]);
-    if(typeof x==='string'){x=(x||'').toLowerCase();y=(y||'').toLowerCase();}
+    let x=sv(a),y=sv(b);
+    if(typeof x==='string'||typeof y==='string'){x=(''+(x||'')).toLowerCase();y=(''+(y||'')).toLowerCase();}
     return (x>y?1:x<y?-1:0)*sortDir;
   });
   const arrow=k=>sortKey===k?(sortDir<0?' ▼':' ▲'):'';
   let h='<table><thead><tr>'
     +'<th data-k="name">Site'+arrow('name')+'</th>'
-    +'<th class="num" data-k="sqm">m²'+arrow('sqm')+'</th>'
-    +'<th class="num" data-k="rent">Rent/wk'+arrow('rent')+'</th>'
-    +FACTORS.map(f=>'<th class="num" data-k="'+f[0]+'">'+f[1]+arrow(f[0])+'</th>').join('')
-    +'<th class="num" data-k="overall">Overall'+arrow('overall')+'</th>'
+    +'<th data-k="premises">Premises'+arrow('premises')+'</th>'
+    +'<th class="num" data-k="area">m²'+arrow('area')+'</th>'
+    +'<th class="num" data-k="term">Term'+arrow('term')+'</th>'
+    +'<th data-k="handover">Handover'+arrow('handover')+'</th>'
+    +'<th class="num" data-k="base">Base rent'+arrow('base')+'</th>'
+    +'<th class="num" data-k="gross">Gross rent'+arrow('gross')+'</th>'
+    +'<th class="num" data-k="overall">Score'+arrow('overall')+'</th>'
     +'<th data-k="status">Status'+arrow('status')+'</th>'
     +'<th style="text-align:right">Actions</th></tr></thead><tbody>';
   rows.forEach(s=>{
+    const g=grossOf(s);
     h+='<tr class="main" data-open="'+s.id+'">'
-      +'<td><div class="sname">'+esc(s.name)+'</div><div class="saddr">'+esc(s.address||'')+'</div></td>'
-      +'<td class="num">'+(s.sqm||'—')+'</td>'
-      +'<td class="num">'+(s.rent?'$'+(+s.rent).toLocaleString():'—')+'</td>'
-      +FACTORS.map(f=>'<td class="num"><span class="score">'+(s.scores[f[0]]??'–')+'</span></td>').join('')
-      +'<td class="num"><span class="overall" style="background:'+ovColor(s.overall)+'">'+s.overall.toFixed(1)+'</span></td>'
+      +'<td><div class="sname">'+esc(s.name)+'</div><div class="saddr">'+esc(s.location||'')+'</div></td>'
+      +'<td>'+esc(s.premises||'—')+'</td>'
+      +'<td class="num">'+(s.area||'—')+'</td>'
+      +'<td class="num">'+(s.term?esc(s.term)+'y':'—')+'</td>'
+      +'<td>'+esc(s.handover||'—')+'</td>'
+      +'<td class="num">'+(s.base?money(+s.base):'—')+'</td>'
+      +'<td class="num">'+(g?money(g):'—')+'</td>'
+      +'<td class="num"><span class="overall" style="background:'+ovColor(s.overall)+'">'+(+s.overall||0).toFixed(1)+'</span></td>'
       +'<td>'+esc(s.status||'')+'</td>'
       +'<td><div class="rowbtns"><button class="btn btn-ghost" data-edit="'+s.id+'">Edit</button><button class="btn btn-danger" data-del="'+s.id+'">Delete</button></div></td>'
       +'</tr>';
-    h+='<tr class="detail" id="d_'+s.id+'" style="display:none"><td colspan="'+(6+FACTORS.length)+'">'+detailHTML(s)+'</td></tr>';
+    h+='<tr class="detail" id="d_'+s.id+'" style="display:none"><td colspan="10">'+detailHTML(s)+'</td></tr>';
   });
   h+='</tbody></table>';
   wrap.innerHTML=h;
@@ -172,13 +205,21 @@ function detailHTML(s){
   let att=(s.attachments||[]).map(a=>a.type==='link'
     ?'<a class="att" href="'+esc(a.url)+'" target="_blank" rel="noopener">🔗 '+esc(a.name)+'</a>'
     :'<a class="att" href="'+a.url+'" download="'+esc(a.name)+'">📄 '+esc(a.name)+'</a>').join('');
-  return '<div class="detailgrid"><div class="full kv">'
-    +'<b>Factor breakdown:</b> '+FACTORS.map(f=>f[1]+' '+(s.scores[f[0]]??'–')).join(' · ')+'</div>'
-    +'<div class="kv"><b>Suburb:</b> '+esc(s.suburb||'—')+'</div>'
-    +'<div class="kv"><b>Catchment pop:</b> '+(s.pop?(+s.pop).toLocaleString():'—')+'</div>'
-    +'<div class="kv"><b>Parking spaces:</b> '+(s.parking||'—')+'</div>'
-    +'<div class="kv"><b>Rent / week:</b> '+(s.rent?'$'+(+s.rent).toLocaleString():'—')+'</div>'
-    +'<div class="full kv"><b>Notes:</b> '+esc(s.notes||'—')+'</div>'
+  var area=+s.area||0, base=+s.base||0, out=+s.outgoings||0, promoPct=+s.promo||0, promo=base*promoPct/100, gross=base+out+promo;
+  return '<div class="detailgrid">'
+    +'<div class="kv"><b>Premises:</b> '+esc(s.premises||'—')+'</div>'
+    +'<div class="kv"><b>Area:</b> '+(area?area+' m²':'—')+'</div>'
+    +'<div class="kv"><b>Term:</b> '+(s.term?esc(s.term)+' years':'—')+'</div>'
+    +'<div class="kv"><b>Handover:</b> '+esc(s.handover||'—')+'</div>'
+    +'<div class="kv"><b>Base rent:</b> '+(base?money(base)+(area?' ('+psm(base,area)+')':''):'—')+'</div>'
+    +'<div class="kv"><b>Outgoings:</b> '+(out?money(out)+(area?' ('+psm(out,area)+')':''):'—')+'</div>'
+    +'<div class="kv"><b>Promo:</b> '+(promo?money(promo)+' ('+promoPct+'% of base p.a.)':'—')+'</div>'
+    +'<div class="kv"><b>Gross rent:</b> '+(gross?money(gross)+(area?' ('+psm(gross,area)+')':''):'—')+'</div>'
+    +'<div class="kv"><b>Rent reviews:</b> '+(s.reviews?esc(s.reviews)+'% p.a.':'—')+'</div>'
+    +'<div class="kv"><b>Lease security:</b> '+esc(s.security||'—')+'</div>'
+    +'<div class="full kv"><b>Incentive:</b> '+esc(s.incentive||'—')+'</div>'
+    +'<div class="full kv"><b>Factor scores:</b> '+FACTORS.map(f=>f[1]+' '+(s.scores&&s.scores[f[0]]!=null?s.scores[f[0]]:'–')).join(' · ')+'</div>'
+    +'<div class="full kv"><b>Description:</b> '+esc(s.notes||'—')+'</div>'
     +(att?'<div class="full">'+att+'</div>':'')+'</div>';
 }
 
@@ -196,15 +237,21 @@ function openEditor(id){
   editId=id;const s=id?DATA.find(x=>x.id===id):null;
   document.getElementById('etitle').textContent=id?'Edit site':'Add site';
   document.getElementById('f_name').value=s?s.name:'';
-  document.getElementById('f_address').value=s?s.address:'';
-  document.getElementById('f_suburb').value=s?s.suburb:'';
+  document.getElementById('f_premises').value=s?(s.premises||''):'';
+  document.getElementById('f_location').value=s?(s.location||''):'';
   document.getElementById('f_status').value=s?(s.status||'Prospect'):'Prospect';
-  document.getElementById('f_sqm').value=s?(s.sqm||''):'';
-  document.getElementById('f_rent').value=s?(s.rent||''):'';
-  document.getElementById('f_parking').value=s?(s.parking||''):'';
-  document.getElementById('f_pop').value=s?(s.pop||''):'';
+  document.getElementById('f_area').value=s?(s.area||''):'';
+  document.getElementById('f_term').value=s?(s.term||''):'';
+  document.getElementById('f_handover').value=s?(s.handover||''):'';
+  document.getElementById('f_base').value=s?(s.base||''):'';
+  document.getElementById('f_outgoings').value=s?(s.outgoings||''):'';
+  document.getElementById('f_promo').value=s?(s.promo!=null&&s.promo!==''?s.promo:''):'';
+  document.getElementById('f_reviews').value=s?(s.reviews||''):'';
+  document.getElementById('f_security').value=s?(s.security||''):'';
+  document.getElementById('f_incentive').value=s?(s.incentive||''):'';
   document.getElementById('f_notes').value=s?(s.notes||''):'';
   document.getElementById('f_link').value='';document.getElementById('f_file').value='';
+  recalc();
   document.getElementById('emsg').textContent='';
   FACTORS.forEach(f=>{const v=s?(s.scores[f[0]]??5):5;document.getElementById('s_'+f[0]).value=v;document.getElementById('v_'+f[0]).textContent=(+v).toFixed(1).replace(/\.0$/,'');});
   updateOv();
@@ -224,13 +271,18 @@ document.getElementById('esave').onclick=()=>{
   const finish=()=>{
     const scores={};FACTORS.forEach(f=>scores[f[0]]=+document.getElementById('s_'+f[0]).value);
     const rec={id:editId||uid(),name,
-      address:document.getElementById('f_address').value.trim(),
-      suburb:document.getElementById('f_suburb').value.trim(),
+      premises:document.getElementById('f_premises').value.trim(),
+      location:document.getElementById('f_location').value.trim(),
       status:document.getElementById('f_status').value,
-      sqm:+document.getElementById('f_sqm').value||0,
-      rent:+document.getElementById('f_rent').value||0,
-      parking:+document.getElementById('f_parking').value||0,
-      pop:+document.getElementById('f_pop').value||0,
+      area:+document.getElementById('f_area').value||0,
+      term:document.getElementById('f_term').value.trim(),
+      handover:document.getElementById('f_handover').value.trim(),
+      base:+document.getElementById('f_base').value||0,
+      outgoings:+document.getElementById('f_outgoings').value||0,
+      promo:+document.getElementById('f_promo').value||0,
+      reviews:document.getElementById('f_reviews').value.trim(),
+      security:document.getElementById('f_security').value.trim(),
+      incentive:document.getElementById('f_incentive').value.trim(),
       notes:document.getElementById('f_notes').value.trim(),
       scores,overall:overall(scores),attachments:pendingAtt,
       created:editId?(DATA.find(x=>x.id===editId).created):Date.now()};
