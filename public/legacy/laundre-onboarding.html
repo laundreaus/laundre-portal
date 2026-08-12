@@ -79,7 +79,7 @@ function render(){
     if(ADMIN && o.crm_stage!=='pending_approval' && o.crm_stage!=='approved'){ act='<button class="btn" data-approve="'+o.id+'">→ Pending Approval</button>'; }
     else if(ADMIN && o.crm_stage==='pending_approval'){ act='<button class="btn ghost" data-back="'+o.id+'">Back to onboarding</button>'; }
     h+='<tr><td><div class="nm">'+esc(u.name||'—')+'</div><div class="em">'+esc(u.email||'')+(u.phone?' · '+esc(u.phone):'')+'</div></td>'
-      +'<td>'+(o.type==='investor'?'Investor':'Franchisee')+'</td>'
+      +'<td>'+(o.type==='investor'?'Potential Investor':'Franchisee')+'</td>'
       +'<td>'+steps+'</td>'
       +'<td>'+fmt(o.nda_signed_at)+'</td>'
       +'<td>'+cd+'</td>'

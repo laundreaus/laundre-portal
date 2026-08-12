@@ -5,7 +5,7 @@ use App\Http\Controllers\InviteController;
 use App\Http\Controllers\Api\{UserController, LocationController, SettingController, TicketController,
     CleaningController, MaintenanceController, DocumentController, GuideController, BookkeepingController,
     SupplierController, SaleController, FranchiseController, UploadController, MaintenanceDocController,
-    OnboardingController, TaskController, CrmController, MembershipController, NdaController};
+    OnboardingController, TaskController, CrmController, MembershipController, NdaController, InvestorController};
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -23,6 +23,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/locations-api', [LocationController::class, 'index']);
     // Postcode dataset served as JSON (large; kept out of the tool HTML to stay under the server response limit)
     Route::get('/postcode-data', [PortalController::class, 'postcodeData']);
+
+    // ---- Investor data dashboard (assigned laundromats) ----
+    Route::get('/investor-data-api', [InvestorController::class, 'data']);
 
     // ---- Digital membership card ----
     Route::get('/membership-card', [MembershipController::class, 'show']);
@@ -135,3 +138,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/{page}.html', fn (string $page) => redirect('/'.$page))->where('page', '[A-Za-z0-9\-]+');
     Route::get('/{page}', [PortalController::class, 'tool'])->where('page', '[A-Za-z0-9\-]+')->name('tool');
 });
+
+// Serve favicons directly (public assets; no auth required).
+Route::get('/favicon.ico', fn()=>response()->file(public_path('favicon.ico')));
+Route::get('/favicon.gif', fn()=>response()->file(public_path('favicon.gif')));
+Route::get('/favicon-32.png', fn()=>response()->file(public_path('favicon-32.png')));

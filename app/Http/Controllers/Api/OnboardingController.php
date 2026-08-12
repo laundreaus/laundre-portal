@@ -8,7 +8,7 @@ use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
 class OnboardingController extends Controller {
-    private function typeFor(User $u): string { return $u->role === 'investor' ? 'investor' : 'franchisee'; }
+    private function typeFor(User $u): string { return in_array($u->role, ['investor','potential_investor']) ? 'investor' : 'franchisee'; }
     private function ob(User $u): Onboarding {
         $o = Onboarding::firstOrCreate(['user_id'=>$u->id], ['type'=>$this->typeFor($u),'crm_stage'=>'invited']);
         if (!$o->first_login_at) { $o->first_login_at = now(); $o->save(); }
@@ -72,7 +72,7 @@ class OnboardingController extends Controller {
 
     public function interest(Request $r) {
         $u = $r->user();
-        abort_unless($u->role==='investor', 403);
+        abort_unless(in_array($u->role, ['potential_investor','investor']), 403);
         $d = $r->validate(['min'=>'nullable|numeric','max'=>'nullable|numeric','note'=>'nullable|string']);
         $o = $this->ob($u);
         $o->fill(['interest_min'=>$d['min']??null,'interest_max'=>$d['max']??null,'interest_note'=>$d['note']??null,'interest_submitted_at'=>now()]);

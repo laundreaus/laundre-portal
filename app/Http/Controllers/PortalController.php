@@ -15,6 +15,9 @@ class PortalController extends Controller {
         if ($u->isOnboarding() && !in_array($page, ['laundre-onboard','laundre-nda','laundre-doc-viewer','laundre-card'])) {
             return redirect('/');
         }
+        if ($u->isInvestor() && !in_array($page, ['laundre-portal','laundre-investor-dashboard','laundre-card','laundre-doc-viewer'])) {
+            return redirect('/');
+        }
         if ($u->role === 'user' && $page !== 'laundre-portal' && !in_array($page, (array)$u->sections)) {
             return redirect('/');
         }
@@ -37,7 +40,8 @@ class PortalController extends Controller {
         $html = preg_replace('/(["\'])([A-Za-z0-9_\-]+)\.html\1/', '$1/$2$1', $html);
         $u = auth()->user();
         $sessionJson = json_encode(['role'=>$u->role,'locationId'=>$u->location_id,'name'=>$u->name,'email'=>$u->email,'sections'=>$u->sections ?? []], JSON_UNESCAPED_SLASHES);
-        $bridge = '<style>#login{display:none!important}#app{display:block!important}</style><script>try{localStorage.setItem("laundre_auth","1");localStorage.setItem("laundre_session",'.json_encode($sessionJson).');}catch(e){}window.LAUNDRE_CSRF='.json_encode(csrf_token()).';</script>';
+        $favicon = '<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/gif" href="/favicon.gif"><link rel="apple-touch-icon" href="/favicon-32.png">';
+        $bridge = $favicon.'<style>#login{display:none!important}#app{display:block!important}</style><script>try{localStorage.setItem("laundre_auth","1");localStorage.setItem("laundre_session",'.json_encode($sessionJson).');}catch(e){}window.LAUNDRE_CSRF='.json_encode(csrf_token()).';</script>';
         $html = str_ireplace('<head>', '<head>'.$bridge, $html);
         $logout = '<form id="__llogout" method="POST" action="/logout" style="display:none">'.csrf_field().'</form><script>document.addEventListener("DOMContentLoaded",function(){var b=document.getElementById("logoutBtn");if(b){b.onclick=function(e){e.preventDefault();document.getElementById("__llogout").submit();};}});</script>';
         $html = str_ireplace('</body>', $logout.'</body>', $html);

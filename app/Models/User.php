@@ -6,29 +6,33 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable {
     use HasApiTokens, Notifiable;
     protected $fillable = ['name','email','phone','password','role','location_id','invite_token','sections',
-        'nda_signed_at','nda_signer_name','nda_signature','nda_address','access_expires_at','member_no'];
+        'nda_signed_at','nda_signer_name','nda_signature','nda_address','access_expires_at','member_no','investor_location_ids'];
     protected $hidden = ['password','remember_token','invite_token','nda_signature'];
     protected function casts(): array { return [
         'email_verified_at'=>'datetime','password'=>'hashed','sections'=>'array',
-        'nda_signed_at'=>'datetime','access_expires_at'=>'datetime',
+        'nda_signed_at'=>'datetime','access_expires_at'=>'datetime','investor_location_ids'=>'array',
     ]; }
     public function location() { return $this->belongsTo(Location::class); }
     public function onboarding() { return $this->hasOne(Onboarding::class); }
     public function isAdmin(): bool { return $this->role === 'admin'; }
     public function hasRole(string $role): bool { return $this->role === $role; }
-    public function isOnboarding(): bool { return in_array($this->role, ['potential_franchisee','investor']); }
+    // Prospect roles that go through the onboarding portal (NDA, welcome video, documents).
+    public function isOnboarding(): bool { return in_array($this->role, ['potential_franchisee','potential_investor']); }
+    public function isInvestor(): bool { return $this->role === 'investor'; }
     public function canSection(string $key): bool { return $this->isAdmin() || ($this->role === 'user' && in_array($key, (array)($this->sections ?? []))); }
 
     // Roles that must sign the NDA before they can use the portal.
-    public function ndaRequiredRole(): bool { return in_array($this->role, ['potential_franchisee','investor','cleaner','maintenance']); }
+    public function ndaRequiredRole(): bool { return in_array($this->role, ['potential_franchisee','potential_investor','cleaner','maintenance']); }
     public function needsNda(): bool { return $this->ndaRequiredRole() && $this->nda_signed_at === null; }
-    // Roles subject to the 21-day access window.
-    public function timeLimitedRole(): bool { return in_array($this->role, ['potential_franchisee','investor']); }
+    // Roles subject to the 21-day access window (prospects only).
+    public function timeLimitedRole(): bool { return in_array($this->role, ['potential_franchisee','potential_investor']); }
     public function isAccessLocked(): bool {
         return $this->timeLimitedRole() && $this->access_expires_at !== null && now()->greaterThan($this->access_expires_at);
     }
     // Which onboarding-document audience this user should see.
-    public function docAudience(): string { return $this->role === 'investor' ? 'investor' : 'franchisee'; }
+    public function docAudience(): string { return in_array($this->role, ['investor','potential_investor']) ? 'investor' : 'franchisee'; }
+    // Laundromats an admin has assigned to an upgraded investor (for their data dashboard).
+    public function investorLocationIds(): array { return array_values(array_filter(array_map('intval', (array)($this->investor_location_ids ?? [])))); }
 
     // ---- Digital membership card ----
     // Only these roles get a membership card.

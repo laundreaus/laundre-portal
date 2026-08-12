@@ -15,11 +15,11 @@ class UserController extends Controller {
                 return $arr;
             });
     }
-    private const INVITE_ROLES = ['potential_franchisee','investor','cleaner','maintenance'];
+    private const INVITE_ROLES = ['potential_franchisee','potential_investor','cleaner','maintenance'];
     public function store(Request $r) {
         $data = $this->rules($r, true);
         $invite = in_array($data['role'], self::INVITE_ROLES);
-        $onboarding = in_array($data['role'], ['potential_franchisee','investor']);
+        $onboarding = in_array($data['role'], ['potential_franchisee','potential_investor']);
         if ($invite) {
             $data['invite_token'] = bin2hex(random_bytes(24));
             $data['password'] = Hash::make(bin2hex(random_bytes(16))); // placeholder until they set their own
@@ -30,7 +30,7 @@ class UserController extends Controller {
         $user = User::create($data);
         $user->assignMemberNo(); // issues LDR-000000 for card-eligible roles (investor/franchisee/user/admin)
         if ($onboarding) {
-            Onboarding::firstOrCreate(['user_id'=>$user->id], ['type'=>$data['role']==='investor'?'investor':'franchisee','crm_stage'=>'invited']);
+            Onboarding::firstOrCreate(['user_id'=>$user->id], ['type'=>in_array($data['role'],['investor','potential_investor'])?'investor':'franchisee','crm_stage'=>'invited']);
             if ($data['role']==='potential_franchisee') {
                 \App\Models\PipelineCard::create(['name'=>$user->name,'email'=>$user->email,'phone'=>$user->phone,'stage'=>'nda_sent','user_id'=>$user->id]);
             }
@@ -46,8 +46,18 @@ class UserController extends Controller {
     public function update(Request $r, User $user) {
         $data = $this->rules($r, false);
         if (!empty($data['password'])) { $data['password'] = Hash::make($data['password']); } else { unset($data['password']); }
+        // Only persist investor location assignments for the investor role.
+        if (($data['role'] ?? $user->role) !== 'investor') { $data['investor_location_ids'] = null; }
+        $wasCard = $user->hasCard();
         $user->update($data);
-        return $user;
+        // Upgrading someone into a card-eligible role (e.g. investor) issues their member number.
+        if (!$wasCard && $user->hasCard() && !$user->member_no) { $user->assignMemberNo(); }
+        // Ensure any onboarding record follows the audience if the role changed.
+        if (in_array($user->role, ['potential_franchisee','potential_investor','investor'])) {
+            $type = in_array($user->role, ['investor','potential_investor']) ? 'investor' : 'franchisee';
+            \App\Models\Onboarding::where('user_id', $user->id)->update(['type' => $type]);
+        }
+        return $user->fresh();
     }
     public function reinvite(Request $r, User $user) {
         abort_unless(in_array($user->role, self::INVITE_ROLES), 422, 'Only invited accounts (prospects, investors, cleaners, maintenance) have invite links.');
@@ -62,10 +72,12 @@ class UserController extends Controller {
             'email'=>'required|string|unique:users,email'.($creating?'':(','.$r->route('user')->id)),
             'phone'=>'nullable|string',
             'password'=>'nullable|string|min:8',
-            'role'=>'required|in:admin,franchisee,cleaner,maintenance,potential_franchisee,investor,user',
+            'role'=>'required|in:admin,franchisee,cleaner,maintenance,potential_franchisee,potential_investor,investor,user',
             'location_id'=>'nullable|exists:locations,id',
             'sections'=>'nullable|array',
             'sections.*'=>'string',
+            'investor_location_ids'=>'nullable|array',
+            'investor_location_ids.*'=>'integer|exists:locations,id',
         ]);
     }
 }
