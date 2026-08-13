@@ -104,7 +104,7 @@ function ytEmbed(u){
   return u;
 }
 function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{};}catch(e){return {};}}
-var ME=SESSION(); var KIND=(ME.role==='investor')?'investor':'franchisee';
+var ME=SESSION(); var KIND=(ME.role==='investor'||ME.role==='potential_investor')?'investor':'franchisee';
 function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
 async function apiGet(u){var r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
 async function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(b)});}
@@ -175,8 +175,8 @@ function renderShowcase(){
   new Chart(document.getElementById('chAnnual'),{type:'bar',data:{labels:ANNUAL.labels,datasets:[{label:'Revenue',data:ANNUAL.values,backgroundColor:[terra,green,greenL],borderRadius:8,maxBarThickness:90}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:tfmt}}},scales:{y:{ticks:{callback:yfmt},grid:{color:'#eee'}},x:{grid:{display:false}}}}});
 }
 async function boot(){
-  document.getElementById('who').textContent=(ME.name||ME.email||'')+(KIND==='investor'?' · Investor':' · Franchise prospect');
-  if(KIND==='investor'){ document.getElementById('h1').textContent='Welcome, '+((ME.name||'').split(' ')[0]||'investor'); document.getElementById('hsub').textContent='Watch the overview, review the documents, then register your interest.'; var cl=document.getElementById('cardLink'); if(cl) cl.style.display='inline-block'; }
+  document.getElementById('who').textContent=(ME.name||ME.email||'')+(KIND==='investor'?' · Investor prospect':' · Franchise prospect');
+  if(KIND==='investor'){ document.getElementById('h1').textContent='Welcome, '+((ME.name||'').split(' ')[0]||'investor'); document.getElementById('hsub').textContent='Watch the overview, review the documents, then register your interest.'; }
   else { document.getElementById('h1').textContent='Welcome, '+((ME.name||'').split(' ')[0]||''); }
   try{
     var content=await apiGet('/onboarding-content'); VIDEO_EMBED=content.video||'';
