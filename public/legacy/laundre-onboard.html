@@ -183,7 +183,7 @@ async function boot(){
     var state=await apiGet('/onboarding-api');
     var docs=await apiGet('/onboarding-docs');
     renderDocs(docs||[]);
-    if(KIND==='franchisee'){ document.getElementById('dataShowcase').style.display='block'; renderShowcase(); }
+    document.getElementById('dataShowcase').style.display='block'; renderShowcase();
     if(KIND==='investor') renderInvestor(state.onboarding);
   }catch(e){ document.getElementById('docs').innerHTML='<div class="empty">Could not load documents — please refresh.</div>'; }
 }
