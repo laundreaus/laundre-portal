@@ -57,6 +57,18 @@ class PortalController extends Controller {
             $stats = '<script>(function(){var C='.json_encode($counts).';window.count=function(k){return C.hasOwnProperty(k)?C[k]:0;};function r(){try{renderStats();}catch(e){}}r();setTimeout(r,250);})();</script>';
             $html = str_ireplace('</body>', $stats.'</body>', $html);
         }
+        // When an admin is previewing "as" another user, show a persistent exit banner.
+        if (session()->has('impersonate_id')) {
+            $labels = ['potential_franchisee'=>'Potential Franchisee','investor'=>'Investor','potential_investor'=>'Potential Investor',
+                'franchisee'=>'Franchisee','cleaner'=>'Cleaner','maintenance'=>'Maintenance','user'=>'Staff'];
+            $roleLabel = $labels[$u->role] ?? ucfirst($u->role);
+            $store = $u->location_id ? optional(Location::find($u->location_id))->name : null;
+            $desc = e($u->name).' · '.$roleLabel.($store ? ' ('.e($store).')' : '');
+            $banner = '<div style="position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:99999;background:#33473D;color:#EAF0EC;padding:9px 18px;border-radius:24px;box-shadow:0 10px 30px rgba(0,0,0,.35);font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,Helvetica,Arial,sans-serif;font-size:13px;font-weight:600;display:flex;gap:12px;align-items:center;white-space:nowrap">'
+                .'<span>👁️ Admin preview — viewing as <b style="color:#fff">'.$desc.'</b></span>'
+                .'<a href="/stop-impersonate" style="color:#F4EFE6;background:#C4703F;padding:4px 12px;border-radius:16px;text-decoration:none;font-weight:800">Exit preview</a></div>';
+            $html = str_ireplace('</body>', $banner.'</body>', $html);
+        }
         return response($html, 200)->header('Content-Type', 'text/html; charset=UTF-8');
     }
 }

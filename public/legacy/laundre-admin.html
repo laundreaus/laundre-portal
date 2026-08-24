@@ -122,8 +122,8 @@
     </div>
     <div id="tableWrap"></div>
     <div class="note">
-      Locations are stored in this browser and shared with the public tool when both pages are served from the same address (same website / folder).
-      Use <b>Export</b> to back up the list as a JSON file and <b>Import</b> to restore or move it to another machine.
+      Locations are saved to the live database - a new approved location is immediately assignable to a franchisee, cleaner or maintenance user in <b>User Management</b> and appears across the dashboard and every tool.
+      Use <b>Export</b> to back up the list as a JSON file and <b>Import</b> to bulk-add locations.
       Only locations with status <b>Active</b> appear on the public map.
     </div>
   </main>
@@ -159,20 +159,18 @@
 </div>
 
 <script>
-/* ================= Shared store ================= */
-const STORE_KEY='laundre_sites_v1';
+/* ================= DB-backed locations store ================= */
+/* Locations are saved to the live database so a new approved site immediately
+   becomes assignable in User Management and appears across the dashboard/tools. */
 const CONTACT_EMAIL='info@littleredjet.com';
-const SEED=[
-  {id:'sthport',name:'Laundré Southport/Ashmore',address:'9/501 Olsen Ave, Southport QLD 4215',lat:-27.97437,lng:153.37941,radius:5,unit:'km',status:'active',notes:'Open 365 days · dog wash + pet machines'},
-  {id:'coomera',name:'Laundré Coomera',address:'Shop 3, 334 Foxwell Road, Coomera QLD 4209',lat:-27.85244,lng:153.33501,radius:5,unit:'km',status:'active',notes:'Open 5am–10pm, 365 days'},
-  {id:'tweed',name:'Laundré Tweed Heads South',address:'7/2-8 Blundell Blvd, Tweed Heads South NSW 2486',lat:-28.19904,lng:153.53956,radius:5,unit:'km',status:'active',notes:''}
-];
-function loadSites(){
-  try{const raw=localStorage.getItem(STORE_KEY);if(raw){const a=JSON.parse(raw);if(Array.isArray(a))return a;}}catch(e){}
-  const s=SEED.slice(); saveSites(s); return s;
-}
-function saveSites(a){ try{localStorage.setItem(STORE_KEY,JSON.stringify(a));}catch(e){} }
+var CSRF=(window.LAUNDRE_CSRF||'');
+function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
+async function apiGet(u){var r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+async function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:b?JSON.stringify(b):null});}
+function normLoc(d){return {id:d.id,name:d.name,address:d.address||'',lat:d.lat,lng:d.lng,radius:d.radius,unit:d.unit||'km',status:d.status||'active',dateApproved:d.date_approved?(''+d.date_approved).slice(0,10):'',notes:d.notes||''};}
+function payloadOf(s){return {name:s.name,address:s.address||null,lat:s.lat,lng:s.lng,radius:s.radius,unit:s.unit||'km',status:s.status||'active',date_approved:s.dateApproved||null,notes:s.notes||null};}
 let sites=[];
+async function reloadSites(){ try{ var rows=await apiGet('/locations-api'); sites=(Array.isArray(rows)?rows:[]).map(normLoc); }catch(e){ sites=[]; } }
 
 /* ================= Auth ================= */
 const CREDS={user:'admin',pass:'laundre2026'};   // change for production / move to a real backend
@@ -210,13 +208,18 @@ function renderTable(){
   h+='</tbody></table>';
   wrap.innerHTML=h;
   wrap.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEditor(b.dataset.edit));
-  wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{
-    const s=sites.find(x=>x.id===b.dataset.del);
-    if(confirm('Delete “'+s.name+'”?')){sites=sites.filter(x=>x.id!==b.dataset.del);saveSites(sites);renderTable();}
+  wrap.querySelectorAll('[data-del]').forEach(b=>b.onclick=async ()=>{
+    const s=sites.find(x=>String(x.id)===String(b.dataset.del)); if(!s)return;
+    if(confirm('Delete “'+s.name+'”? This removes it from the database and anywhere it is assigned.')){
+      var r=await apiSend('/locations-api/'+s.id,'DELETE',null);
+      if(r.ok||r.status===204){ await reloadSites(); renderTable(); } else { alert('Could not delete this location.'); }
+    }
   });
-  wrap.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=()=>{
-    const s=sites.find(x=>x.id===b.dataset.toggle);
-    s.status=s.status==='active'?'inactive':'active';saveSites(sites);renderTable();
+  wrap.querySelectorAll('[data-toggle]').forEach(b=>b.onclick=async ()=>{
+    const s=sites.find(x=>String(x.id)===String(b.dataset.toggle)); if(!s)return;
+    var p=payloadOf(s); p.status=(s.status==='active'?'inactive':'active');
+    var r=await apiSend('/locations-api/'+s.id,'PUT',p);
+    if(r.ok){ await reloadSites(); renderTable(); } else { alert('Could not update status.'); }
   });
 }
 
@@ -241,7 +244,7 @@ function updateMini(){
 }
 function openEditor(id){
   editId=id;
-  const s=id?sites.find(x=>x.id===id):null;
+  const s=id?sites.find(x=>String(x.id)===String(id)):null;
   document.getElementById('editorTitle').textContent=id?'Edit location':'Add location';
   document.getElementById('f_name').value=s?s.name:'';
   document.getElementById('f_address').value=s?s.address:'';
@@ -277,7 +280,7 @@ document.getElementById('geoBtn').onclick=()=>{
     }).catch(()=>{msg.textContent='Geocoding failed — check your connection.';msg.className='msg err';});
 };
 
-document.getElementById('editorSave').onclick=()=>{
+document.getElementById('editorSave').onclick=async ()=>{
   const name=document.getElementById('f_name').value.trim();
   const address=document.getElementById('f_address').value.trim();
   const lat=parseFloat(document.getElementById('f_lat').value), lng=parseFloat(document.getElementById('f_lng').value);
@@ -286,15 +289,18 @@ document.getElementById('editorSave').onclick=()=>{
   if(!name){msg.textContent='Please enter a name.';msg.className='msg err';return;}
   if(isNaN(lat)||isNaN(lng)){msg.textContent='Please set coordinates (use Locate or enter manually).';msg.className='msg err';return;}
   if(!(radius>0)){msg.textContent='Radius must be greater than 0.';msg.className='msg err';return;}
-  const rec={id:editId||uid(),name,address,lat:+lat.toFixed(5),lng:+lng.toFixed(5),radius,
-             unit:document.getElementById('f_unit').value,status:document.getElementById('f_status').value,
-             dateApproved:document.getElementById('f_dateApproved').value||'',
-             notes:document.getElementById('f_notes').value.trim()};
-  if(editId){sites=sites.map(x=>x.id===editId?rec:x);} else {sites.push(rec);}
-  saveSites(sites);
-  // New approved locations flow automatically into the Franchise Checklist and Bookkeeping,
-  // which both read from this locations store (laundre_sites_v1) on load.
-  renderTable(); closeEditor();
+  var payload={name:name,address:address||null,lat:+lat.toFixed(5),lng:+lng.toFixed(5),radius:radius,
+    unit:document.getElementById('f_unit').value,status:document.getElementById('f_status').value,
+    date_approved:document.getElementById('f_dateApproved').value||null,
+    notes:document.getElementById('f_notes').value.trim()||null};
+  var btn=document.getElementById('editorSave'); btn.disabled=true; msg.className='msg'; msg.textContent='Saving…';
+  try{
+    var r=await apiSend(editId?('/locations-api/'+editId):'/locations-api', editId?'PUT':'POST', payload);
+    if(r.status===422){ var j={}; try{j=await r.json();}catch(e){} msg.className='msg err'; msg.textContent=(j.errors?Object.values(j.errors)[0][0]:(j.message||'Please check the form.')); btn.disabled=false; return; }
+    if(!r.ok){ msg.className='msg err'; msg.textContent='Could not save (HTTP '+r.status+').'; btn.disabled=false; return; }
+    // Saved to the DB — it is now assignable in User Management and visible across the dashboard.
+    btn.disabled=false; await reloadSites(); renderTable(); closeEditor();
+  }catch(e){ msg.className='msg err'; msg.textContent='Could not save — please try again.'; btn.disabled=false; }
 };
 
 /* ================= Export / Import ================= */
@@ -307,12 +313,12 @@ document.getElementById('importBtn').onclick=()=>document.getElementById('import
 document.getElementById('importFile').onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
   const rd=new FileReader();
-  rd.onload=()=>{ try{const a=JSON.parse(rd.result); if(Array.isArray(a)){sites=a;saveSites(sites);renderTable();alert('Imported '+a.length+' locations.');} else alert('File is not a valid locations list.'); }catch(err){alert('Could not read file: '+err.message);} };
+  rd.onload=async ()=>{ try{ const a=JSON.parse(rd.result); if(!Array.isArray(a)){alert('File is not a valid locations list.');return;} var n=0; for(var i=0;i<a.length;i++){ var s=a[i]; var p={name:s.name,address:s.address||null,lat:s.lat,lng:s.lng,radius:s.radius,unit:s.unit||'km',status:s.status||'active',date_approved:s.dateApproved||s.date_approved||null,notes:s.notes||null}; var r=await apiSend('/locations-api','POST',p); if(r.ok)n++; } await reloadSites(); renderTable(); alert('Imported '+n+' of '+a.length+' locations.'); }catch(err){alert('Could not read file: '+err.message);} };
   rd.readAsText(f); e.target.value='';
 };
 
 /* ================= Init ================= */
-function init(){ sites=loadSites(); renderTable(); }
+async function init(){ await reloadSites(); renderTable(); }
 </script>
 </body>
 </html>

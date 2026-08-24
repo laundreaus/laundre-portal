@@ -2,6 +2,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\InviteController;
+use App\Http\Controllers\ImpersonateController;
 use App\Http\Controllers\Api\{UserController, LocationController, SettingController, TicketController,
     CleaningController, MaintenanceController, DocumentController, GuideController, BookkeepingController,
     SupplierController, SaleController, FranchiseController, UploadController, MaintenanceDocController,
@@ -16,8 +17,16 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/welcome/{token}', [InviteController::class, 'show'])->where('token','[A-Za-z0-9]+');
 Route::post('/welcome/{token}', [InviteController::class, 'store'])->where('token','[A-Za-z0-9]+')->middleware('throttle:20,1');
 
+// Serve favicons directly (public assets; no auth required).
+Route::get('/favicon.ico', fn () => response()->file(public_path('favicon.ico')));
+Route::get('/favicon.gif', fn () => response()->file(public_path('favicon.gif')));
+Route::get('/favicon-32.png', fn () => response()->file(public_path('favicon-32.png')));
+
 Route::middleware('auth')->group(function () {
     Route::get('/', [PortalController::class, 'index'])->name('portal');
+
+    // ---- Admin "view as user" preview ----
+    Route::get('/stop-impersonate', [ImpersonateController::class, 'stop']);
 
     // ---- Shared read + scoped-write APIs (any authenticated user; controllers enforce store scoping) ----
     Route::get('/locations-api', [LocationController::class, 'index']);
@@ -85,6 +94,13 @@ Route::middleware('auth')->group(function () {
 
     // ---- Admin-only writes ----
     Route::middleware('role:admin')->group(function () {
+        Route::post('/impersonate/{user}', [ImpersonateController::class, 'start']);
+
+        // Site Locations (DB-backed): create/edit/delete approved laundromats.
+        Route::post('/locations-api', [LocationController::class, 'store']);
+        Route::match(['put','patch'], '/locations-api/{location}', [LocationController::class, 'update']);
+        Route::delete('/locations-api/{location}', [LocationController::class, 'destroy']);
+
         Route::get('/users-api', [UserController::class, 'index']);
         Route::post('/users-api', [UserController::class, 'store']);
         Route::match(['put','patch'], '/users-api/{user}', [UserController::class, 'update']);
@@ -138,8 +154,3 @@ Route::middleware('auth')->group(function () {
     Route::get('/{page}.html', fn (string $page) => redirect('/'.$page))->where('page', '[A-Za-z0-9\-]+');
     Route::get('/{page}', [PortalController::class, 'tool'])->where('page', '[A-Za-z0-9\-]+')->name('tool');
 });
-
-// Serve favicons directly (public assets; no auth required).
-Route::get('/favicon.ico', fn()=>response()->file(public_path('favicon.ico')));
-Route::get('/favicon.gif', fn()=>response()->file(public_path('favicon.gif')));
-Route::get('/favicon-32.png', fn()=>response()->file(public_path('favicon-32.png')));

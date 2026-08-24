@@ -207,6 +207,7 @@ function openEditor(id){
   document.getElementById('f_status').value=t?t.status:'todo';
   document.getElementById('f_file').value='';
   document.getElementById('emsg').textContent='';
+  document.getElementById('esave').disabled=false;
   document.getElementById('edelete').style.display=id?'inline-block':'none';
   renderAttachCur(t);
   document.getElementById('overlay').classList.add('show');
