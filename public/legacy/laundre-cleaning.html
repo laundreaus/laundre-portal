@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Laundré · Cleaning</title>
 <script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);var LOC=q.get("loc")||"";window.__FIXED_LOC=LOC;window.__EMBED=q.get("embed")==="1";if(window.__EMBED){document.addEventListener("DOMContentLoaded",function(){var s=document.createElement("style");s.textContent="header{display:none!important}main{padding-top:12px!important}";document.head.appendChild(s);});}if(LOC){var of=window.fetch;window.fetch=function(u,o){var url=(typeof u==="string")?u:(u&&u.url)||"";var m=(o&&o.method)||"GET";return of.apply(this,arguments).then(function(r){if(url.indexOf("/locations-api")>=0&&m==="GET"){return r.clone().json().then(function(j){if(Array.isArray(j)){var f=j.filter(function(x){return String(x.id)===String(LOC);});return new Response(JSON.stringify(f),{status:200,headers:{"Content-Type":"application/json"}});}return r;}).catch(function(){return r;});}return r;});};}}catch(e){}})();</script>
 <style>
   :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
   *{box-sizing:border-box;}
@@ -106,9 +107,10 @@ const CSRF=(window.LAUNDRE_CSRF||'');
 function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
 async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
 async function apiSend(u,method,body){const r=await fetch(u,{method:method,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(body)});if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();}
+function uploadFile(f){var fd=new FormData();fd.append('file',f,f.name);return fetch('/upload-api',{method:'POST',headers:hdrs(false),credentials:'same-origin',body:fd}).then(function(r){if(!r.ok)throw new Error('upload HTTP '+r.status);return r.json();});}
 const DEFAULT_ITEMS=['Bins emptied','Lint traps emptied','Floors mopped','Surfaces wiped','Machines & benches wiped'];
 let ITEMS=DEFAULT_ITEMS.slice();
-async function saveItemsRemote(){try{await apiSend('/cleaning-items-api','POST',{items:ITEMS});}catch(e){alert('Could not save checklist items: '+e.message);}}
+async function saveItemsRemote(){try{await apiSend('/cleaning-items-api','POST',{items:ITEMS,loc:(window.__FIXED_LOC||null)});}catch(e){alert('Could not save checklist items: '+e.message);}}
 function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{role:'admin'};}catch(e){return {role:'admin'};}}
 const ME=SESSION(); const ADMIN=!(ME.role&&ME.role!=='admin');
 function ms(t){if(!t)return 0;var n=Date.parse(t);return isNaN(n)?0:n;}
@@ -154,11 +156,16 @@ function renderCleaner(){
   main.innerHTML=h;
   renderPhotos();
   main.querySelectorAll('.citem').forEach(el=>el.querySelector('input').addEventListener('change',e=>{el.classList.toggle('done',e.target.checked);}));
-  document.getElementById('photoInput').onchange=e=>{
-    const files=[...e.target.files]; let pending=files.length;
-    files.forEach(f=>{ if(f.size>2.5*1024*1024){pending--;document.getElementById('msg').textContent='Some photos were over 2.5MB and skipped.';return;}
-      const rd=new FileReader();rd.onload=()=>{pendingPhotos.push(rd.result);renderPhotos();};rd.readAsDataURL(f); });
-    e.target.value='';
+  document.getElementById('photoInput').onchange=async e=>{
+    const files=[...e.target.files]; e.target.value='';
+    const msg=document.getElementById('msg');
+    for(let i=0;i<files.length;i++){ const f=files[i];
+      if(f.size>12*1024*1024){ msg.style.color='#B4472F'; msg.textContent='Some photos over 12MB were skipped.'; continue; }
+      msg.style.color='#6b7d73'; msg.textContent='Uploading photo…';
+      try{ const up=await uploadFile(f); pendingPhotos.push(up.url); renderPhotos(); }
+      catch(err){ msg.style.color='#B4472F'; msg.textContent='A photo failed to upload — please try again.'; }
+    }
+    if(msg.textContent==='Uploading photo…') msg.textContent='';
   };
   document.getElementById('submitBtn').onclick=submitClean;
 }
@@ -257,7 +264,7 @@ document.getElementById('mClose').onclick=()=>document.getElementById('overlay')
 
 async function boot(){
   try{
-    const [locs,data,items]=await Promise.all([apiGet('/locations-api'),apiGet('/cleaning-api'),apiGet('/cleaning-items-api')]);
+    const [locs,data,items]=await Promise.all([apiGet('/locations-api'),apiGet('/cleaning-api'),apiGet('/cleaning-items-api'+(window.__FIXED_LOC?('?loc='+window.__FIXED_LOC):''))]);
     LOCS=(locs||[]).map(s=>({id:s.id,name:s.name}));
     DATA=(data||[]).map(normalize);
     if(Array.isArray(items)&&items.length)ITEMS=items;

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Store Dashboard</title>
+<script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}if(!a||(s&&s.role&&s.role!=='admin'))location.replace('laundre-portal.html');})();</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);window.__FIXED_LOC=q.get('loc')||'';window.__EMBED=q.get('embed')==='1';if(window.__EMBED){document.addEventListener('DOMContentLoaded',function(){var st=document.createElement('style');st.textContent='header{display:none!important}main{padding-top:10px!important}';document.head.appendChild(st);});}}catch(e){}})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;}
+  .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;}
+  .btn-green{background:var(--green);color:#fff;} .btn-green:hover{filter:brightness(1.1);}
+  .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);} .btn-ghost:hover{background:#EFEADD;}
+  input[type=date]{font-family:inherit;font-size:13px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:8px 10px;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;}
+  header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:1100px;margin:0 auto;padding:18px 22px 60px;}
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .toolbar .spacer{flex:1;} .toolbar label{font-size:12px;color:#5f7469;font-weight:600;}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+  .stat{background:#fff;border:1px solid var(--cream-line);border-radius:12px;padding:14px 16px;}
+  .stat .n{font-size:22px;font-weight:800;color:var(--green);} .stat .l{font-size:11.5px;color:#7a8b84;margin-top:2px;}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:18px 20px;margin-bottom:18px;}
+  .card h3{margin:0 0 14px;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);display:flex;align-items:center;gap:8px;}
+  .card h3 .spacer{flex:1;}
+  .bp-badge{display:inline-flex;align-items:center;gap:5px;background:#E1EDE4;color:#2f6b46;border-radius:20px;padding:2px 10px;font-size:10.5px;font-weight:800;letter-spacing:.02em;}
+  .bars{display:flex;align-items:flex-end;gap:6px;height:180px;padding-top:8px;overflow-x:auto;}
+  .bar{flex:1;min-width:16px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+  .bar .b{width:100%;background:var(--green);border-radius:5px 5px 0 0;min-height:2px;transition:.15s;}
+  .bar:hover .b{background:var(--accent);}
+  .bar .v{font-size:9.5px;color:#7a8b84;margin-bottom:3px;white-space:nowrap;}
+  .bar .d{font-size:9.5px;color:#8a9790;margin-top:4px;white-space:nowrap;}
+  .empty{padding:36px;text-align:center;color:#8a9790;background:#fff;border:1px solid var(--cream-line);border-radius:12px;}
+  .toggle{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#5f7469;font-weight:600;cursor:pointer;}
+  .hiddenNote{background:#FBE9E2;border:1px solid #e6cabb;color:#9a3a22;border-radius:12px;padding:14px 16px;font-size:13.5px;font-weight:600;}
+</style>
+</head>
+<body>
+<header>
+  <span class="ttl">Store Dashboard</span>
+  <span class="spacer"></span>
+  <a class="btn btn-ghost" href="laundre-portal.html">← Portal</a>
+</header>
+<main>
+  <div class="toolbar">
+    <label>From <input type="date" id="from"></label>
+    <label>To <input type="date" id="to"></label>
+    <button class="btn btn-ghost" id="r7">7 days</button>
+    <button class="btn btn-ghost" id="r30">30 days</button>
+    <span class="spacer"></span>
+    <label class="toggle"><input type="checkbox" id="bpHide"> Hide Bubble Pay module</label>
+  </div>
+  <div id="body"></div>
+</main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(){return {'Accept':'application/json','X-CSRF-TOKEN':CSRF};}
+function apiGet(u){return fetch(u,{headers:hdrs(),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function apiPut(u,v){return fetch(u,{method:'PUT',headers:Object.assign({'Content-Type':'application/json'},hdrs()),credentials:'same-origin',body:JSON.stringify({value:v})}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+var LOC=window.__FIXED_LOC||new URLSearchParams(location.search).get('loc')||'';
+var SALES=[], ALL=[], HIDDEN=false;
+function money(n){return '$'+Math.round(n).toLocaleString();}
+function d10(s){return (''+s).slice(0,10);} // DB dates may arrive as full timestamps
+function fmtD(s){var d=new Date(d10(s)+'T00:00');return isNaN(d)?d10(s):d.toLocaleDateString('en-AU',{day:'numeric',month:'short'});}
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function maxDate(){return ALL.length?d10(ALL[ALL.length-1].date):ymd(new Date());}
+function setRange(days){var to=new Date(maxDate()+'T00:00');var from=new Date(to);from.setDate(from.getDate()-(days-1));document.getElementById('to').value=ymd(to);document.getElementById('from').value=ymd(from);applyWindow();}
+function applyWindow(){
+  var f=document.getElementById('from').value, t=document.getElementById('to').value;
+  SALES=ALL.filter(function(x){var d=d10(x.date);return (!f||d>=f)&&(!t||d<=t);});
+  render();
+}
+function loadAll(){
+  if(!LOC){document.getElementById('body').innerHTML='<div class="empty">No laundromat selected.</div>';return Promise.resolve();}
+  return apiGet('/sales-api?location_id='+encodeURIComponent(LOC)).then(function(rows){
+    ALL=(Array.isArray(rows)?rows:[]).map(function(x){return {date:d10(x.date),revenue:+x.revenue||0,txns:+x.txns||0};});
+  }).catch(function(e){document.getElementById('body').innerHTML='<div class="empty">Could not load sales: '+e.message+'</div>';});
+}
+function render(){
+  var el=document.getElementById('body');
+  if(HIDDEN){el.innerHTML='<div class="hiddenNote">Bubble Pay module is hidden for this laundromat. Untick “Hide Bubble Pay module” above to show it.</div>';return;}
+  var rev=SALES.reduce(function(s,x){return s+(+x.revenue||0);},0);
+  var txn=SALES.reduce(function(s,x){return s+(+x.txns||0);},0);
+  var days=SALES.length||1;
+  var best=SALES.reduce(function(m,x){return (+x.revenue||0)>(m?+m.revenue:-1)?x:m;},null);
+  var stats='<div class="stats">'
+    +'<div class="stat"><div class="n">'+money(rev)+'</div><div class="l">Revenue (period)</div></div>'
+    +'<div class="stat"><div class="n">'+txn.toLocaleString()+'</div><div class="l">Transactions</div></div>'
+    +'<div class="stat"><div class="n">'+money(txn?rev/txn:0)+'</div><div class="l">Avg / transaction</div></div>'
+    +'<div class="stat"><div class="n">'+money(rev/days)+'</div><div class="l">Avg / day</div></div>'
+    +'<div class="stat"><div class="n">'+(best?money(best.revenue):'—')+'</div><div class="l">Best day'+(best?(' · '+fmtD(best.date)):'')+'</div></div>'
+    +'</div>';
+  var chart;
+  if(!SALES.length){chart='<div class="empty">No sales in this period. Data syncs automatically from Bubble Pay.</div>';}
+  else{
+    var mx=Math.max.apply(null,SALES.map(function(x){return +x.revenue||0;}))||1;
+    var bars=SALES.map(function(x){var h=Math.round(((+x.revenue||0)/mx)*150);return '<div class="bar" title="'+fmtD(x.date)+': '+money(x.revenue)+' · '+(x.txns||0)+' txns"><div class="v">'+(SALES.length<=31?money(x.revenue):'')+'</div><div class="b" style="height:'+h+'px"></div><div class="d">'+(SALES.length<=31?fmtD(x.date):'')+'</div></div>';}).join('');
+    chart='<div class="card"><h3><span class="bp-badge">● Bubble Pay</span> Daily revenue<span class="spacer"></span></h3><div class="bars">'+bars+'</div></div>';
+  }
+  el.innerHTML=stats+chart;
+}
+// Bubble Pay hide toggle (per laundromat)
+document.getElementById('bpHide').addEventListener('change',function(){
+  HIDDEN=this.checked;
+  apiPut('/settings-api/bubblepay_hidden_'+LOC, HIDDEN?'1':'0').catch(function(){});
+  render();
+});
+document.getElementById('from').addEventListener('change',applyWindow);
+document.getElementById('to').addEventListener('change',applyWindow);
+document.getElementById('r7').addEventListener('click',function(){setRange(7);});
+document.getElementById('r30').addEventListener('click',function(){setRange(30);});
+// init: load all this store's sales, default to the last 7 days ending at the most recent synced date
+(function(){
+  Promise.all([
+    loadAll(),
+    apiGet('/settings-api/bubblepay_hidden_'+LOC).then(function(v){HIDDEN=(v==='1'||v===1||v===true);document.getElementById('bpHide').checked=HIDDEN;}).catch(function(){})
+  ]).then(function(){ setRange(7); });
+})();
+</script>
+</body>
+</html>

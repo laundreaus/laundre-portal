@@ -57,6 +57,27 @@
   a.tile p{margin:0;font-size:13px;color:#6b7d73;line-height:1.5;}
   a.tile .arrow{position:absolute;top:22px;right:22px;color:var(--cream-line);font-size:20px;transition:.15s;}
   a.tile:hover .arrow{color:var(--accent);}
+  /* Titled sections + compact admin tools (6-across) + laundromat cards */
+  .sectlabel{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:800;margin:6px 0 14px;display:flex;align-items:center;gap:12px;}
+  .sectlabel .ln{flex:1;height:1px;background:var(--cream-line);}
+  .tools6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-bottom:8px;}
+  @media(max-width:1040px){.tools6{grid-template-columns:repeat(4,1fr);}}
+  @media(max-width:680px){.tools6{grid-template-columns:repeat(2,1fr);}}
+  a.ctile{background:#fff;border:1px solid var(--cream-line);border-radius:13px;padding:15px 10px;text-decoration:none;color:inherit;display:flex;flex-direction:column;align-items:center;text-align:center;gap:9px;transition:.13s;position:relative;}
+  a.ctile:hover{border-color:var(--green);box-shadow:0 8px 20px rgba(52,73,61,.12);transform:translateY(-2px);}
+  a.ctile .ic{width:42px;height:42px;border-radius:11px;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:20px;position:relative;}
+  a.ctile .ic .dot{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;border-radius:9px;background:var(--accent);border:2px solid #fff;}
+  a.ctile h4{margin:0;font-size:12.5px;font-weight:700;color:var(--green-d);line-height:1.25;}
+  .stores{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;}
+  a.store{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:16px 18px;text-decoration:none;color:inherit;display:block;transition:.13s;}
+  a.store:hover{border-color:var(--green);box-shadow:0 8px 22px rgba(52,73,61,.12);transform:translateY(-2px);}
+  a.store .sn{font-weight:800;color:var(--green-d);font-size:15.5px;}
+  a.store .sa{color:#8a9790;font-size:12.5px;margin-top:3px;min-height:16px;}
+  a.store .sc{margin-top:11px;display:flex;gap:6px;flex-wrap:wrap;}
+  a.store .sc span{background:#EFEADD;color:#6b5a43;border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700;}
+  .addstore{border:2px dashed var(--cream-line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#8a9790;background:#fff;cursor:pointer;min-height:104px;font-weight:800;font-size:14px;}
+  .addstore:hover{border-color:var(--green);color:var(--green);}
+  .addstore .plus{font-size:26px;line-height:1;}
   .foot{margin-top:34px;font-size:11.5px;color:#8a9790;line-height:1.6;}
   /* Sales dashboard */
   .dash{background:#fff;border:1px solid var(--cream-line);border-radius:16px;padding:20px 22px;margin-bottom:28px;}
@@ -167,10 +188,19 @@ function showApp(){
       renderStats();
       try{renderAlerts();}catch(e){}
       try{setupViewAs();}catch(e){}
+      try{fetchDbSales().then(function(){try{renderDashboard('admin');}catch(e){}});}catch(e){}
     } else {
-      const ln=locName(s.locationId);
-      document.getElementById('heroTitle').textContent='Welcome, '+(s.name||'Franchisee');
-      document.getElementById('heroSub').textContent= ln ? ('Managing '+ln) : 'Your franchisee home';
+      var first=(s.name||'').split(' ')[0]||'';
+      var store=s.locationName||locName(s.locationId)||'';
+      var homes={
+        franchisee:  store?('Managing '+store):'Your franchisee home',
+        cleaner:     store?('Cleaning · '+store):'Your cleaning checklist',
+        maintenance: store?('Maintenance · '+store):'Your maintenance tools',
+        investor:    'Your investor dashboard and membership card',
+        user:        'Your assigned tools'
+      };
+      document.getElementById('heroTitle').textContent='Welcome'+(first?', '+first:'');
+      document.getElementById('heroSub').textContent = homes[role] || 'Your Laundré home';
       document.getElementById('stats').innerHTML='';
     }
   }catch(err){ console.error('portal render error',err); }
@@ -196,34 +226,37 @@ const TOOLS=[
   {icon:'💼',name:'Investors',href:'laundre-investors.html',roles:['admin'],updated:true,desc:'Investor prospects and the interest amounts they have formally registered.'},
   {icon:'📄',name:'Documents',href:'laundre-documents.html',roles:['admin','franchisee'],desc:'Manage key documents and control which franchises can see them.',
      fdesc:'Key documents and resources shared with your store.'},
-  {icon:'✅',name:'Franchise Checklist',href:'laundre-checklist.html',roles:['admin','franchisee'],desc:'Onboarding checklists across all franchisees.',
+  {icon:'✅',name:'Franchise Checklist',href:'laundre-checklist.html',roles:['admin','franchisee'],store:true,desc:'Onboarding checklists across all franchisees.',
      fname:'My Franchise Checklist',fdesc:'Work through your store’s onboarding checklist and track progress.'},
   {icon:'📐',name:'Layout Tool',href:'laundre-layout.html',roles:['admin'],desc:'To-scale drag-and-drop fit-out designer: draw the floor, place Fuego washers/dryers and fixtures, and get live area and cost.'},
   {icon:'📍',name:'Site Locations',href:'laundre-admin.html',roles:['admin'],desc:'Manage approved laundromat locations, radii and active status.'},
   {icon:'🗺️',name:'Postcode & Radius Tool',href:'region-postcode-tool.html',roles:['admin'],updated:true,desc:'Draw a radius around any address and list the postcodes and suburbs it covers.'},
   {icon:'📊',name:'Prospective Site Analyzer',href:'laundre-site-analyzer.html',roles:['admin'],desc:'Score potential sites on population, parking, size and footfall.'},
-  {icon:'🧮',name:'Cost Analysis',href:'laundre-cost-analysis.html',roles:['admin'],desc:'Fit-out estimator with trade line items, builder margin, GST and price per m².'},
+  {icon:'🧮',name:'Cost Calculators',href:'laundre-calculators.html',roles:['admin'],updated:true,desc:'Equipment & finance calculator plus the fit-out estimator (trades, margins, GST, price per m²).'},
   {icon:'🔧',name:'Suppliers & Contacts',href:'laundre-suppliers.html',roles:['admin'],desc:'Key supplier directory — equipment, fit-out, signage and services.'},
   {icon:'📈',name:'Reporting',href:'laundre-reporting.html',roles:['admin'],desc:'Upload monthly sales reports (CSV) that feed the dashboard.'},
   {icon:'📘',name:'Maintenance Docs',href:'laundre-maintenance-docs.html',roles:['admin','maintenance'],desc:'Upload manuals, service guides and technical docs for the maintenance team.',fname:'Maintenance Docs',fdesc:'Manuals, guides and technical docs for your maintenance work.'},
-  {icon:'🆘',name:'Support Queue',href:'laundre-support.html',roles:['admin','franchisee'],desc:'Review incidents and questions submitted by franchisees.',
+  {icon:'🆘',name:'Support Queue',href:'laundre-support.html',roles:['admin','franchisee'],store:true,desc:'Review incidents and questions submitted by franchisees.',
      fname:'Submit / Ask',fdesc:'Report an incident or ask the franchise team a question.'},
-  {icon:'📒',name:'Bookkeeping Checker',href:'laundre-bookkeeping.html',roles:['admin','franchisee'],desc:'Track quarterly BAS lodgements and annual returns for every laundromat.',
+  {icon:'📒',name:'Bookkeeping Checker',href:'laundre-bookkeeping.html',roles:['admin','franchisee'],store:true,desc:'Track quarterly BAS lodgements and annual returns for every laundromat.',
      fname:'Bookkeeping',fdesc:'Track your store’s quarterly BAS and annual return, and attach the records.'},
-  {icon:'🧹',name:'Cleaning',href:'laundre-cleaning.html',roles:['admin','cleaner'],updated:true,desc:'Daily cleaning submissions across all laundromats — ticks, notes and photos.',
+  {icon:'🧹',name:'Cleaning',href:'laundre-cleaning.html',roles:['admin','cleaner'],store:true,updated:true,desc:'Daily cleaning submissions across all laundromats — ticks, notes and photos.',
      fname:'Daily Cleaning',fdesc:'Complete today’s cleaning checklist — bins, lint traps, notes, issues and photos.'},
-  {icon:'🛠️',name:'Maintenance',href:'laundre-maintenance.html',roles:['admin','maintenance'],updated:true,desc:'Machine &amp; tech guides plus maintenance logs across all laundromats.',
+  {icon:'🛠️',name:'Maintenance',href:'laundre-maintenance.html',roles:['admin','maintenance'],store:true,updated:true,desc:'Machine &amp; tech guides plus maintenance logs across all laundromats.',
      fname:'Maintenance',fdesc:'Machine guides &amp; instructions, and log your maintenance checks, with location capture.'},
-  {icon:'💳',name:'Bubble Pay',href:'https://www.bubblepayportal.com/my-dashboard',roles:['admin','franchisee'],ext:true,
+  {icon:'💳',name:'Bubble Pay',href:'https://www.bubblepayportal.com/my-dashboard',roles:['admin','franchisee'],store:true,ext:true,
      desc:'Open the Bubble Pay dashboard for payments and machine management.',
      fdesc:'Open your Bubble Pay dashboard for payments and machine management.'},
   {icon:'👤',name:'User Management',href:'laundre-users.html',roles:['admin'],updated:true,desc:'Create franchisee, staff and prospect logins, assign stores and sections, and send invite links.'},
   {icon:'📈',name:'Data Dashboard',href:'laundre-investor-dashboard.html',roles:['investor'],desc:'Live trading revenue for the laundromats assigned to your account.',fname:'Data Dashboard',fdesc:'Live trading revenue for the laundromats assigned to you.'},
   {icon:'💳',name:'Membership Card',href:'laundre-card.html',roles:['admin','franchisee','user','investor'],desc:'Your Laundré digital membership card — view it and add it to Apple / Google Wallet.',fname:'My Membership Card',fdesc:'Your Laundré digital membership card — add it to Apple / Google Wallet.'},
-  {icon:'📹',name:'CCTV',href:'laundre-cctv.html',roles:['admin','franchisee'],desc:'Enter 4 camera feed embeds per laundromat; each franchisee sees only their store.',fname:'CCTV',fdesc:'Live camera feeds for your laundromat.'},
+  {icon:'📹',name:'CCTV',href:'laundre-cctv.html',roles:['admin','franchisee'],store:true,desc:'Enter 4 camera feed embeds per laundromat; each franchisee sees only their store.',fname:'CCTV',fdesc:'Live camera feeds for your laundromat.'},
   {icon:'✍️',name:'NDA',href:'laundre-nda-admin.html',roles:['admin'],updated:true,desc:'Every signed non-disclosure agreement — signer, role, date and IP — with a downloadable executed PDF for each.'}
 ];
 function renderTiles(role){
+  const grid=document.getElementById('grid');
+  if(role==='admin'){ renderAdminSections(); return; }
+  grid.className='grid';
   let list;
   if(role==='user'){
     const sess=currentSession()||{}; const secs=sess.sections||[];
@@ -231,7 +264,7 @@ function renderTiles(role){
   } else {
     list=TOOLS.filter(t=>t.roles.includes(role));
   }
-  document.getElementById('grid').innerHTML=list.map(t=>{
+  grid.innerHTML=list.map(t=>{
     const name=(role==='franchisee'&&t.fname)?t.fname:t.name;
     const desc=(role==='franchisee'&&t.fdesc)?t.fdesc:t.desc;
     const ext=t.ext?' target="_blank" rel="noopener"':'';
@@ -240,6 +273,45 @@ function renderTiles(role){
     const tag=t.updated?'<span class="newtag">Updated</span>':'';
     return '<a class="tile" href="'+t.href+'"'+ext+'><span class="arrow">'+arrow+'</span><div class="ic">'+t.icon+dot+'</div><h3>'+esc(name)+'</h3><p>'+esc(desc)+'</p>'+tag+'</a>';
   }).join('');
+}
+/* Admin dashboard: global "Admin tools" (6-across) + a "Laundromats" section of store cards. */
+function renderAdminSections(){
+  const grid=document.getElementById('grid');
+  grid.className='';
+  const adminTools=TOOLS.filter(t=>t.roles.includes('admin') && !t.store);
+  const toolsHtml=adminTools.map(t=>{
+    const ext=t.ext?' target="_blank" rel="noopener"':'';
+    const dot=t.updated?'<span class="dot"></span>':'';
+    return '<a class="ctile" href="'+t.href+'"'+ext+' title="'+esc(t.desc||'')+'"><div class="ic">'+t.icon+dot+'</div><h4>'+esc(t.name)+'</h4></a>';
+  }).join('');
+  grid.innerHTML=
+    '<div class="sectlabel">Admin tools<span class="ln"></span></div>'
+    +'<div class="tools6">'+toolsHtml+'</div>'
+    +'<div class="sectlabel" style="margin-top:30px">Laundromats<span class="ln"></span></div>'
+    +'<div class="stores" id="stores"><div class="addstore" id="addStoreInit"><span class="plus">＋</span>Add laundromat</div></div>';
+  const initAdd=document.getElementById('addStoreInit'); if(initAdd) initAdd.onclick=addLaundromat;
+  renderStores();
+}
+async function renderStores(){
+  const wrap=document.getElementById('stores'); if(!wrap) return;
+  let locs=[];
+  try{ const r=await fetch('/locations-api',{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'}); locs=r.ok?(await r.json()):[]; }catch(e){}
+  if(!Array.isArray(locs)) locs=[];
+  const cards=locs.map(l=>
+    '<a class="store" href="laundre-laundromat?loc='+l.id+'"><div class="sn">'+esc(l.name||'Laundromat')+'</div><div class="sa">'+esc(l.address||'')+'</div>'
+    +'<div class="sc"><span>Dashboard</span><span>Maintenance</span><span>Cleaning</span><span>CCTV</span><span>+4</span></div></a>'
+  ).join('');
+  wrap.innerHTML=cards+'<div class="addstore" id="addStore"><span class="plus">＋</span>Add laundromat</div>';
+  const add=document.getElementById('addStore'); if(add) add.onclick=addLaundromat;
+}
+function addLaundromat(){
+  const addr=(prompt('Laundromat address (this becomes the entity):')||'').trim();
+  if(!addr) return;
+  const name=(prompt('Short name for this laundromat:', (addr.split(',')[0]||addr).trim())||'').trim()||addr;
+  fetch('/locations-api',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':(window.LAUNDRE_CSRF||''),'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin',body:JSON.stringify({name:name,address:addr,status:'active'})})
+    .then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(loc=>{ location.href='laundre-laundromat?loc='+(loc.id||''); })
+    .catch(e=>alert('Could not create laundromat: '+e.message));
 }
 
 /* ---------- Admin: preview each user type's dashboard ---------- */
@@ -363,7 +435,18 @@ async function renderAlerts(){
 /* ---------- Sales dashboard (admin only) ---------- */
 const SALES_KEY='laundre_sales_v1';
 const SALES_SEED=[{"locationId":"coomera","site":"Coomera","date":"2026-06-01","revenue":760.2,"txns":57},{"locationId":"coomera","site":"Coomera","date":"2026-06-02","revenue":425.25,"txns":41},{"locationId":"coomera","site":"Coomera","date":"2026-06-03","revenue":574.35,"txns":54},{"locationId":"coomera","site":"Coomera","date":"2026-06-04","revenue":576.45,"txns":42},{"locationId":"coomera","site":"Coomera","date":"2026-06-05","revenue":715.05,"txns":65},{"locationId":"coomera","site":"Coomera","date":"2026-06-06","revenue":660.45,"txns":53},{"locationId":"coomera","site":"Coomera","date":"2026-06-07","revenue":1117.2,"txns":101},{"locationId":"coomera","site":"Coomera","date":"2026-06-08","revenue":1118.25,"txns":91},{"locationId":"coomera","site":"Coomera","date":"2026-06-09","revenue":849.45,"txns":81},{"locationId":"coomera","site":"Coomera","date":"2026-06-10","revenue":1236.9,"txns":123},{"locationId":"coomera","site":"Coomera","date":"2026-06-11","revenue":1288.35,"txns":117},{"locationId":"coomera","site":"Coomera","date":"2026-06-12","revenue":1115.1,"txns":106},{"locationId":"coomera","site":"Coomera","date":"2026-06-13","revenue":1193.85,"txns":104},{"locationId":"coomera","site":"Coomera","date":"2026-06-14","revenue":1375.5,"txns":117},{"locationId":"coomera","site":"Coomera","date":"2026-06-15","revenue":1239.0,"txns":99},{"locationId":"coomera","site":"Coomera","date":"2026-06-16","revenue":1107.75,"txns":99},{"locationId":"coomera","site":"Coomera","date":"2026-06-17","revenue":733.95,"txns":72},{"locationId":"coomera","site":"Coomera","date":"2026-06-18","revenue":583.8,"txns":54},{"locationId":"coomera","site":"Coomera","date":"2026-06-19","revenue":644.7,"txns":60},{"locationId":"coomera","site":"Coomera","date":"2026-06-20","revenue":948.15,"txns":78},{"locationId":"coomera","site":"Coomera","date":"2026-06-21","revenue":1471.05,"txns":129},{"locationId":"coomera","site":"Coomera","date":"2026-06-22","revenue":607.95,"txns":64},{"locationId":"coomera","site":"Coomera","date":"2026-06-23","revenue":655.2,"txns":50},{"locationId":"coomera","site":"Coomera","date":"2026-06-24","revenue":556.5,"txns":47},{"locationId":"coomera","site":"Coomera","date":"2026-06-25","revenue":648.9,"txns":57},{"locationId":"coomera","site":"Coomera","date":"2026-06-26","revenue":999.6,"txns":87},{"locationId":"coomera","site":"Coomera","date":"2026-06-27","revenue":847.35,"txns":78},{"locationId":"coomera","site":"Coomera","date":"2026-06-28","revenue":1346.1,"txns":130},{"locationId":"coomera","site":"Coomera","date":"2026-06-29","revenue":773.85,"txns":70},{"locationId":"coomera","site":"Coomera","date":"2026-06-30","revenue":1167.6,"txns":113},{"locationId":"sthport","site":"Southport","date":"2026-06-01","revenue":291.2,"txns":27},{"locationId":"sthport","site":"Southport","date":"2026-06-02","revenue":293.28,"txns":21},{"locationId":"sthport","site":"Southport","date":"2026-06-03","revenue":486.25,"txns":36},{"locationId":"sthport","site":"Southport","date":"2026-06-04","revenue":182.75,"txns":17},{"locationId":"sthport","site":"Southport","date":"2026-06-05","revenue":287.21,"txns":24},{"locationId":"sthport","site":"Southport","date":"2026-06-06","revenue":531.96,"txns":45},{"locationId":"sthport","site":"Southport","date":"2026-06-07","revenue":582.16,"txns":56},{"locationId":"sthport","site":"Southport","date":"2026-06-08","revenue":326.13,"txns":30},{"locationId":"sthport","site":"Southport","date":"2026-06-09","revenue":542.98,"txns":35},{"locationId":"sthport","site":"Southport","date":"2026-06-10","revenue":543.78,"txns":48},{"locationId":"sthport","site":"Southport","date":"2026-06-11","revenue":969.36,"txns":88},{"locationId":"sthport","site":"Southport","date":"2026-06-12","revenue":288.27,"txns":24},{"locationId":"sthport","site":"Southport","date":"2026-06-13","revenue":776.14,"txns":65},{"locationId":"sthport","site":"Southport","date":"2026-06-14","revenue":529.32,"txns":53},{"locationId":"sthport","site":"Southport","date":"2026-06-15","revenue":372.09,"txns":34},{"locationId":"sthport","site":"Southport","date":"2026-06-16","revenue":808.6,"txns":47},{"locationId":"sthport","site":"Southport","date":"2026-06-17","revenue":346.32,"txns":27},{"locationId":"sthport","site":"Southport","date":"2026-06-18","revenue":304.06,"txns":23},{"locationId":"sthport","site":"Southport","date":"2026-06-19","revenue":324.0,"txns":21},{"locationId":"sthport","site":"Southport","date":"2026-06-20","revenue":384.09,"txns":34},{"locationId":"sthport","site":"Southport","date":"2026-06-21","revenue":731.75,"txns":65},{"locationId":"sthport","site":"Southport","date":"2026-06-22","revenue":204.31,"txns":18},{"locationId":"sthport","site":"Southport","date":"2026-06-23","revenue":757.73,"txns":46},{"locationId":"sthport","site":"Southport","date":"2026-06-24","revenue":415.41,"txns":37},{"locationId":"sthport","site":"Southport","date":"2026-06-25","revenue":385.73,"txns":34},{"locationId":"sthport","site":"Southport","date":"2026-06-26","revenue":318.76,"txns":26},{"locationId":"sthport","site":"Southport","date":"2026-06-27","revenue":518.79,"txns":45},{"locationId":"sthport","site":"Southport","date":"2026-06-28","revenue":635.73,"txns":58},{"locationId":"sthport","site":"Southport","date":"2026-06-29","revenue":284.12,"txns":27},{"locationId":"sthport","site":"Southport","date":"2026-06-30","revenue":646.99,"txns":52},{"locationId":"tweed","site":"Tweed","date":"2026-06-01","revenue":799.05,"txns":80},{"locationId":"tweed","site":"Tweed","date":"2026-06-02","revenue":519.75,"txns":60},{"locationId":"tweed","site":"Tweed","date":"2026-06-03","revenue":354.9,"txns":36},{"locationId":"tweed","site":"Tweed","date":"2026-06-04","revenue":656.25,"txns":78},{"locationId":"tweed","site":"Tweed","date":"2026-06-05","revenue":323.4,"txns":40},{"locationId":"tweed","site":"Tweed","date":"2026-06-06","revenue":530.25,"txns":53},{"locationId":"tweed","site":"Tweed","date":"2026-06-07","revenue":1151.85,"txns":114},{"locationId":"tweed","site":"Tweed","date":"2026-06-08","revenue":1115.1,"txns":118},{"locationId":"tweed","site":"Tweed","date":"2026-06-09","revenue":1089.9,"txns":93},{"locationId":"tweed","site":"Tweed","date":"2026-06-10","revenue":936.6,"txns":104},{"locationId":"tweed","site":"Tweed","date":"2026-06-11","revenue":1026.9,"txns":108},{"locationId":"tweed","site":"Tweed","date":"2026-06-12","revenue":1227.45,"txns":114},{"locationId":"tweed","site":"Tweed","date":"2026-06-13","revenue":1088.85,"txns":99},{"locationId":"tweed","site":"Tweed","date":"2026-06-14","revenue":1295.75,"txns":131},{"locationId":"tweed","site":"Tweed","date":"2026-06-15","revenue":871.5,"txns":94},{"locationId":"tweed","site":"Tweed","date":"2026-06-16","revenue":1012.2,"txns":116},{"locationId":"tweed","site":"Tweed","date":"2026-06-17","revenue":531.3,"txns":56},{"locationId":"tweed","site":"Tweed","date":"2026-06-18","revenue":888.32,"txns":97},{"locationId":"tweed","site":"Tweed","date":"2026-06-19","revenue":764.43,"txns":74},{"locationId":"tweed","site":"Tweed","date":"2026-06-20","revenue":663.61,"txns":58},{"locationId":"tweed","site":"Tweed","date":"2026-06-21","revenue":1246.37,"txns":119},{"locationId":"tweed","site":"Tweed","date":"2026-06-22","revenue":942.91,"txns":97},{"locationId":"tweed","site":"Tweed","date":"2026-06-23","revenue":763.36,"txns":75},{"locationId":"tweed","site":"Tweed","date":"2026-06-24","revenue":811.66,"txns":74},{"locationId":"tweed","site":"Tweed","date":"2026-06-25","revenue":853.66,"txns":87},{"locationId":"tweed","site":"Tweed","date":"2026-06-26","revenue":921.91,"txns":92},{"locationId":"tweed","site":"Tweed","date":"2026-06-27","revenue":1067.86,"txns":108},{"locationId":"tweed","site":"Tweed","date":"2026-06-28","revenue":1110.9,"txns":105},{"locationId":"tweed","site":"Tweed","date":"2026-06-29","revenue":1132.97,"txns":99},{"locationId":"tweed","site":"Tweed","date":"2026-06-30","revenue":1097.26,"txns":112}];
-function loadSales(){try{const r=localStorage.getItem(SALES_KEY);if(r){const a=JSON.parse(r);if(Array.isArray(a))return a;}}catch(e){}try{localStorage.setItem(SALES_KEY,JSON.stringify(SALES_SEED));}catch(e){}return SALES_SEED.slice();}
+// Live sales come from the DB (fed by the Bubble Pay sync task) via /sales-api.
+// The seed is only a fallback so the dashboard is never blank before the fetch resolves / if no data exists yet.
+let DB_SALES=null;
+function loadSales(){ if(DB_SALES && DB_SALES.length) return DB_SALES; return SALES_SEED.slice(); }
+function fetchDbSales(){
+  return fetch('/sales-api',{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'})
+    .then(r=>r.ok?r.json():[]).then(rows=>{
+      if(!Array.isArray(rows)) rows=[];
+      DB_SALES=rows.map(x=>({locationId:String(x.location_id),site:(x.location&&x.location.name)?x.location.name:'',date:(''+x.date).slice(0,10),revenue:+x.revenue||0,txns:+x.txns||0}));
+      return DB_SALES;
+    }).catch(()=>{DB_SALES=[];return DB_SALES;});
+}
 let dashGran='daily', dashFrom='', dashTo='', dashSites=null, salesChart=null, lastDashRole=null;
 const PALETTE=['#435E53','#C4703F','#3a6ea5','#8a7fa3','#c9a24b','#6b8e9e','#a35c5c'];
 function AUD(n){return '$'+(Math.round(n||0)).toLocaleString('en-AU');}
@@ -380,8 +463,13 @@ function renderDashboard(role){
   const scoped=sales.filter(r=>isAdmin || r.locationId===sess.locationId);
   const allDates=scoped.map(r=>r.date).sort();
   const minD=allDates[0]||'', maxD=allDates[allDates.length-1]||'';
-  if(!dashFrom||dashFrom<minD) dashFrom=minD;
-  if(!dashTo||dashTo>maxD||dashTo<dashFrom) dashTo=maxD;
+  if(!dashTo||dashTo>maxD) dashTo=maxD;
+  if(!dashFrom){ // default view = last 7 days ending at the most recent data
+    var _d=new Date((maxD||new Date().toISOString().slice(0,10))+'T00:00'); _d.setDate(_d.getDate()-6);
+    dashFrom=_d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');
+  }
+  if(minD && dashFrom<minD) dashFrom=minD;
+  if(dashTo<dashFrom) dashTo=maxD;
   if(isAdmin){ if(!dashSites) dashSites=sites.map(s=>s.id); dashSites=dashSites.filter(id=>sites.some(s=>s.id===id)); if(!dashSites.length&&sites.length) dashSites=sites.map(s=>s.id); }
   const title=isAdmin?'Sales dashboard':'Store sales — '+esc((sites[0]&&sites[0].name)||locName(sess.locationId)||'your store');
   const sitePicker=isAdmin

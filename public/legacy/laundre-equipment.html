@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>(function(){var a=localStorage.getItem("laundre_auth")==="1",s=null;try{s=JSON.parse(localStorage.getItem("laundre_session")||"null");}catch(e){}if(!a||(s&&s.role&&s.role!=="admin"))location.replace("laundre-portal.html");})();</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laundré · Equipment Cost Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@300;400;500;600&display=swap');
+  :root{
+    --green:#2F3B32; --green-mid:#54654F; --sage:#8A9A7B; --sage-soft:#C7D2BC;
+    --cream:#F6F3EA; --cream-2:#EFEADD; --ink:#26302A; --muted:#6B7268; --line:#D9D3C4; --warn:#B4694E;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',sans-serif;color:var(--ink);background:var(--cream);line-height:1.5;padding:26px 18px 60px;}
+  .wrap{max-width:960px;margin:0 auto;}
+  header{border-bottom:2px solid var(--green);padding-bottom:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px;}
+  header .eyebrow{font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--sage);font-weight:600;}
+  header h1{font-family:'Fraunces',serif;font-size:27px;color:var(--green);font-weight:500;margin-top:4px;}
+  header .meta{font-size:11px;color:var(--muted);text-align:right;line-height:1.7;}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0 10px;}
+  .controls label{font-size:12.5px;color:var(--green-mid);display:flex;align-items:center;gap:6px;cursor:pointer;}
+  .controls .site{margin-left:auto;display:flex;gap:8px;}
+  button{font-family:inherit;font-size:12.5px;border:1px solid var(--line);background:#fff;color:var(--green);
+    padding:7px 13px;border-radius:6px;cursor:pointer;transition:.15s;}
+  button:hover{background:var(--cream-2);}
+  button.primary{background:var(--green);color:#fff;border-color:var(--green);}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  thead th{background:var(--green);color:var(--cream);font-weight:500;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:9px 10px;text-align:right;}
+  thead th.l{text-align:left;}
+  tbody td{padding:6px 10px;font-size:13px;border-bottom:1px solid var(--line);text-align:right;}
+  tbody td.l{text-align:left;}
+  tbody tr.cat td{background:var(--cream-2);font-weight:600;color:var(--green);font-size:11px;letter-spacing:.05em;text-transform:uppercase;}
+  tbody tr.off td{color:var(--muted);opacity:.55;}
+  .code{font-size:11px;color:var(--muted);}
+  input[type=number]{font-family:inherit;font-size:13px;width:64px;text-align:right;border:1px solid var(--line);
+    border-radius:5px;padding:4px 6px;background:var(--cream);color:var(--ink);}
+  input.qty{background:#FFF6C8;border-color:#E4D9A0;font-weight:600;}
+  input:focus{outline:2px solid var(--sage-soft);}
+  .disc{width:58px;}
+  .lt,.net{font-variant-numeric:tabular-nums;}
+  .summary{margin-top:22px;display:grid;grid-template-columns:1fr 320px;gap:22px;align-items:start;}
+  @media(max-width:720px){.summary{grid-template-columns:1fr;}}
+  .card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 18px;}
+  .card h3{font-family:'Fraunces',serif;font-size:15px;color:var(--green);margin-bottom:10px;}
+  .row{display:flex;justify-content:space-between;font-size:13.5px;padding:5px 0;border-bottom:1px dashed var(--line);}
+  .row:last-child{border-bottom:none;}
+  .row .v{font-variant-numeric:tabular-nums;font-weight:500;}
+  .row.big{font-family:'Fraunces',serif;font-size:20px;color:var(--green);border-top:2px solid var(--green);margin-top:6px;padding-top:12px;}
+  .row.big .v{font-weight:600;}
+  .row.disc-row .v{color:var(--warn);}
+  .chips{display:flex;flex-direction:column;gap:8px;}
+  .chip{display:flex;justify-content:space-between;font-size:12.5px;color:var(--green-mid);padding:8px 11px;background:var(--cream-2);border-radius:6px;}
+  .chip b{color:var(--green);}
+  .note{font-size:11px;color:var(--muted);font-style:italic;margin-top:14px;line-height:1.6;}
+  .flag{background:#FBEDE6;border:1px solid #E7C9BB;border-radius:6px;padding:10px 12px;font-size:12px;color:#7A3F2A;margin-top:12px;}
+  .fh{font-family:'Fraunces',serif;font-size:20px;color:var(--green);font-weight:500;margin:30px 0 14px;padding-bottom:10px;border-bottom:2px solid var(--green);}
+  .finance{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start;}
+  @media(max-width:720px){.finance{grid-template-columns:1fr;}}
+  .frow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line);gap:12px;}
+  .frow label{font-size:13.5px;color:var(--green-mid);}
+  .fin{display:flex;align-items:center;gap:6px;}
+  .fin .pre,.fin .suf{font-size:12.5px;color:var(--muted);}
+  .fin input,.fin select{font-family:inherit;font-size:14px;width:110px;text-align:right;border:1px solid #E4D9A0;background:#FFF6C8;
+    border-radius:6px;padding:6px 8px;color:var(--ink);font-weight:600;}
+  .fin select{text-align:left;width:130px;}
+  .fin input:focus,.fin select:focus{outline:2px solid var(--sage-soft);}
+  button.mini{font-size:11px;padding:5px 9px;}
+  .fhint{font-size:11px;color:var(--muted);font-style:italic;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Fagor · Spencer Systems pricing</div>
+      <h1>Laundré Equipment Calculator</h1>
+    </div>
+    <div class="meta">Based on Quote #6687 (Toowoomba, Mar 2026)<br>Edit yellow quantities &amp; discounts — totals update live</div>
+  </header>
+
+  <div class="controls">
+    <label><input type="checkbox" id="tgPlinth" checked> Include plinths (1 per washer)</label>
+    <label><input type="checkbox" id="tgDelivery" checked> Delivery</label>
+    <label><input type="checkbox" id="tgInstall" checked> Installation</label>
+    <div class="site">
+      <button class="primary" onclick="preset('hervey')">Hervey Bay preset</button>
+      <button onclick="preset('toowoomba')">Toowoomba (as quoted)</button>
+      <button onclick="preset('zero')">Clear</button>
+    </div>
+  </div>
+
+  <table id="tbl">
+    <thead>
+      <tr>
+        <th class="l">Item</th><th class="l">Code</th>
+        <th>Unit price</th><th>Qty</th><th>List total</th><th>Discount %</th><th>Net (ex GST)</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <div class="summary">
+    <div class="card">
+      <h3>Machine mix</h3>
+      <div class="chips" id="chips"></div>
+      <div class="note">
+        Prices ex GST unless the total line says otherwise. Net = Unit price × Qty × (1 − Discount%).
+        Discounts pre-set from the quote (washers 17.5%, plinths 20%, dryers 17.5%, single dryer 25%, coin kit 20%).
+        Quote terms: 15% deposit at order, balance before delivery; 12–16 week lead time on non-stock items. Indicative only.
+      </div>
+    </div>
+    <div class="card">
+      <h3>Cost summary</h3>
+      <div class="row"><span>List price (before discount)</span><span class="v" id="sList"></span></div>
+      <div class="row disc-row"><span>Total discount</span><span class="v" id="sDisc"></span></div>
+      <div class="row"><span>Subtotal (ex GST)</span><span class="v" id="sSub"></span></div>
+      <div class="row"><span>GST 10%</span><span class="v" id="sGst"></span></div>
+      <div class="row big"><span>Total (incl GST)</span><span class="v" id="sTot"></span></div>
+      <div class="row" style="margin-top:8px;"><span>Equipment only (ex delivery/install)</span><span class="v" id="sEquip"></span></div>
+    </div>
+  </div>
+
+  <h2 class="fh">Finance calculator</h2>
+  <div class="finance">
+    <div class="card">
+      <h3>Loan inputs</h3>
+      <div class="frow"><label>Amount to finance</label>
+        <div class="fin"><span class="pre">$</span><input type="number" id="fAmount" step="1000"><button class="mini" onclick="useTotal()">Use total</button></div></div>
+      <div class="fhint" id="fAmtHint"></div>
+      <div class="frow"><label>Deposit</label>
+        <div class="fin"><input type="number" id="fDeposit" step="1" value="15"><span class="suf">%</span></div></div>
+      <div class="frow"><label>Loan term</label>
+        <div class="fin"><input type="number" id="fTerm" step="1" min="1" value="7"><span class="suf">years</span></div></div>
+      <div class="frow"><label>Interest rate</label>
+        <div class="fin"><input type="number" id="fRate" step="0.1" value="14"><span class="suf">% p.a.</span></div></div>
+      <div class="frow"><label>Repayment frequency</label>
+        <div class="fin"><select id="fFreq">
+          <option value="12">Monthly</option><option value="26">Fortnightly</option><option value="52">Weekly</option>
+        </select></div></div>
+    </div>
+    <div class="card">
+      <h3>Repayments</h3>
+      <div class="row big" style="border-top:none;margin-top:0;padding-top:0;"><span id="fFreqLbl">Monthly repayment</span><span class="v" id="fPay"></span></div>
+      <div class="row"><span>Deposit payable upfront</span><span class="v" id="fDep"></span></div>
+      <div class="row"><span>Amount financed (after deposit)</span><span class="v" id="fPrin"></span></div>
+      <div class="row"><span>Annual repayments</span><span class="v" id="fAnnual"></span></div>
+      <div class="row"><span>Total repaid over term</span><span class="v" id="fTotalRepaid"></span></div>
+      <div class="row disc-row"><span>Total interest</span><span class="v" id="fInterest"></span></div>
+      <div class="row"><span>All-in cost (deposit + repayments)</span><span class="v" id="fAllIn"></span></div>
+      <div class="fhint" style="margin-top:10px">Repayment uses a standard amortising loan (principal + interest). Deposit is paid separately upfront and is not financed.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// catalogue: type washer/plinth/dryer/other ; link ties plinth qty to a washer code
+const CAT = [
+  {cat:"Washers — Fagor LN TP2 (200G extract, electric)"},
+  {code:"LN-11 TP2 E",  name:"10kg washer",         type:"washer", unit:9995,  disc:.175, plinth:"LN-11-PLINTH-250"},
+  {code:"LN-14 TP2 E",  name:"14kg washer",         type:"washer", unit:10995, disc:.175, plinth:"LN-14-PLINTH-250"},
+  {code:"LN-18 TP2 E",  name:"18kg washer",         type:"washer", unit:12995, disc:.175, plinth:"LN-18-PLINTH-250"},
+  {code:"LN-22 TP2 E",  name:"22kg washer",         type:"washer", unit:14995, disc:.175, plinth:"LN-22-PLINTH-250"},
+  {cat:"Plinths (steel anti-vibration — auto-matched to washers unless edited)"},
+  {code:"LN-11-PLINTH-250", name:"Plinth — LN-11", type:"plinth", unit:995,  disc:.20},
+  {code:"LN-14-PLINTH-250", name:"Plinth — LN-14", type:"plinth", unit:995,  disc:.20},
+  {code:"LN-18-PLINTH-250", name:"Plinth — LN-18", type:"plinth", unit:1095, disc:.20},
+  {code:"LN-22-PLINTH-250", name:"Plinth — LN-22", type:"plinth", unit:1195, disc:.20},
+  {cat:"Dryers — Fagor SR ADVANCE (gas, KARE fire-safety)"},
+  {code:"SR-2-18 TP2 G",    name:"2×18kg ADVANCE stack dryer", type:"dryer", unit:17995, disc:.175},
+  {code:"SR-2-22 TP2 G XP", name:"2×22kg ADVANCE stack dryer", type:"dryer", unit:18995, disc:.175},
+  {code:"SR-16 TP2 G",      name:"18kg ADVANCE single dryer",  type:"dryer", unit:7995,  disc:.25},
+  {cat:"Other"},
+  {code:"Delivery",     name:"Delivery to site (tailgate)", type:"delivery", unit:3800, disc:0},
+  {code:"Installation", name:"Installation (delivery, travel & accom.)", type:"install", unit:18000, disc:0},
+];
+const PRESETS = {
+  hervey:    {"LN-11 TP2 E":2,"LN-14 TP2 E":2,"LN-18 TP2 E":4,"LN-22 TP2 E":0,"SR-2-18 TP2 G":3,"SR-2-22 TP2 G XP":2,"SR-16 TP2 G":0,"Delivery":1,"Installation":1},
+  toowoomba: {"LN-11 TP2 E":2,"LN-14 TP2 E":2,"LN-18 TP2 E":4,"LN-22 TP2 E":3,"SR-2-18 TP2 G":3,"SR-2-22 TP2 G XP":2,"SR-16 TP2 G":1,"Delivery":1,"Installation":1},
+  zero:      {}
+};
+const MODEL_ASSUMPTION = 166000; // machines ex GST in the partnership model
+const state = {}; // code -> {qty, disc, plinthManual}
+const money = v => "$"+v.toLocaleString("en-AU",{minimumFractionDigits:2,maximumFractionDigits:2});
+const codeOf = {}; CAT.forEach(x=>{ if(x.code) codeOf[x.code]=x; });
+
+function initState(){ CAT.forEach(x=>{ if(x.code) state[x.code]={qty:0,disc:x.disc}; }); }
+
+function autoPlinths(){
+  // plinths are always tied to their washer: qty mirrors the washer qty
+  CAT.forEach(x=>{
+    if(x.type==="washer" && x.plinth){
+      state[x.plinth].qty = state[x.code].qty;
+    }
+  });
+}
+
+function render(){
+  const tb=document.getElementById("rows"); tb.innerHTML="";
+  const plinthOn=document.getElementById("tgPlinth").checked;
+  const delOn=document.getElementById("tgDelivery").checked;
+  const insOn=document.getElementById("tgInstall").checked;
+  CAT.forEach(x=>{
+    if(x.cat){ const tr=document.createElement("tr"); tr.className="cat";
+      tr.innerHTML=`<td class="l" colspan="7">${x.cat}</td>`; tb.appendChild(tr); return; }
+    const st=state[x.code];
+    let disabled = (x.type==="plinth" && !plinthOn) || (x.type==="delivery" && !delOn) || (x.type==="install" && !insOn);
+    const qty = disabled?0:st.qty;
+    const list = x.unit*qty, net=list*(1-st.disc);
+    const qtyLocked = disabled || x.type==="plinth";
+    const tr=document.createElement("tr"); if(disabled) tr.className="off";
+    tr.innerHTML=`
+      <td class="l">${x.name}</td>
+      <td class="l"><span class="code">${x.code}</span></td>
+      <td>${money(x.unit)}</td>
+      <td><input type="number" min="0" step="1" class="qty" data-code="${x.code}" data-f="qty" value="${qty}" ${qtyLocked?"disabled":""} ${x.type==="plinth"?'title="Auto-matched to washer quantity"':""}></td>
+      <td class="lt">${money(list)}</td>
+      <td><input type="number" min="0" max="100" step="0.5" class="disc" data-code="${x.code}" data-f="disc" value="${(st.disc*100)}"></td>
+      <td class="net">${money(net)}</td>`;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll("input").forEach(inp=>{
+    inp.addEventListener("input",e=>{
+      const c=e.target.dataset.code, f=e.target.dataset.f;
+      let v=parseFloat(e.target.value); if(isNaN(v))v=0;
+      if(f==="qty"){ state[c].qty=Math.max(0,Math.round(v)); }
+      else state[c].disc=Math.min(1,Math.max(0,v/100));
+      autoPlinths(); calc(); render(); // re-render to reflect auto plinths / list totals
+    });
+  });
+  calc();
+}
+
+function calc(){
+  const plinthOn=document.getElementById("tgPlinth").checked;
+  const delOn=document.getElementById("tgDelivery").checked;
+  const insOn=document.getElementById("tgInstall").checked;
+  let list=0,net=0,equip=0;
+  CAT.forEach(x=>{
+    if(!x.code) return; const st=state[x.code];
+    let disabled=(x.type==="plinth"&&!plinthOn)||(x.type==="delivery"&&!delOn)||(x.type==="install"&&!insOn);
+    if(disabled) return;
+    const l=x.unit*st.qty, n=l*(1-st.disc);
+    list+=l; net+=n;
+    if(x.type!=="delivery"&&x.type!=="install") equip+=n;
+  });
+  const gst=net*0.1, tot=net+gst;
+  document.getElementById("sList").textContent=money(list);
+  document.getElementById("sDisc").textContent="−"+money(list-net);
+  document.getElementById("sSub").textContent=money(net);
+  document.getElementById("sGst").textContent=money(gst);
+  document.getElementById("sTot").textContent=money(tot);
+  document.getElementById("sEquip").textContent=money(equip)+" ex GST";
+  // chips: count washers & dryers
+  let w=0,d=0; const parts=[];
+  CAT.forEach(x=>{ if(x.type==="washer"&&state[x.code].qty>0){w+=state[x.code].qty; parts.push(state[x.code].qty+"× "+x.name);} });
+  CAT.forEach(x=>{ if(x.type==="dryer"&&state[x.code].qty>0){d+=state[x.code].qty; parts.push(state[x.code].qty+"× "+x.name);} });
+  document.getElementById("chips").innerHTML =
+    `<div class="chip"><span>Washers</span><b>${w}</b></div>`+
+    `<div class="chip"><span>Dryer units</span><b>${d}</b></div>`+
+    parts.map(p=>`<div class="chip" style="opacity:.85"><span>${p}</span></div>`).join("");
+  // feed finance calculator
+  currentTotal = tot;
+  document.getElementById("fAmtHint").textContent="Cost summary total (incl GST): "+money(tot);
+  if(!amtManual){ document.getElementById("fAmount").value=Math.round(tot); }
+  finance();
+}
+
+let currentTotal=0, amtManual=false;
+function useTotal(){ amtManual=false; document.getElementById("fAmount").value=Math.round(currentTotal); finance(); }
+function finance(){
+  const amt=parseFloat(document.getElementById("fAmount").value)||0;
+  const depPct=Math.min(100,Math.max(0,parseFloat(document.getElementById("fDeposit").value)||0));
+  const term=Math.max(0,parseFloat(document.getElementById("fTerm").value)||0);
+  const rate=Math.max(0,parseFloat(document.getElementById("fRate").value)||0);
+  const freq=parseInt(document.getElementById("fFreq").value)||12;
+  const deposit=amt*depPct/100;
+  const principal=amt-deposit;
+  const n=term*freq, i=(rate/100)/freq;
+  let pay=0;
+  if(n>0){ pay = i>0 ? principal*i/(1-Math.pow(1+i,-n)) : principal/n; }
+  const annual=pay*freq, totalRepaid=pay*n, interest=totalRepaid-principal, allIn=deposit+totalRepaid;
+  const flabel={12:"Monthly repayment",26:"Fortnightly repayment",52:"Weekly repayment"}[freq];
+  document.getElementById("fFreqLbl").textContent=flabel;
+  document.getElementById("fPay").textContent=money(pay);
+  document.getElementById("fDep").textContent=money(deposit);
+  document.getElementById("fPrin").textContent=money(principal);
+  document.getElementById("fAnnual").textContent=money(annual);
+  document.getElementById("fTotalRepaid").textContent=money(totalRepaid);
+  document.getElementById("fInterest").textContent=money(interest);
+  document.getElementById("fAllIn").textContent=money(allIn);
+}
+["fAmount","fDeposit","fTerm","fRate","fFreq"].forEach(id=>{
+  document.getElementById(id).addEventListener("input",e=>{ if(id==="fAmount") amtManual=true; finance(); });
+});
+
+function preset(name){
+  const p=PRESETS[name]||{};
+  CAT.forEach(x=>{ if(x.code){ state[x.code].qty=p[x.code]||0; state[x.code].disc=x.disc; } });
+  document.getElementById("tgPlinth").checked=true;
+  document.getElementById("tgDelivery").checked = name!=="zero";
+  document.getElementById("tgInstall").checked = name!=="zero";
+  autoPlinths(); render();
+}
+
+["tgPlinth","tgDelivery","tgInstall"].forEach(id=>document.getElementById(id).addEventListener("change",()=>{autoPlinths();render();}));
+initState(); preset("hervey");
+</script>
+<script>function _rz(){try{parent.postMessage({t:"calc-h",h:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)},"*");}catch(e){}}window.addEventListener("load",_rz);setInterval(_rz,700);</script>
+</body>
+</html>

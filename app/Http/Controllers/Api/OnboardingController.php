@@ -83,8 +83,20 @@ class OnboardingController extends Controller {
     // ---- Onboarding portal: video + document library (current user) ----
     public function content(Request $r) {
         $u = $r->user();
-        $key = $u->docAudience()==='investor' ? 'onboarding_video_investor' : 'onboarding_video_franchisee';
-        return response()->json(['kind'=>$u->docAudience(), 'video'=>(string)(Setting::get($key,''))]);
+        $aud = $u->docAudience();
+        if ($aud === 'investor') {
+            // Investors/prospects: content is per role only.
+            $video = (string) Setting::get('onboarding_video_investor','');
+        } else {
+            // Store staff (franchisee / cleaner / maintenance): per-laundromat content,
+            // falling back to the role default when the store hasn't set its own.
+            $role = in_array($u->role, ['cleaner','maintenance']) ? $u->role : 'franchisee';
+            $base = $role === 'franchisee' ? 'onboarding_video_franchisee' : ('intro_video_'.$role);
+            $video = '';
+            if ($u->location_id) $video = (string) Setting::get($base.'_'.$u->location_id, '');
+            if ($video === '') $video = (string) Setting::get($base, '');
+        }
+        return response()->json(['kind'=>$aud, 'video'=>$video]);
     }
     public function myDocuments(Request $r) {
         $u = $r->user();
@@ -159,18 +171,26 @@ class OnboardingController extends Controller {
                         'unique_viewers'=>$d->views()->distinct('user_id')->count('user_id'),
                         'url'=>url('/onboarding-doc/'.$d->id)];
             });
-        return response()->json([
-            'videos'=>['franchisee'=>(string)Setting::get('onboarding_video_franchisee',''),'investor'=>(string)Setting::get('onboarding_video_investor',''),'cleaner'=>(string)Setting::get('intro_video_cleaner',''),'maintenance'=>(string)Setting::get('intro_video_maintenance','')],
-            'documents'=>$docs,
-        ]);
+        // When a laundromat (?loc) is given, return that store's videos, falling back to the role default.
+        $loc = $r->query('loc');
+        $sfx = $loc ? '_'.$loc : '';
+        $videos = [
+            'franchisee' =>(string)Setting::get('onboarding_video_franchisee'.$sfx, $loc?(string)Setting::get('onboarding_video_franchisee',''):''),
+            'investor'   =>(string)Setting::get('onboarding_video_investor',''),
+            'cleaner'    =>(string)Setting::get('intro_video_cleaner'.$sfx,        $loc?(string)Setting::get('intro_video_cleaner',''):''),
+            'maintenance'=>(string)Setting::get('intro_video_maintenance'.$sfx,    $loc?(string)Setting::get('intro_video_maintenance',''):''),
+        ];
+        return response()->json(['videos'=>$videos,'documents'=>$docs,'loc'=>$loc,'scoped'=>(bool)$loc]);
     }
     public function setVideos(Request $r) {
         $this->gateContent($r);
-        $d = $r->validate(['franchisee'=>'nullable|string','investor'=>'nullable|string','cleaner'=>'nullable|string','maintenance'=>'nullable|string']);
-        if (array_key_exists('franchisee',$d))  Setting::put('onboarding_video_franchisee', (string)($d['franchisee']??''));
-        if (array_key_exists('investor',$d))    Setting::put('onboarding_video_investor',   (string)($d['investor']??''));
-        if (array_key_exists('cleaner',$d))     Setting::put('intro_video_cleaner',         (string)($d['cleaner']??''));
-        if (array_key_exists('maintenance',$d)) Setting::put('intro_video_maintenance',     (string)($d['maintenance']??''));
+        $d = $r->validate(['franchisee'=>'nullable|string','investor'=>'nullable|string','cleaner'=>'nullable|string','maintenance'=>'nullable|string','loc'=>'nullable']);
+        $loc = !empty($d['loc']) ? '_'.$d['loc'] : '';
+        // Investor content is per role only, never per store.
+        if (array_key_exists('investor',$d) && $loc==='') Setting::put('onboarding_video_investor', (string)($d['investor']??''));
+        if (array_key_exists('franchisee',$d))  Setting::put('onboarding_video_franchisee'.$loc, (string)($d['franchisee']??''));
+        if (array_key_exists('cleaner',$d))     Setting::put('intro_video_cleaner'.$loc,         (string)($d['cleaner']??''));
+        if (array_key_exists('maintenance',$d)) Setting::put('intro_video_maintenance'.$loc,     (string)($d['maintenance']??''));
         return response()->json(['ok'=>true]);
     }
     public function storeDoc(Request $r) {

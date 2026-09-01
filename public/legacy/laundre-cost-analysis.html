@@ -76,12 +76,13 @@
           <div class="full"><label>Location</label><input id="p_location" /></div>
           <div><label>Site size (m²)</label><input id="p_sqm" type="number" step="1" min="1" /></div>
           <div><label>Builder's margin (%)</label><input id="p_margin" type="number" step="0.5" /></div>
+          <div><label>Our margin (%)</label><input id="p_ourmargin" type="number" step="0.5" /></div>
           <div><label>GST (%)</label><input id="p_gst" type="number" step="0.5" /></div>
         </div>
       </div>
       <div class="card">
         <h3>Trade line items (ex GST)</h3>
-        <table id="itemsTbl"><thead><tr><th>Trade / item</th><th class="amt">Amount (ex GST)</th><th class="act"></th></tr></thead><tbody></tbody></table>
+        <table id="itemsTbl"><thead><tr><th>Trade / item</th><th class="amt">Amount (ex GST)</th><th style="width:78px;text-align:right">% of build</th><th class="act"></th></tr></thead><tbody></tbody></table>
         <button class="btn btn-ghost addline" id="addLine">＋ Add line</button>
       </div>
     </div>
@@ -97,7 +98,7 @@ const STORE_KEY='laundre_cost_v1';
 const AUD=n=>'$'+(Math.round(n||0)).toLocaleString('en-AU');
 function toowoomba(){
   return {id:'toowoomba',name:'Laundré Toowoomba',location:'Tenancy 2A, Northpoint Shopping Centre, Toowoomba City',
-    sqm:63,marginPct:12.5,gstPct:10,
+    sqm:63,marginPct:12.5,ourMarginPct:20,gstPct:10,
     items:[
       {label:'Construction Preliminaries',amount:24400},
       {label:'Gyprock / Framing Works',amount:32250},
@@ -119,47 +120,74 @@ function cur(){return DATA.find(p=>p.id===curId)||DATA[0];}
 function uid(){return 'proj_'+Math.random().toString(36).slice(2,7);}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
+const DESIGN_FEE=3000; // fixed Design line item — does not change
 function calc(p){
-  const subtotal=(p.items||[]).reduce((s,i)=>s+(+i.amount||0),0);
-  const margin=subtotal*(+p.marginPct||0)/100;
-  const totalEx=subtotal+margin;
+  const tradesSub=(p.items||[]).reduce((s,i)=>s+(+i.amount||0),0);
+  const design=DESIGN_FEE;
+  const subtotal=tradesSub+design;
+  const bMargin=subtotal*(+p.marginPct||0)/100;
+  const afterBuilder=subtotal+bMargin;
+  const oMargin=afterBuilder*(+p.ourMarginPct||0)/100;
+  const totalEx=afterBuilder+oMargin;
   const gst=totalEx*(+p.gstPct||0)/100;
   const grandInc=totalEx+gst;
   const perSqm=(+p.sqm>0)?totalEx/p.sqm:0;
   const perSqmInc=(+p.sqm>0)?grandInc/p.sqm:0;
-  return {subtotal,margin,totalEx,gst,grandInc,perSqm,perSqmInc};
+  return {tradesSub,design,subtotal,bMargin,afterBuilder,oMargin,totalEx,gst,grandInc,perSqm,perSqmInc};
 }
 function renderProjSel(){
   document.getElementById('projSel').innerHTML=DATA.map(p=>'<option value="'+p.id+'"'+(p.id===curId?' selected':'')+'>'+esc(p.name)+'</option>').join('');
 }
 function renderFields(){
   const p=cur();
+  if(p.ourMarginPct==null) p.ourMarginPct=20;
   document.getElementById('p_name').value=p.name||'';
   document.getElementById('p_location').value=p.location||'';
   document.getElementById('p_sqm').value=p.sqm||'';
   document.getElementById('p_margin').value=p.marginPct;
+  document.getElementById('p_ourmargin').value=p.ourMarginPct;
   document.getElementById('p_gst').value=p.gstPct;
 }
 function renderItems(){
-  const p=cur();
+  const p=cur(), c=calc(p);
   const tb=document.querySelector('#itemsTbl tbody');
-  tb.innerHTML=(p.items||[]).map((it,i)=>
-    '<tr><td><input class="lineinput" data-i="'+i+'" data-k="label" value="'+esc(it.label)+'" /></td>'
+  let h=(p.items||[]).map((it,i)=>{
+    const pct=c.subtotal>0?((+it.amount||0)/c.subtotal*100):0;
+    return '<tr><td><input class="lineinput" data-i="'+i+'" data-k="label" value="'+esc(it.label)+'" /></td>'
     +'<td class="amt"><input class="lineinput" data-i="'+i+'" data-k="amount" type="number" step="1" value="'+(it.amount||0)+'" /></td>'
-    +'<td class="act"><button class="rm" data-rm="'+i+'">×</button></td></tr>').join('');
+    +'<td class="pctcell" data-p="'+i+'" style="text-align:right;color:#7a8b84;font-size:12.5px">'+pct.toFixed(1)+'%</td>'
+    +'<td class="act"><button class="rm" data-rm="'+i+'">×</button></td></tr>';
+  }).join('');
+  const dpct=c.subtotal>0?(c.design/c.subtotal*100):0;
+  h+='<tr><td style="color:#5f7469;padding-left:9px">Design <span style="font-size:11px;color:#8a9790">· fixed</span></td>'
+    +'<td class="amt" style="color:#5f7469;padding-left:9px">'+AUD(c.design)+'</td>'
+    +'<td class="pctcell" id="designPct" style="text-align:right;color:#7a8b84;font-size:12.5px">'+dpct.toFixed(1)+'%</td>'
+    +'<td class="act"></td></tr>';
+  tb.innerHTML=h;
   tb.querySelectorAll('.lineinput').forEach(inp=>inp.oninput=()=>{
     const i=+inp.dataset.i,k=inp.dataset.k;
     cur().items[i][k]=k==='amount'?(+inp.value||0):inp.value;
-    save();renderSummary();
+    save();updatePcts();renderSummary();
   });
   tb.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{cur().items.splice(+b.dataset.rm,1);save();renderItems();renderSummary();});
+}
+function updatePcts(){
+  const c=calc(cur());
+  document.querySelectorAll('#itemsTbl tbody .pctcell[data-p]').forEach(function(td){
+    const i=+td.dataset.p, it=cur().items[i]; if(!it) return;
+    td.textContent=(c.subtotal>0?((+it.amount||0)/c.subtotal*100):0).toFixed(1)+'%';
+  });
+  var dp=document.getElementById('designPct'); if(dp) dp.textContent=(c.subtotal>0?(c.design/c.subtotal*100):0).toFixed(1)+'%';
 }
 function renderSummary(){
   const p=cur(), c=calc(p);
   document.getElementById('summary').innerHTML=
     '<h3>Estimate</h3>'
-    +'<div class="row"><span>Sub-total (ex GST)</span><span>'+AUD(c.subtotal)+'</span></div>'
-    +'<div class="row"><span>Builder\'s margin ('+(p.marginPct)+'%)</span><span>'+AUD(c.margin)+'</span></div>'
+    +'<div class="row"><span>Trades sub-total</span><span>'+AUD(c.tradesSub)+'</span></div>'
+    +'<div class="row"><span>Design (fixed)</span><span>'+AUD(c.design)+'</span></div>'
+    +'<div class="row big"><span>Sub-total (ex GST)</span><span>'+AUD(c.subtotal)+'</span></div>'
+    +'<div class="row"><span>Builder\'s margin ('+(p.marginPct)+'%)</span><span>'+AUD(c.bMargin)+'</span></div>'
+    +'<div class="row"><span>Our margin ('+(p.ourMarginPct||0)+'%)</span><span>'+AUD(c.oMargin)+'</span></div>'
     +'<div class="row big"><span>Total (ex GST)</span><span>'+AUD(c.totalEx)+'</span></div>'
     +'<div class="row"><span>GST ('+(p.gstPct)+'%)</span><span>'+AUD(c.gst)+'</span></div>'
     +'<div class="row big"><span>Grand total (inc GST)</span><span>'+AUD(c.grandInc)+'</span></div>'
@@ -168,13 +196,14 @@ function renderSummary(){
 }
 function renderAll(){renderProjSel();renderFields();renderItems();renderSummary();}
 
-['p_name','p_location','p_sqm','p_margin','p_gst'].forEach(idn=>{
+['p_name','p_location','p_sqm','p_margin','p_ourmargin','p_gst'].forEach(idn=>{
   document.getElementById(idn).addEventListener('input',()=>{
     const p=cur();
     p.name=document.getElementById('p_name').value;
     p.location=document.getElementById('p_location').value;
     p.sqm=+document.getElementById('p_sqm').value||0;
     p.marginPct=+document.getElementById('p_margin').value||0;
+    p.ourMarginPct=+document.getElementById('p_ourmargin').value||0;
     p.gstPct=+document.getElementById('p_gst').value||0;
     save();renderSummary();
     if(idn==='p_name') renderProjSel();
@@ -182,7 +211,7 @@ function renderAll(){renderProjSel();renderFields();renderItems();renderSummary(
 });
 document.getElementById('projSel').onchange=e=>{curId=e.target.value;renderAll();};
 document.getElementById('addLine').onclick=()=>{cur().items.push({label:'New item',amount:0});save();renderItems();renderSummary();};
-document.getElementById('newBtn').onclick=()=>{const p={id:uid(),name:'New project',location:'',sqm:63,marginPct:12.5,gstPct:10,items:[{label:'Construction Preliminaries',amount:0}]};DATA.push(p);curId=p.id;save();renderAll();};
+document.getElementById('newBtn').onclick=()=>{const p={id:uid(),name:'New project',location:'',sqm:63,marginPct:12.5,ourMarginPct:20,gstPct:10,items:[{label:'Construction Preliminaries',amount:0}]};DATA.push(p);curId=p.id;save();renderAll();};
 document.getElementById('dupBtn').onclick=()=>{const p=cur();const n=JSON.parse(JSON.stringify(p));n.id=uid();n.name=p.name+' (VE)';DATA.push(n);curId=n.id;save();renderAll();};
 document.getElementById('delBtn').onclick=()=>{if(DATA.length<=1){alert('Keep at least one project.');return;}if(confirm('Delete “'+cur().name+'”?')){DATA=DATA.filter(p=>p.id!==curId);curId=DATA[0].id;save();renderAll();}};
 document.getElementById('exportBtn').onclick=()=>{
@@ -190,6 +219,8 @@ document.getElementById('exportBtn').onclick=()=>{
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='laundre-cost-projects.json';a.click();URL.revokeObjectURL(a.href);
 };
 DATA=load();curId=DATA[0].id;renderAll();
+function _rz(){try{parent.postMessage({t:'calc-h',h:Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)},'*');}catch(e){}}
+window.addEventListener('load',_rz);setInterval(_rz,700);
 </script>
 </body>
 </html>

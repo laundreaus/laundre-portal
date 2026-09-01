@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Laundromat</title>
+<script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}if(!a||(s&&s.role&&s.role!=='admin'))location.replace('laundre-portal.html');})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;}
+  .top{background:var(--green-d);color:#EAF0EC;padding:12px 22px;display:flex;align-items:center;gap:14px;}
+  .top a.back{color:#EAF0EC;text-decoration:none;font-size:13px;font-weight:700;border:1px solid rgba(255,255,255,.25);border-radius:7px;padding:7px 12px;}
+  .top a.back:hover{background:rgba(255,255,255,.1);}
+  .top .name{font-size:17px;font-weight:800;} .top .addr{font-size:12px;color:#b9c7bf;margin-top:1px;}
+  .top .spacer{flex:1;}
+  .tabs{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;gap:2px;padding:0 14px;overflow-x:auto;position:sticky;top:0;z-index:10;}
+  .tab{border:none;background:transparent;color:#5f7469;font-size:13.5px;font-weight:700;padding:13px 15px;border-bottom:3px solid transparent;white-space:nowrap;}
+  .tab:hover{color:var(--green-d);}
+  .tab.active{color:var(--green-d);border-bottom-color:var(--accent);}
+  .frames{position:relative;}
+  iframe{display:none;width:100%;border:none;background:var(--cream);height:calc(100vh - 118px);}
+  iframe.active{display:block;}
+  .loading{padding:50px;text-align:center;color:#8a9790;font-size:14px;}
+</style>
+</head>
+<body>
+<div class="top">
+  <a class="back" href="laundre-portal.html">← Laundromats</a>
+  <div><div class="name" id="sName">Laundromat</div><div class="addr" id="sAddr"></div></div>
+  <span class="spacer"></span>
+</div>
+<div class="tabs" id="tabs"></div>
+<div class="frames" id="frames"><div class="loading" id="ld">Loading…</div></div>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function apiGet(u){return fetch(u,{headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF},credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+var LOC=new URLSearchParams(location.search).get('loc')||'';
+// tool page (clean path, no .html so the query string survives) + embed flag
+var TABS=[
+  {k:'dashboard', label:'Dashboard',        page:'laundre-store-dashboard'},
+  {k:'maint',     label:'Maintenance',      page:'laundre-maintenance'},
+  {k:'clean',     label:'Cleaning',         page:'laundre-cleaning'},
+  {k:'cctv',      label:'CCTV',             page:'laundre-cctv'},
+  {k:'book',      label:'Bookkeeping',      page:'laundre-bookkeeping'},
+  {k:'support',   label:'Support tickets',  page:'laundre-support'},
+  {k:'checklist', label:'Opening checklist',page:'laundre-checklist'},
+  {k:'onboard',   label:'Onboarding',       page:'laundre-onboarding-content'}
+];
+var loaded={};
+function show(k){
+  TABS.forEach(function(t){
+    var btn=document.getElementById('tab_'+t.k), fr=document.getElementById('fr_'+t.k);
+    var on=(t.k===k);
+    btn.classList.toggle('active',on);
+    if(on&&!loaded[t.k]){ fr.src=t.page+'?loc='+encodeURIComponent(LOC)+'&embed=1'; loaded[t.k]=true; }
+    fr.classList.toggle('active',on);
+  });
+  try{localStorage.setItem('laundromat_tab_'+LOC,k);}catch(e){}
+}
+function build(){
+  var tabsEl=document.getElementById('tabs'), fr=document.getElementById('frames');
+  document.getElementById('ld').remove();
+  tabsEl.innerHTML=TABS.map(function(t){return '<button class="tab" id="tab_'+t.k+'">'+t.label+'</button>';}).join('');
+  fr.innerHTML=TABS.map(function(t){return '<iframe id="fr_'+t.k+'" title="'+t.label+'"></iframe>';}).join('');
+  TABS.forEach(function(t){document.getElementById('tab_'+t.k).onclick=function(){show(t.k);};});
+  var start='dashboard';try{var sv=localStorage.getItem('laundromat_tab_'+LOC);if(sv&&TABS.some(function(t){return t.k===sv;}))start=sv;}catch(e){}
+  show(start);
+}
+if(!LOC){document.getElementById('frames').innerHTML='<div class="loading">No laundromat selected. <a href="laundre-portal.html">Back to portal</a></div>';}
+else{
+  apiGet('/locations-api').then(function(list){
+    var loc=(list||[]).find(function(l){return String(l.id)===String(LOC);});
+    if(loc){document.getElementById('sName').textContent=loc.name||'Laundromat';document.getElementById('sAddr').textContent=loc.address||'';document.title='Laundré · '+(loc.name||'Laundromat');}
+    build();
+  }).catch(function(){build();});
+}
+</script>
+</body>
+</html>

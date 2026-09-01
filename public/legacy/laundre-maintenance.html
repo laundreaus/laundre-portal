@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Laundré · Maintenance</title>
 <script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);var LOC=q.get("loc")||"";window.__FIXED_LOC=LOC;window.__EMBED=q.get("embed")==="1";if(window.__EMBED){document.addEventListener("DOMContentLoaded",function(){var s=document.createElement("style");s.textContent="header{display:none!important}main{padding-top:12px!important}";document.head.appendChild(s);});}if(LOC){var of=window.fetch;window.fetch=function(u,o){var url=(typeof u==="string")?u:(u&&u.url)||"";var m=(o&&o.method)||"GET";return of.apply(this,arguments).then(function(r){if(url.indexOf("/locations-api")>=0&&m==="GET"){return r.clone().json().then(function(j){if(Array.isArray(j)){var f=j.filter(function(x){return String(x.id)===String(LOC);});return new Response(JSON.stringify(f),{status:200,headers:{"Content-Type":"application/json"}});}return r;}).catch(function(){return r;});}return r;});};}}catch(e){}})();</script>
 <style>
   :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
   *{box-sizing:border-box;}
@@ -121,7 +122,7 @@ function laundromats(){return LOCS;}
 function locName(id){const l=LOCS.find(x=>x.id==id);return l?l.name:(id||'—');}
 function findSub(locId,date){return LOGS.find(x=>x.locationId===locId && x.date===date);}
 function dayLabel(ds){const d=new Date(ds+'T00:00');return d.toLocaleDateString('en-AU',{weekday:'short'})+' '+d.getDate();}
-function guideVisible(g){ if(ADMIN) return true; return g.visibility==='all'||(''+g.visibility)===(''+ME.locationId); }
+function guideVisible(g){ if(window.__FIXED_LOC) return g.visibility==='all'||(''+g.visibility)===(''+window.__FIXED_LOC); if(ADMIN) return true; return g.visibility==='all'||(''+g.visibility)===(''+ME.locationId); }
 
 /* ============ MAINTENANCE (staff) VIEW ============ */
 let pendingPhotos=[];
@@ -158,7 +159,17 @@ function renderStaff(){
   main.innerHTML=h;
   renderPhotos();
   main.querySelectorAll('.citem').forEach(el=>el.querySelector('input').addEventListener('change',e=>el.classList.toggle('done',e.target.checked)));
-  document.getElementById('photoInput').onchange=e=>{[...e.target.files].forEach(f=>{if(f.size>2.5*1024*1024){document.getElementById('msg').textContent='Some photos over 2.5MB were skipped.';return;}const rd=new FileReader();rd.onload=()=>{pendingPhotos.push(rd.result);renderPhotos();};rd.readAsDataURL(f);});e.target.value='';};
+  document.getElementById('photoInput').onchange=async e=>{
+    var files=[...e.target.files]; e.target.value='';
+    var msg=document.getElementById('msg');
+    for(var i=0;i<files.length;i++){ var f=files[i];
+      if(f.size>12*1024*1024){ msg.style.color='#B4472F'; msg.textContent='Some photos over 12MB were skipped.'; continue; }
+      msg.style.color='#6b7d73'; msg.textContent='Uploading photo…';
+      try{ var up=await uploadFile(f); pendingPhotos.push(up.url); renderPhotos(); }
+      catch(err){ msg.style.color='#B4472F'; msg.textContent='A photo failed to upload — please try again.'; }
+    }
+    if(msg.textContent==='Uploading photo…') msg.textContent='';
+  };
   document.getElementById('submitBtn').onclick=submitLog;
 }
 function renderPhotos(){const c=document.getElementById('photos');if(!c)return;c.innerHTML=pendingPhotos.map((p,i)=>'<div class="thumb"><img src="'+p+'"><button data-rp="'+i+'">×</button></div>').join('')+'<div class="addphoto" id="addphoto">+</div>';c.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>{pendingPhotos.splice(+b.dataset.rp,1);renderPhotos();});document.getElementById('addphoto').onclick=()=>document.getElementById('photoInput').click();}
@@ -239,6 +250,7 @@ function openGuideEditor(id){
     +'<div class="full"><label class="fld" style="margin-top:0">Note</label><input id="g_note" value="'+esc(g?g.note:'')+'"></div></div>'
     +'<div class="msg" id="gmsg"></div>';
   if(g&&g.visibility&&g.visibility!=='all') document.getElementById('g_visibility').value=g.visibility;
+  else if(!g&&window.__FIXED_LOC){var _gv=document.getElementById('g_visibility'); if(_gv) _gv.value=window.__FIXED_LOC;}
   document.getElementById('mFoot').innerHTML='<button class="btn btn-ghost" id="gCancel">Cancel</button><button class="btn btn-green" id="gSave">Save guide</button>';
   document.getElementById('overlay').classList.add('show');
   document.getElementById('gCancel').onclick=closeModal;

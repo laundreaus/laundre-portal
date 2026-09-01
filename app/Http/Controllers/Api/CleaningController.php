@@ -20,11 +20,24 @@ class CleaningController extends Controller {
             ['user_id'=>$u->id,'by'=>$u->name,'items'=>$data['items']??[], 'labels'=>$data['labels']??[], 'notes'=>$data['notes']??null,'issues'=>$data['issues']??null,'photos'=>$data['photos']??[],'geo'=>$data['geo']??null]
         );
     }
-    public function items() { return response()->json(Setting::get('cleaning_items', ['Bins emptied','Lint traps emptied','Floors mopped','Surfaces wiped','Machines & benches wiped'])); }
+    private const DEFAULT_ITEMS = ['Bins emptied','Lint traps emptied','Floors mopped','Surfaces wiped','Machines & benches wiped'];
+    // Per-laundromat cleaning checklist. Each store starts from the shared template and can be customised.
+    public function items(Request $r) {
+        $u = $r->user();
+        $loc = $r->query('loc');
+        if (!$loc && !$u->isAdmin()) $loc = $u->location_id;
+        if ($loc) {
+            $items = Setting::get('cleaning_items_'.$loc, null);
+            if (is_array($items) && count($items)) return response()->json(array_values($items));
+        }
+        // Fall back to the shared template (starting structure).
+        return response()->json(array_values(Setting::get('cleaning_items', self::DEFAULT_ITEMS)));
+    }
     public function saveItems(Request $r) {
         abort_unless($r->user()->isAdmin(), 403);
-        $items = $r->validate(['items'=>'required|array|min:1'])['items'];
-        Setting::put('cleaning_items', array_values($items));
-        return response()->json($items);
+        $data = $r->validate(['items'=>'required|array|min:1','loc'=>'nullable']);
+        $key = !empty($data['loc']) ? ('cleaning_items_'.$data['loc']) : 'cleaning_items';
+        Setting::put($key, array_values($data['items']));
+        return response()->json($data['items']);
     }
 }

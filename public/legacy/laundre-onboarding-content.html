@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Laundré · Onboarding Content</title>
 <script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}if(!a)location.replace('laundre-portal.html');})();</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);window.__FIXED_LOC=q.get('loc')||'';window.__EMBED=q.get('embed')==='1';if(window.__EMBED){document.addEventListener('DOMContentLoaded',function(){var s=document.createElement('style');s.textContent='header{display:none!important}main{padding-top:12px!important}';document.head.appendChild(s);});}}catch(e){}})();</script>
 <style>
   :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--green-l:#6E8B7B;--accent:#C4703F;--ink:#2E3D36;--muted:#8a9790;}
   *{box-sizing:border-box;}
@@ -50,6 +51,7 @@
 <main>
   <h1>Onboarding content</h1>
   <div class="sub">Control the welcome videos and the documents franchisees and investors see, and track who has opened what.</div>
+  <div id="storeBanner" style="display:none;background:#EDF4EE;border:1px solid #bcd8c4;color:#2f6b46;border-radius:12px;padding:11px 15px;font-size:13px;font-weight:600;margin-bottom:14px">📍 Editing this laundromat’s onboarding videos. Franchisee, cleaner and maintenance videos here apply to this store only (blank = use the default). Investor content is global.</div>
 
   <div class="card">
     <h3>Welcome videos (YouTube)</h3>
@@ -93,7 +95,8 @@ function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return 
 
 async function load(){
   try{
-    var d=await apiGet('/onboarding-content-admin');
+    var d=await apiGet('/onboarding-content-admin'+(window.__FIXED_LOC?('?loc='+window.__FIXED_LOC):''));
+    if(window.__FIXED_LOC){ var sb=document.getElementById('storeBanner'); if(sb){sb.style.display='';} }
     document.getElementById('v_fr').value=d.videos.franchisee||'';
     document.getElementById('v_inv').value=d.videos.investor||'';
     document.getElementById('v_cln').value=(d.videos.cleaner||'');
@@ -122,7 +125,7 @@ function renderDocs(list){
 
 document.getElementById('saveVid').onclick=async function(){
   var msg=document.getElementById('vmsg'); this.disabled=true; msg.className='msg'; msg.textContent='Saving…';
-  var r=await apiSend('/onboarding-content-admin/video','PUT',{franchisee:document.getElementById('v_fr').value.trim(),investor:document.getElementById('v_inv').value.trim(),cleaner:document.getElementById('v_cln').value.trim(),maintenance:document.getElementById('v_mnt').value.trim()});
+  var r=await apiSend('/onboarding-content-admin/video','PUT',{franchisee:document.getElementById('v_fr').value.trim(),investor:document.getElementById('v_inv').value.trim(),cleaner:document.getElementById('v_cln').value.trim(),maintenance:document.getElementById('v_mnt').value.trim(),loc:(window.__FIXED_LOC||null)});
   this.disabled=false;
   if(r.ok){msg.className='msg ok';msg.textContent='Saved.';}else{msg.className='msg err';msg.textContent='Could not save.';}
 };
