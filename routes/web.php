@@ -63,6 +63,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/bookkeeping-api', [BookkeepingController::class, 'upsert']);
     Route::get('/suppliers-api', [SupplierController::class, 'index']);
     Route::get('/sales-api', [SaleController::class, 'index']);
+    Route::get('/sales-group-series', [SaleController::class, 'groupSeries']);
     Route::get('/franchises-api', [FranchiseController::class, 'index']);
     Route::match(['put','patch'], '/franchises-api/{franchise}', [FranchiseController::class, 'update']);
 

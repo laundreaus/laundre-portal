@@ -5,12 +5,12 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable {
     use HasApiTokens, Notifiable;
-    protected $fillable = ['name','email','phone','password','role','location_id','invite_token','sections',
+    protected $fillable = ['name','email','phone','password','role','location_id','location_ids','invite_token','sections',
         'nda_signed_at','nda_signer_name','nda_signature','nda_address','access_expires_at','member_no','investor_location_ids'];
     protected $hidden = ['password','remember_token','invite_token','nda_signature'];
     protected function casts(): array { return [
         'email_verified_at'=>'datetime','password'=>'hashed','sections'=>'array',
-        'nda_signed_at'=>'datetime','access_expires_at'=>'datetime','investor_location_ids'=>'array',
+        'nda_signed_at'=>'datetime','access_expires_at'=>'datetime','investor_location_ids'=>'array','location_ids'=>'array',
     ]; }
     public function location() { return $this->belongsTo(Location::class); }
     public function onboarding() { return $this->hasOne(Onboarding::class); }
@@ -31,8 +31,18 @@ class User extends Authenticatable {
     }
     // Which onboarding-document audience this user should see.
     public function docAudience(): string { return in_array($this->role, ['investor','potential_investor']) ? 'investor' : 'franchisee'; }
-    // Laundromats an admin has assigned to an upgraded investor (for their data dashboard).
-    public function investorLocationIds(): array { return array_values(array_filter(array_map('intval', (array)($this->investor_location_ids ?? [])))); }
+    // All laundromats this user is assigned to (multi-site). Falls back to the single primary location.
+    public function locationIds(): array {
+        $ids = array_filter(array_map('intval', (array)($this->location_ids ?? [])));
+        if (!$ids && $this->location_id) $ids = [(int)$this->location_id];
+        return array_values(array_unique($ids));
+    }
+    // Laundromats an investor can see on their data dashboard (their assigned sites).
+    public function investorLocationIds(): array {
+        $ids = array_filter(array_map('intval', (array)($this->investor_location_ids ?? [])));
+        if (!$ids) $ids = $this->locationIds();
+        return array_values(array_unique($ids));
+    }
 
     // ---- Digital membership card ----
     // Only these roles get a membership card.

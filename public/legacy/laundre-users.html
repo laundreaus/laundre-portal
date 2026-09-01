@@ -83,7 +83,7 @@
       <div><label>Phone</label><input id="f_phone" type="text" autocomplete="off" placeholder="Optional" /></div>
       <div><label>Role</label><select id="f_role"><option value="franchisee">Franchisee</option><option value="cleaner">Cleaner</option><option value="maintenance">Maintenance</option><option value="user">User (staff)</option><option value="potential_franchisee">Potential Franchisee</option><option value="potential_investor">Potential Investor</option><option value="investor">Investor</option><option value="admin">Admin</option></select></div>
       <div id="pwWrap"><label>Password</label><input id="f_password" type="text" autocomplete="new-password" /></div>
-      <div id="locWrap"><label>Assigned laundromat</label><select id="f_location"></select></div>
+      <div class="full" id="locWrap"><label>Assigned laundromat(s)</label><div id="locList" style="display:grid;grid-template-columns:1fr 1fr;gap:7px 16px;margin-top:4px"></div><div style="font-size:11.5px;color:#8a9790;margin-top:5px">Tick one or more. Multi-site users can switch between them in the portal.</div></div>
       <div class="full" id="onbHint" style="display:none;font-size:12px;color:#6b7d73;background:#FBF9F4;border:1px solid var(--cream-line);border-radius:8px;padding:10px 12px;line-height:1.5">No password needed — after you save you’ll get a unique invite link to send them. They set their own password and sign the NDA, then get access to their portal (franchisees &amp; investors) or their tool (cleaners &amp; maintenance).</div>
       <div class="full" id="secWrap" style="display:none"><label>Sections this staff user can access</label><div id="secList" style="display:grid;grid-template-columns:1fr 1fr;gap:7px 16px;margin-top:4px"></div></div>
       <div class="full" id="invLocWrap" style="display:none"><label>Laundromats this investor can see (data dashboard)</label><div id="invLocList" style="display:grid;grid-template-columns:1fr 1fr;gap:7px 16px;margin-top:4px"></div></div>
@@ -153,7 +153,7 @@ function render(){
     else if(role==='user') locCell='<span class="uemail">'+nsec+' section'+(nsec===1?'':'s')+'</span>';
     else if(role==='investor'){var ni=(u.investor_location_ids&&u.investor_location_ids.length)||0;locCell='<span class="uemail">'+ni+' laundromat'+(ni===1?'':'s')+'</span>';}
     else if(role==='admin') locCell='<span class="uemail">All (admin)</span>';
-    else locCell=esc(locName(u.location_id)||'')||'<span class="uemail">\u2014 unassigned \u2014</span>';
+    else {var _ids=(u.location_ids&&u.location_ids.length)?u.location_ids:(u.location_id?[u.location_id]:[]);var _names=_ids.map(function(id){return locName(id);}).filter(Boolean);locCell=_names.length?esc(_names.join(', ')):'<span class="uemail">\u2014 unassigned \u2014</span>';}
     let invBtn='';
     if(isInvite(role)){ invBtn = u.invite_url
         ? '<button class="btn btn-ghost" data-invite="'+u.id+'">Copy invite</button>'
@@ -184,9 +184,13 @@ async function delUser(id){
 }
 
 let editId=null;
-function fillLocations(sel){
-  document.getElementById('f_location').innerHTML='<option value="">\u2014 select laundromat \u2014</option>'+LOCS.map(l=>'<option value="'+l.id+'"'+(String(l.id)===String(sel)?' selected':'')+'>'+esc(l.name)+'</option>').join('');
+function renderLocList(sel){
+  var have=(Array.isArray(sel)?sel:[]).map(String);
+  document.getElementById('locList').innerHTML=LOCS.length?LOCS.map(function(l){
+    return '<label style="display:flex;align-items:center;gap:8px;font-weight:500;font-size:13px;margin:0;color:var(--ink)"><input type="checkbox" data-loc="'+l.id+'" '+(have.indexOf(String(l.id))>=0?'checked':'')+' style="width:auto"> '+esc(l.name)+'</label>';
+  }).join(''):'<span class="uemail">No laundromats yet \u2014 add them in Site Locations.</span>';
 }
+function selectedLocs(){return [].slice.call(document.querySelectorAll('#locList [data-loc]')).filter(function(c){return c.checked;}).map(function(c){return Number(c.dataset.loc);});}
 function toggleLocWrap(){
   var role=document.getElementById('f_role').value; var inv=isInvite(role); var staff=isStaff(role);
   document.getElementById('locWrap').style.display=needsLoc(role)?'block':'none';
@@ -204,7 +208,7 @@ function openEditor(id){
   document.getElementById('f_password').value='';
   document.getElementById('f_password').placeholder=id?'Leave blank to keep current':'Set a password';
   document.getElementById('f_role').value=u?(u.role||'franchisee'):'franchisee';
-  fillLocations(u?u.location_id:'');
+  renderLocList(u?((u.location_ids&&u.location_ids.length)?u.location_ids:(u.location_id?[u.location_id]:[])):[]);
   renderSecList(u?u.sections:[]);
   renderInvLocList(u?u.investor_location_ids:[]);
   toggleLocWrap();
@@ -222,14 +226,14 @@ document.getElementById('esave').onclick=async ()=>{
   const phone=document.getElementById('f_phone').value.trim();
   const password=document.getElementById('f_password').value;
   const role=document.getElementById('f_role').value;
-  const location_id=document.getElementById('f_location').value;
+  const location_ids=selectedLocs();
   const inv=isInvite(role); const staff=isStaff(role);
   const msg=document.getElementById('emsg');
   if(!name){msg.textContent='Full name is required.';return;}
   if(!email){msg.textContent='Email is required.';return;}
   if(!inv && !editId && !password){msg.textContent='Please set a password.';return;}
-  if(needsLoc(role) && !location_id){msg.textContent='Assign a laundromat for '+role+' accounts.';return;}
-  const payload={name,email,phone,role,location_id:needsLoc(role)?Number(location_id):null};
+  if(needsLoc(role) && !location_ids.length){msg.textContent='Assign at least one laundromat for '+role+' accounts.';return;}
+  const payload={name,email,phone,role,location_ids:needsLoc(role)?location_ids:null,location_id:needsLoc(role)?(location_ids[0]||null):null};
   if(password && !inv)payload.password=password;
   if(staff)payload.sections=selectedSections();
   if(isInvestor(role))payload.investor_location_ids=selectedInvLocs();

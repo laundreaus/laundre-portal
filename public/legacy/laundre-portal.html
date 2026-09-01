@@ -136,6 +136,7 @@
     <div class="hero">
       <h2 id="heroTitle">Welcome back</h2>
       <p id="heroSub">Your Laundré operations toolkit.</p>
+      <div id="siteSwitcher" style="margin-top:12px;display:none;align-items:center;gap:10px"></div>
     </div>
     <div id="alerts"></div>
     <section id="salesDash"></section>
@@ -188,7 +189,7 @@ function showApp(){
       renderStats();
       try{renderAlerts();}catch(e){}
       try{setupViewAs();}catch(e){}
-      try{fetchDbSales().then(function(){try{renderDashboard('admin');}catch(e){}});}catch(e){}
+      try{Promise.all([fetchDbSales(),fetchGroupSeries()]).then(function(){try{renderDashboard('admin');}catch(e){}});}catch(e){}
     } else {
       var first=(s.name||'').split(' ')[0]||'';
       var store=s.locationName||locName(s.locationId)||'';
@@ -202,8 +203,9 @@ function showApp(){
       document.getElementById('heroTitle').textContent='Welcome'+(first?', '+first:'');
       document.getElementById('heroSub').textContent = homes[role] || 'Your Laundré home';
       document.getElementById('stats').innerHTML='';
+      try{renderSiteSwitcher(role);}catch(e){}
       // Franchisees get a store-sales widget too — pull live DB sales, then re-render it.
-      if(role==='franchisee'){ try{fetchDbSales().then(function(){try{renderDashboard(role);}catch(e){}});}catch(e){} }
+      if(role==='franchisee'){ try{Promise.all([fetchDbSales(),fetchGroupSeries()]).then(function(){try{renderDashboard(role);}catch(e){}});}catch(e){} }
     }
   }catch(err){ console.error('portal render error',err); }
   document.getElementById('app').classList.add('show');
@@ -266,6 +268,7 @@ function renderTiles(role){
   } else {
     list=TOOLS.filter(t=>t.roles.includes(role));
   }
+  const multi=userLocations().length>1, AL=activeLoc();
   grid.innerHTML=list.map(t=>{
     const name=(role==='franchisee'&&t.fname)?t.fname:t.name;
     const desc=(role==='franchisee'&&t.fdesc)?t.fdesc:t.desc;
@@ -273,8 +276,21 @@ function renderTiles(role){
     const arrow=t.ext?'↗':'→';
     const dot=t.updated?'<span class="dot"></span>':'';
     const tag=t.updated?'<span class="newtag">Updated</span>':'';
-    return '<a class="tile" href="'+t.href+'"'+ext+'><span class="arrow">'+arrow+'</span><div class="ic">'+t.icon+dot+'</div><h3>'+esc(name)+'</h3><p>'+esc(desc)+'</p>'+tag+'</a>';
+    // Multi-site users: point tools at the active store (clean path so the ?loc query survives).
+    const href=(!t.ext && multi && AL)?(t.href.replace(/\.html$/,'')+'?loc='+encodeURIComponent(AL)):t.href;
+    return '<a class="tile" href="'+href+'"'+ext+'><span class="arrow">'+arrow+'</span><div class="ic">'+t.icon+dot+'</div><h3>'+esc(name)+'</h3><p>'+esc(desc)+'</p>'+tag+'</a>';
   }).join('');
+}
+function renderSiteSwitcher(role){
+  const host=document.getElementById('siteSwitcher'); if(!host) return;
+  const locs=userLocations();
+  if(!locs || locs.length<2){ host.style.display='none'; host.innerHTML=''; return; }
+  const AL=activeLoc();
+  host.style.display='flex';
+  host.innerHTML='<span style="font-size:12.5px;color:#5f7469;font-weight:700">Viewing site</span>'
+    +'<select id="siteSwitchSel" style="font-family:inherit;font-size:13.5px;font-weight:700;color:var(--green);background:#fff;border:1px solid var(--cream-line);border-radius:8px;padding:8px 11px;cursor:pointer">'
+    +locs.map(l=>'<option value="'+l.id+'"'+(String(l.id)===String(AL)?' selected':'')+'>'+esc(l.name)+'</option>').join('')+'</select>';
+  document.getElementById('siteSwitchSel').onchange=function(){ setActiveLoc(this.value); renderTiles(role); if(role==='franchisee'){ try{renderDashboard(role);}catch(e){} } };
 }
 /* Admin dashboard: global "Admin tools" (6-across) + a "Laundromats" section of store cards. */
 function renderAdminSections(){
@@ -449,6 +465,17 @@ function fetchDbSales(){
       return DB_SALES;
     }).catch(()=>{DB_SALES=[];return DB_SALES;});
 }
+// Group-wide daily series (all laundromats) — powers the "group average" comparison line.
+let GROUP_SERIES=null;
+function fetchGroupSeries(){
+  return fetch('/sales-group-series',{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'})
+    .then(r=>r.ok?r.json():[]).then(rows=>{GROUP_SERIES=Array.isArray(rows)?rows.map(x=>({date:(''+x.date).slice(0,10),total:+x.total||0,n:+x.n||0})):[];return GROUP_SERIES;})
+    .catch(()=>{GROUP_SERIES=[];return GROUP_SERIES;});
+}
+// ---- Multi-site: the user's laundromats + the one they're currently viewing ----
+function userLocations(){var s=currentSession()||{};return Array.isArray(s.locations)?s.locations:[];}
+function activeLoc(){var s=currentSession()||{};var locs=userLocations();if(!locs.length)return (s.locationId!=null?String(s.locationId):'');var saved=null;try{saved=localStorage.getItem('laundre_active_loc');}catch(e){}if(saved&&locs.some(function(l){return String(l.id)===String(saved);}))return saved;return String(locs[0].id);}
+function setActiveLoc(id){try{localStorage.setItem('laundre_active_loc',String(id));}catch(e){}}
 let dashGran='daily', dashFrom='', dashTo='', dashSites=null, salesChart=null, lastDashRole=null;
 const PALETTE=['#435E53','#C4703F','#3a6ea5','#8a7fa3','#c9a24b','#6b8e9e','#a35c5c'];
 function AUD(n){return '$'+(Math.round(n||0)).toLocaleString('en-AU');}
@@ -461,7 +488,7 @@ function renderDashboard(role){
   const sess=currentSession()||{};
   const sales=loadSales();
   let sites=[...new Map(sales.map(r=>[r.locationId,{id:r.locationId,name:(locName(r.locationId)||r.site||r.locationId)}])).values()];
-  if(!isAdmin){ sites=sites.filter(s=>String(s.id)===String(sess.locationId)); dashSites=[String(sess.locationId)]; }   // franchisee: own store only (ids compared as strings — DB ids are numeric, seed ids are strings)
+  if(!isAdmin){ var AL=activeLoc(); if(sites.length && !sites.some(s=>String(s.id)===String(AL))) AL=String(sites[0].id); sites=sites.filter(s=>String(s.id)===String(AL)); dashSites=[String(AL)]; }   // franchisee: the active store (multi-site aware; ids compared as strings)
   const scoped=sales.filter(r=>isAdmin || String(r.locationId)===String(sess.locationId));
   const allDates=scoped.map(r=>r.date).sort();
   const minD=allDates[0]||'', maxD=allDates[allDates.length-1]||'';
@@ -506,12 +533,14 @@ function drawSales(sales,sites){
   const single=selSites.length===1;
   const datasets=selSites.map((s,idx)=>{const byKey={};rows.filter(r=>r.locationId===s.id).forEach(r=>{const k=keyFn(r);byKey[k]=(byKey[k]||0)+r.revenue;});const color=PALETTE[idx%PALETTE.length];
     return {label:s.name,data:keys.map(k=>Math.round(byKey[k]||0)),backgroundColor:dashGran==='daily'?(single?color+'33':color):color,borderColor:color,borderWidth:2,fill:dashGran==='daily'&&single,tension:.3,pointRadius:dashGran==='daily'?2:0,order:2};});
-  // Average line: mean revenue per store per period (sits among the store lines)
-  if(keys.length && selSites.length){
-    const allVals=datasets.reduce((arr,ds)=>arr.concat(ds.data),[]);
-    const avg=allVals.length?Math.round(allVals.reduce((a,b)=>a+b,0)/allVals.length):0;
-    const avgLabel=selSites.length>1?'Average / store ('+AUD(avg)+')':'Average ('+AUD(avg)+')';
-    datasets.push({type:'line',label:avgLabel,data:keys.map(()=>avg),borderColor:'#C4703F',borderDash:[6,5],borderWidth:2,pointRadius:0,fill:false,tension:0,order:0});
+  // Group average line: average revenue per store per period across ALL laundromats,
+  // so each store can benchmark against the whole group (not just itself/the selection).
+  if(keys.length && GROUP_SERIES && GROUP_SERIES.length){
+    const gt={}, gn={}, gd={};
+    GROUP_SERIES.filter(r=>r.date>=dashFrom && r.date<=dashTo).forEach(r=>{const k=keyFn(r); gt[k]=(gt[k]||0)+r.total; gn[k]=(gn[k]||0)+r.n; gd[k]=(gd[k]||0)+1;});
+    const avgData=keys.map(k=>{const t=gt[k]||0, sn=gn[k]||0, d=gd[k]||0; const stores=d?sn/d:0; return stores?Math.round(t/stores):0;});
+    const overall=avgData.length?Math.round(avgData.reduce((a,b)=>a+b,0)/avgData.length):0;
+    datasets.push({type:'line',label:'Group average ('+AUD(overall)+')',data:avgData,borderColor:'#C4703F',borderDash:[6,5],borderWidth:2,pointRadius:0,fill:false,tension:0,order:0});
   }
   const totRev=rows.reduce((s,r)=>s+r.revenue,0), totTx=rows.reduce((s,r)=>s+r.txns,0), dayCount=new Set(rows.map(r=>r.date)).size;
   document.getElementById('kpis').innerHTML=

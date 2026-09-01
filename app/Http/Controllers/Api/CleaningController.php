@@ -8,15 +8,22 @@ class CleaningController extends Controller {
     public function index(Request $r) {
         $u = $r->user();
         $q = CleaningLog::query()->orderByDesc('date');
-        if (!$u->isAdmin()) { $q->where('location_id',$u->location_id); }
+        if (!$u->isAdmin()) {
+            $ids = $u->locationIds();
+            if ($r->filled('loc') && in_array((int)$r->query('loc'), $ids)) $ids = [(int)$r->query('loc')];
+            $q->whereIn('location_id', $ids);
+        }
         return $q->get();
     }
     public function submit(Request $r) {
         $u = $r->user();
-        abort_if(!$u->location_id, 422, 'No store assigned');
-        $data = $r->validate(['date'=>'required|date_format:Y-m-d','items'=>'array','labels'=>'array','notes'=>'nullable|string','issues'=>'nullable|string','photos'=>'array','geo'=>'nullable|array']);
+        $data = $r->validate(['date'=>'required|date_format:Y-m-d','location_id'=>'nullable|integer','items'=>'array','labels'=>'array','notes'=>'nullable|string','issues'=>'nullable|string','photos'=>'array','geo'=>'nullable|array']);
+        // Multi-site staff submit for the active store (must be one of theirs); otherwise their primary store.
+        $loc = (int)($data['location_id'] ?? 0);
+        if (!$loc || !in_array($loc, $u->locationIds())) $loc = (int)$u->location_id;
+        abort_if(!$loc, 422, 'No store assigned');
         return CleaningLog::updateOrCreate(
-            ['location_id'=>$u->location_id,'date'=>$data['date']],
+            ['location_id'=>$loc,'date'=>$data['date']],
             ['user_id'=>$u->id,'by'=>$u->name,'items'=>$data['items']??[], 'labels'=>$data['labels']??[], 'notes'=>$data['notes']??null,'issues'=>$data['issues']??null,'photos'=>$data['photos']??[],'geo'=>$data['geo']??null]
         );
     }

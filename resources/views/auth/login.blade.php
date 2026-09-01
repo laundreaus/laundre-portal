@@ -10,6 +10,7 @@
       <div style="margin-bottom:14px"><label style="font-size:12px;color:#5f7469;font-weight:600;display:block;margin-bottom:5px">Email / username</label><input name="email" type="text" value="{{ old('email') }}" autofocus></div>
       <div style="margin-bottom:14px"><label style="font-size:12px;color:#5f7469;font-weight:600;display:block;margin-bottom:5px">Password</label><input name="password" type="password"></div>
       @error('email')<div style="color:#B4472F;font-size:12.5px;margin-bottom:10px">{{ $message }}</div>@enderror
+      <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#5f7469;margin:2px 0 16px;cursor:pointer;user-select:none"><input type="checkbox" name="remember" value="1" style="width:auto;accent-color:var(--green)"> Trust this device — keep me signed in for 30 days</label>
       <button class="btn btn-green" style="width:100%" type="submit">Sign in</button>
     </form>
     <div style="font-size:11px;color:#8a9790;text-align:center;margin-top:16px">Accounts are managed by an administrator.</div>

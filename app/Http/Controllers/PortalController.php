@@ -39,7 +39,9 @@ class PortalController extends Controller {
         $html = preg_replace('/(["\'])laundre-portal\.html\1/', '$1/$1', $html);
         $html = preg_replace('/(["\'])([A-Za-z0-9_\-]+)\.html\1/', '$1/$2$1', $html);
         $u = auth()->user();
-        $sessionJson = json_encode(['role'=>$u->role,'locationId'=>$u->location_id,'name'=>$u->name,'email'=>$u->email,'sections'=>$u->sections ?? []], JSON_UNESCAPED_SLASHES);
+        $locIds = $u->locationIds();
+        $locList = $locIds ? Location::whereIn('id', $locIds)->orderBy('name')->get(['id','name'])->map(fn($l)=>['id'=>$l->id,'name'=>$l->name])->values()->all() : [];
+        $sessionJson = json_encode(['role'=>$u->role,'locationId'=>$u->location_id,'locationName'=>($u->location_id?optional(Location::find($u->location_id))->name:null),'locationIds'=>$locIds,'locations'=>$locList,'name'=>$u->name,'email'=>$u->email,'sections'=>$u->sections ?? []], JSON_UNESCAPED_SLASHES);
         $favicon = '<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/gif" href="/favicon.gif"><link rel="apple-touch-icon" href="/favicon-32.png">';
         $bridge = $favicon.'<style>#login{display:none!important}#app{display:block!important}</style><script>try{localStorage.setItem("laundre_auth","1");localStorage.setItem("laundre_session",'.json_encode($sessionJson).');}catch(e){}window.LAUNDRE_CSRF='.json_encode(csrf_token()).';</script>';
         $html = str_ireplace('<head>', '<head>'.$bridge, $html);

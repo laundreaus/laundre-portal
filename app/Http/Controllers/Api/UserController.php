@@ -17,7 +17,7 @@ class UserController extends Controller {
     }
     private const INVITE_ROLES = ['potential_franchisee','potential_investor','cleaner','maintenance'];
     public function store(Request $r) {
-        $data = $this->rules($r, true);
+        $data = $this->normalizeLocations($this->rules($r, true));
         $invite = in_array($data['role'], self::INVITE_ROLES);
         $onboarding = in_array($data['role'], ['potential_franchisee','potential_investor']);
         if ($invite) {
@@ -44,7 +44,7 @@ class UserController extends Controller {
         return $user;
     }
     public function update(Request $r, User $user) {
-        $data = $this->rules($r, false);
+        $data = $this->normalizeLocations($this->rules($r, false));
         if (!empty($data['password'])) { $data['password'] = Hash::make($data['password']); } else { unset($data['password']); }
         // Only persist investor location assignments for the investor role.
         if (($data['role'] ?? $user->role) !== 'investor') { $data['investor_location_ids'] = null; }
@@ -74,10 +74,21 @@ class UserController extends Controller {
             'password'=>'nullable|string|min:8',
             'role'=>'required|in:admin,franchisee,cleaner,maintenance,potential_franchisee,potential_investor,investor,user',
             'location_id'=>'nullable|exists:locations,id',
+            'location_ids'=>'nullable|array',
+            'location_ids.*'=>'integer|exists:locations,id',
             'sections'=>'nullable|array',
             'sections.*'=>'string',
             'investor_location_ids'=>'nullable|array',
             'investor_location_ids.*'=>'integer|exists:locations,id',
         ]);
+    }
+    // Keep the primary location_id in sync with the multi-site location_ids list (first = primary).
+    private function normalizeLocations(array $data): array {
+        if (array_key_exists('location_ids', $data)) {
+            $ids = array_values(array_unique(array_filter(array_map('intval', (array)$data['location_ids']))));
+            $data['location_ids'] = $ids ?: null;
+            if ($ids) $data['location_id'] = $ids[0];
+        }
+        return $data;
     }
 }
