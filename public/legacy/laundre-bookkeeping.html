@@ -105,9 +105,15 @@ function rows(){
 }
 function currentFYStart(){const d=new Date();return d.getMonth()>=6?d.getFullYear():d.getFullYear()-1;}
 function fyLabel(y){return y+'\u2013'+String(y+1).slice(2);}
+// The financial year a store was set up in (AU FY starts in July). Bookkeeping starts here \u2014 no older financials.
+function fyStartOf(dateStr){var d=new Date(dateStr||'');if(isNaN(d))return null;return d.getMonth()>=6?d.getFullYear():d.getFullYear()-1;}
+var SETUP_FY_MIN=null;
 let FY=currentFYStart();
 function buildFYSel(){
-  const cur=currentFYStart();const years=[];for(let y=cur;y>=cur-4;y--)years.push(y);
+  const cur=currentFYStart();
+  const floor=(SETUP_FY_MIN!=null)?Math.min(SETUP_FY_MIN,cur):cur-4; // don't offer years before the store was set up
+  const years=[];for(let y=cur;y>=floor;y--)years.push(y);
+  if(FY<floor)FY=floor; if(FY>cur)FY=cur;
   document.getElementById('fySel').innerHTML=years.map(y=>'<option value="'+y+'"'+(y===FY?' selected':'')+'>FY '+fyLabel(y)+'</option>').join('');
 }
 function rec(rowId){
@@ -199,6 +205,8 @@ async function loadAll(){
   try{
     const [locs,entries]=await Promise.all([apiGet('/locations-api'),apiGet('/bookkeeping-api')]);
     LOCS=Array.isArray(locs)?locs:[];
+    var _fys=LOCS.map(function(l){return fyStartOf(l.created_at);}).filter(function(y){return y!=null;});
+    SETUP_FY_MIN=_fys.length?Math.min.apply(null,_fys):null;
     STATUS={};
     (Array.isArray(entries)?entries:[]).forEach(e=>{
       const rid=String(e.location_id), fy=String(e.fy);

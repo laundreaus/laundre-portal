@@ -18,3 +18,7 @@ yarn-error.log
 /.idea
 /.vscode
 .DS_Store
+bootstrap/cache/
+public/uploads/
+*.zip
+error_log

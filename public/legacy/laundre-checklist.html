@@ -761,6 +761,15 @@ function fmtDate(ts) {
   const d = new Date(ts);
   return d.toLocaleDateString('en-AU', { day:'numeric', month:'short', year:'numeric' });
 }
+/* An opening checklist is "complete" once every task is ticked. The completed date is the last tick.
+   Once complete it drops off the franchisee/user view but stays visible to admins with the date. */
+function franchiseCompletedAt(f) {
+  const p = franchiseProgress(f);
+  if (p.total === 0 || p.pct !== 100) return null;
+  let mx = 0;
+  f.sections.forEach(s => s.tasks.forEach(t => { if (t.doneAt && t.doneAt > mx) mx = t.doneAt; }));
+  return mx || Date.now();
+}
 
 /* ----------  SYNC FROM APPROVED LOCATIONS  ---------- */
 /* Each approved location in the Site Locations tool (laundre_sites_v1) automatically
@@ -788,7 +797,16 @@ function route() {
   if (sess && sess.role && sess.role !== 'admin') {
     if (navAdmin) navAdmin.style.display = 'none';
     const mine = Store.list().find(f => f.sourceLocationId === sess.locationId);
-    if (mine) { renderFranchise(app, mine.id); }
+    if (mine) {
+      const cAt = franchiseCompletedAt(mine);
+      if (cAt) {
+        app.innerHTML = '<div style="max-width:640px;margin:26px auto;padding:26px 24px;background:#fff;border:1px solid #bcd8c4;border-radius:14px;text-align:center;">'
+          + '<div style="font-size:34px;line-height:1;margin-bottom:10px;">✅</div>'
+          + '<div style="font-size:18px;font-weight:800;color:var(--sage,#435E53);">Opening checklist complete</div>'
+          + '<div style="color:#6b7d73;font-size:14px;margin-top:6px;">All items were signed off on ' + fmtDate(cAt) + '. Nothing more to do here — your store is open. 🎉</div>'
+          + '</div>';
+      } else { renderFranchise(app, mine.id); }
+    }
     else {
       app.innerHTML = '<div style="max-width:640px;margin:26px auto;padding:22px;background:#fff;border:1px solid var(--line);border-radius:12px;color:var(--sage-soft);">'
         + 'No laundromat is assigned to your account yet. Please contact your administrator.</div>';
@@ -851,11 +869,12 @@ function renderAdmin(app) {
         </div>
       ` : franchises.map(f => {
         const p = franchiseProgress(f);
+        const cAt = franchiseCompletedAt(f);
         return `
           <div class="franchise-row" data-id="${f.id}" data-action="open">
             <div>
-              <div class="fr-name">${esc(f.name)}</div>
-              <div class="fr-meta">${esc(f.location || '—')}${f.contact ? ' · ' + esc(f.contact) : ''} · created ${fmtDate(f.createdAt)}</div>
+              <div class="fr-name">${esc(f.name)}${cAt ? ' <span style="display:inline-block;background:#E1EDE4;color:#2f6b46;border-radius:20px;padding:1px 9px;font-size:11px;font-weight:800;vertical-align:middle;margin-left:6px;">✓ Completed</span>' : ''}</div>
+              <div class="fr-meta">${esc(f.location || '—')}${f.contact ? ' · ' + esc(f.contact) : ''} · created ${fmtDate(f.createdAt)}${cAt ? ' · <strong style="color:#2f6b46;">completed ' + fmtDate(cAt) + '</strong>' : ''}</div>
             </div>
             <div class="fr-progress">
               <div class="fr-progress-label"><span>Progress</span><span>${p.done} / ${p.total} · ${p.pct}%</span></div>
