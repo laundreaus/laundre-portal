@@ -202,6 +202,8 @@ function showApp(){
       document.getElementById('heroTitle').textContent='Welcome'+(first?', '+first:'');
       document.getElementById('heroSub').textContent = homes[role] || 'Your Laundré home';
       document.getElementById('stats').innerHTML='';
+      // Franchisees get a store-sales widget too — pull live DB sales, then re-render it.
+      if(role==='franchisee'){ try{fetchDbSales().then(function(){try{renderDashboard(role);}catch(e){}});}catch(e){} }
     }
   }catch(err){ console.error('portal render error',err); }
   document.getElementById('app').classList.add('show');
@@ -459,8 +461,8 @@ function renderDashboard(role){
   const sess=currentSession()||{};
   const sales=loadSales();
   let sites=[...new Map(sales.map(r=>[r.locationId,{id:r.locationId,name:(locName(r.locationId)||r.site||r.locationId)}])).values()];
-  if(!isAdmin){ sites=sites.filter(s=>s.id===sess.locationId); dashSites=[sess.locationId]; }   // franchisee: own store only
-  const scoped=sales.filter(r=>isAdmin || r.locationId===sess.locationId);
+  if(!isAdmin){ sites=sites.filter(s=>String(s.id)===String(sess.locationId)); dashSites=[String(sess.locationId)]; }   // franchisee: own store only (ids compared as strings — DB ids are numeric, seed ids are strings)
+  const scoped=sales.filter(r=>isAdmin || String(r.locationId)===String(sess.locationId));
   const allDates=scoped.map(r=>r.date).sort();
   const minD=allDates[0]||'', maxD=allDates[allDates.length-1]||'';
   if(!dashTo||dashTo>maxD) dashTo=maxD;
