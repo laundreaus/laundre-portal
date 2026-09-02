@@ -263,7 +263,7 @@ const TOOLS=[
 function renderTiles(role){
   const grid=document.getElementById('grid');
   if(role==='admin'){ renderAdminSections(); return; }
-  grid.className='grid';
+  grid.className='tools6';
   let list;
   if(role==='user'){
     const sess=currentSession()||{}; const secs=sess.sections||[];
@@ -281,7 +281,7 @@ function renderTiles(role){
     const tag=t.updated?'<span class="newtag">Updated</span>':'';
     // Multi-site users: point tools at the active store (clean path so the ?loc query survives).
     const href=(!t.ext && multi && AL)?(t.href.replace(/\.html$/,'')+'?loc='+encodeURIComponent(AL)):t.href;
-    return '<a class="tile" href="'+href+'"'+ext+'><span class="arrow">'+arrow+'</span><div class="ic">'+t.icon+dot+'</div><h3>'+esc(name)+'</h3><p>'+esc(desc)+'</p>'+tag+'</a>';
+    return '<a class="ctile" href="'+href+'"'+ext+' title="'+esc(desc||'')+'"><div class="ic">'+t.icon+dot+'</div><h4>'+esc(name)+'</h4></a>';
   }).join('');
 }
 function renderSiteSwitcher(role){
