@@ -6,7 +6,8 @@ use App\Http\Controllers\ImpersonateController;
 use App\Http\Controllers\Api\{UserController, LocationController, SettingController, TicketController,
     CleaningController, MaintenanceController, DocumentController, GuideController, BookkeepingController,
     SupplierController, SaleController, FranchiseController, UploadController, MaintenanceDocController,
-    OnboardingController, TaskController, CrmController, MembershipController, NdaController, InvestorController};
+    OnboardingController, TaskController, CrmController, MembershipController, NdaController, InvestorController,
+    ActivityController, ExpenseController, MachineController, LocationFileController, ConnectionController};
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -64,6 +65,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/suppliers-api', [SupplierController::class, 'index']);
     Route::get('/sales-api', [SaleController::class, 'index']);
     Route::get('/sales-group-series', [SaleController::class, 'groupSeries']);
+    // Profit module (expenses) + machine list — scoped to the user's laundromats.
+    Route::get('/expenses-api', [ExpenseController::class, 'index']);
+    Route::post('/expenses-api', [ExpenseController::class, 'upsert']);
+    Route::delete('/expenses-api/{expense}', [ExpenseController::class, 'destroy']);
+    Route::get('/machines-api', [MachineController::class, 'index']);
+    // Per-laundromat files (admin uploads); non-admins may read insurance certs for their stores.
+    Route::get('/location-files-api', [LocationFileController::class, 'index']);
+    // Connected Systems status (Bubble Pay / Xero).
+    Route::get('/connections-api', [ConnectionController::class, 'status']);
     Route::get('/franchises-api', [FranchiseController::class, 'index']);
     Route::match(['put','patch'], '/franchises-api/{franchise}', [FranchiseController::class, 'update']);
 
@@ -144,6 +154,15 @@ Route::middleware('auth')->group(function () {
         Route::delete('/sales-api/month', [SaleController::class, 'destroyMonth']);
 
         Route::post('/cleaning-items-api', [CleaningController::class, 'saveItems']);
+
+        Route::get('/activity-api', [ActivityController::class, 'index']);
+        Route::post('/location-files-api', [LocationFileController::class, 'store']);
+        Route::delete('/location-files-api/{location_file}', [LocationFileController::class, 'destroy']);
+        Route::post('/connections-api/xero-demo', [ConnectionController::class, 'xeroDemo']);
+        Route::post('/connections-api/xero-disconnect', [ConnectionController::class, 'xeroDisconnect']);
+        Route::post('/machines-api', [MachineController::class, 'store']);
+        Route::match(['put','patch'], '/machines-api/{machine}', [MachineController::class, 'update']);
+        Route::delete('/machines-api/{machine}', [MachineController::class, 'destroy']);
 
         Route::post('/franchises-api', [FranchiseController::class, 'store']);
         Route::delete('/franchises-api/{franchise}', [FranchiseController::class, 'destroy']);

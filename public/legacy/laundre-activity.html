@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Activity Log</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  input,select{font-family:inherit;font-size:13px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:8px 10px;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:1120px;margin:0 auto;padding:16px 22px 60px;}
+  .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:14px;overflow:hidden;}
+  table{width:100%;border-collapse:collapse;} th,td{padding:8px 11px;font-size:12.5px;border-bottom:1px solid #f0ece2;text-align:left;vertical-align:top;}
+  th{background:var(--green-d);color:#EAF0EC;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;position:sticky;top:0;}
+  tr:hover td{background:#faf7f0;}
+  .tag{display:inline-block;border-radius:20px;padding:2px 8px;font-size:10.5px;font-weight:700;text-transform:capitalize;}
+  .tag.create{background:#E1EDE4;color:#2f6b46;} .tag.update{background:#E7EDF6;color:#3a5a8c;} .tag.delete{background:#F5E0DA;color:#B4472F;} .tag.view{background:#EFEADD;color:#7a6f52;} .tag.login,.tag.logout{background:#F0E8F2;color:#6b4d7a;} .tag.impersonate{background:#F5E8D8;color:#9a6b32;}
+  .role{font-size:11px;color:#8a9790;}
+  .when{white-space:nowrap;color:#7a8b84;font-size:11.5px;}
+  .empty{padding:30px;text-align:center;color:#8a9790;}
+  .count{font-size:12px;color:#8a9790;}
+</style>
+</head>
+<body>
+<header><span class="ttl">Activity Log</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-portal.html">← Portal</a></header>
+<main>
+  <div class="filters">
+    <input id="f_q" placeholder="Search action, name, path…" style="width:230px">
+    <select id="f_role"><option value="">All roles</option><option value="admin">Admin</option><option value="franchisee">Franchisee</option><option value="investor">Investor</option><option value="cleaner">Cleaner</option><option value="maintenance">Maintenance</option></select>
+    <select id="f_action"><option value="">All actions</option><option value="create">Create</option><option value="update">Update</option><option value="delete">Delete</option><option value="view">View</option><option value="login">Login</option><option value="logout">Logout</option><option value="impersonate">Impersonate</option></select>
+    <button class="btn btn-green" id="f_go">Filter</button>
+    <span class="spacer"></span>
+    <span class="count" id="count"></span>
+  </div>
+  <div class="card"><div id="tbl"><div class="empty">Loading…</div></div></div>
+</main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function apiGet(u){return fetch(u,{headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function when(s){if(!s)return '';var d=new Date((''+s).replace(' ','T'));if(isNaN(d))return esc(s);return d.toLocaleString('en-AU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}
+function load(){
+  var p=new URLSearchParams();
+  var q=document.getElementById('f_q').value.trim(); if(q)p.set('q',q);
+  var r=document.getElementById('f_role').value; if(r)p.set('role',r);
+  var a=document.getElementById('f_action').value; if(a)p.set('action',a);
+  document.getElementById('tbl').innerHTML='<div class="empty">Loading…</div>';
+  apiGet('/activity-api?'+p.toString()).then(function(rows){
+    document.getElementById('count').textContent=(rows.length||0)+' entries';
+    if(!rows.length){document.getElementById('tbl').innerHTML='<div class="empty">No activity recorded yet.</div>';return;}
+    document.getElementById('tbl').innerHTML='<table><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Detail</th><th>Path</th><th>IP</th></tr></thead><tbody>'
+      +rows.map(function(x){return '<tr><td class="when">'+when(x.created_at)+'</td>'
+        +'<td><b>'+esc(x.actor_name||'—')+'</b><div class="role">'+esc(x.actor_role||'')+'</div></td>'
+        +'<td><span class="tag '+esc(x.action||'view')+'">'+esc(x.action||'—')+'</span></td>'
+        +'<td>'+esc(x.subject||'—')+'</td>'
+        +'<td style="color:#8a9790;font-size:11px">'+esc(x.method||'')+' '+esc(x.path||'')+'</td>'
+        +'<td style="color:#8a9790;font-size:11px">'+esc(x.ip||'')+'</td></tr>';}).join('')
+      +'</tbody></table>';
+  }).catch(function(e){document.getElementById('tbl').innerHTML='<div class="empty">Could not load: '+e.message+' (admin only)</div>';});
+}
+document.getElementById('f_go').onclick=load;
+document.getElementById('f_q').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+document.getElementById('f_role').onchange=load;
+document.getElementById('f_action').onchange=load;
+load();
+</script>
+</body>
+</html>

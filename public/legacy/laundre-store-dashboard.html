@@ -51,7 +51,6 @@
     <button class="btn btn-ghost" id="r7">7 days</button>
     <button class="btn btn-ghost" id="r30">30 days</button>
     <span class="spacer"></span>
-    <label class="toggle"><input type="checkbox" id="bpHide"> Hide Bubble Pay module</label>
   </div>
   <div id="body"></div>
 </main>
@@ -81,7 +80,6 @@ function loadAll(){
 }
 function render(){
   var el=document.getElementById('body');
-  if(HIDDEN){el.innerHTML='<div class="hiddenNote">Bubble Pay module is hidden for this laundromat. Untick “Hide Bubble Pay module” above to show it.</div>';return;}
   var rev=SALES.reduce(function(s,x){return s+(+x.revenue||0);},0);
   var txn=SALES.reduce(function(s,x){return s+(+x.txns||0);},0);
   var days=SALES.length||1;
@@ -102,23 +100,12 @@ function render(){
   }
   el.innerHTML=stats+chart;
 }
-// Bubble Pay hide toggle (per laundromat)
-document.getElementById('bpHide').addEventListener('change',function(){
-  HIDDEN=this.checked;
-  apiPut('/settings-api/bubblepay_hidden_'+LOC, HIDDEN?'1':'0').catch(function(){});
-  render();
-});
 document.getElementById('from').addEventListener('change',applyWindow);
 document.getElementById('to').addEventListener('change',applyWindow);
 document.getElementById('r7').addEventListener('click',function(){setRange(7);});
 document.getElementById('r30').addEventListener('click',function(){setRange(30);});
 // init: load all this store's sales, default to the last 7 days ending at the most recent synced date
-(function(){
-  Promise.all([
-    loadAll(),
-    apiGet('/settings-api/bubblepay_hidden_'+LOC).then(function(v){HIDDEN=(v==='1'||v===1||v===true);document.getElementById('bpHide').checked=HIDDEN;}).catch(function(){})
-  ]).then(function(){ setRange(7); });
-})();
+(function(){ loadAll().then(function(){ setRange(7); }); })();
 </script>
 </body>
 </html>

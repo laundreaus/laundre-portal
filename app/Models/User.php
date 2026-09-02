@@ -2,9 +2,10 @@
 namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable {
-    use HasApiTokens, Notifiable;
+    use HasApiTokens, Notifiable, SoftDeletes;
     protected $fillable = ['name','email','phone','password','role','location_id','location_ids','invite_token','sections',
         'nda_signed_at','nda_signer_name','nda_signature','nda_address','access_expires_at','member_no','investor_location_ids'];
     protected $hidden = ['password','remember_token','invite_token','nda_signature'];

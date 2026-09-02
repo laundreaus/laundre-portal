@@ -75,6 +75,7 @@
           <div class="full"><label>Project name</label><input id="p_name" /></div>
           <div class="full"><label>Location</label><input id="p_location" /></div>
           <div><label>Site size (m²)</label><input id="p_sqm" type="number" step="1" min="1" /></div>
+          <div><label>Total build cost (ex GST)</label><input id="p_build" type="number" step="100" min="0" /></div>
           <div><label>Builder's margin (%)</label><input id="p_margin" type="number" step="0.5" /></div>
           <div><label>Our margin (%)</label><input id="p_ourmargin" type="number" step="0.5" /></div>
           <div><label>GST (%)</label><input id="p_gst" type="number" step="0.5" /></div>
@@ -121,8 +122,23 @@ function uid(){return 'proj_'+Math.random().toString(36).slice(2,7);}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 const DESIGN_FEE=3000; // fixed Design line item — does not change
+// Migrate older projects (amount-based) to the %-of-build model: each trade holds a fixed % of the
+// total build cost; the dollar amounts are derived. Change the build cost and amounts scale, % stays.
+function normalizeProject(p){
+  if(!p) return p;
+  if(p.buildTotal==null){
+    var sub=(p.items||[]).reduce((s,i)=>s+(+i.amount||0),0);
+    p.buildTotal=sub||0;
+    (p.items||[]).forEach(function(it){ if(it.pct==null) it.pct = sub>0 ? (+it.amount||0)/sub*100 : 0; });
+  }
+  (p.items||[]).forEach(function(it){ if(it.pct==null) it.pct=0; });
+  return p;
+}
 function calc(p){
-  const tradesSub=(p.items||[]).reduce((s,i)=>s+(+i.amount||0),0);
+  normalizeProject(p);
+  const build=+p.buildTotal||0;
+  const amounts=(p.items||[]).map(i=>build*(+i.pct||0)/100);
+  const tradesSub=amounts.reduce((s,a)=>s+a,0);
   const design=DESIGN_FEE;
   const subtotal=tradesSub+design;
   const bMargin=subtotal*(+p.marginPct||0)/100;
@@ -133,17 +149,18 @@ function calc(p){
   const grandInc=totalEx+gst;
   const perSqm=(+p.sqm>0)?totalEx/p.sqm:0;
   const perSqmInc=(+p.sqm>0)?grandInc/p.sqm:0;
-  return {tradesSub,design,subtotal,bMargin,afterBuilder,oMargin,totalEx,gst,grandInc,perSqm,perSqmInc};
+  return {tradesSub,design,subtotal,bMargin,afterBuilder,oMargin,totalEx,gst,grandInc,perSqm,perSqmInc,amounts};
 }
 function renderProjSel(){
   document.getElementById('projSel').innerHTML=DATA.map(p=>'<option value="'+p.id+'"'+(p.id===curId?' selected':'')+'>'+esc(p.name)+'</option>').join('');
 }
 function renderFields(){
-  const p=cur();
+  const p=normalizeProject(cur());
   if(p.ourMarginPct==null) p.ourMarginPct=20;
   document.getElementById('p_name').value=p.name||'';
   document.getElementById('p_location').value=p.location||'';
   document.getElementById('p_sqm').value=p.sqm||'';
+  document.getElementById('p_build').value=(p.buildTotal!=null?p.buildTotal:'');
   document.getElementById('p_margin').value=p.marginPct;
   document.getElementById('p_ourmargin').value=p.ourMarginPct;
   document.getElementById('p_gst').value=p.gstPct;
@@ -152,10 +169,10 @@ function renderItems(){
   const p=cur(), c=calc(p);
   const tb=document.querySelector('#itemsTbl tbody');
   let h=(p.items||[]).map((it,i)=>{
-    const pct=c.subtotal>0?((+it.amount||0)/c.subtotal*100):0;
+    const amt=c.amounts[i]||0;
     return '<tr><td><input class="lineinput" data-i="'+i+'" data-k="label" value="'+esc(it.label)+'" /></td>'
-    +'<td class="amt"><input class="lineinput" data-i="'+i+'" data-k="amount" type="number" step="1" value="'+(it.amount||0)+'" /></td>'
-    +'<td class="pctcell" data-p="'+i+'" style="text-align:right;color:#7a8b84;font-size:12.5px">'+pct.toFixed(1)+'%</td>'
+    +'<td class="amt amtcell" data-a="'+i+'" style="color:#33473D;font-weight:700">'+AUD(amt)+'</td>'
+    +'<td style="text-align:right;white-space:nowrap"><input class="lineinput pctinput" data-i="'+i+'" data-k="pct" type="number" step="0.1" min="0" value="'+(it.pct||0)+'" style="width:62px;text-align:right;padding:6px 8px" /> %</td>'
     +'<td class="act"><button class="rm" data-rm="'+i+'">×</button></td></tr>';
   }).join('');
   const dpct=c.subtotal>0?(c.design/c.subtotal*100):0;
@@ -166,16 +183,16 @@ function renderItems(){
   tb.innerHTML=h;
   tb.querySelectorAll('.lineinput').forEach(inp=>inp.oninput=()=>{
     const i=+inp.dataset.i,k=inp.dataset.k;
-    cur().items[i][k]=k==='amount'?(+inp.value||0):inp.value;
-    save();updatePcts();renderSummary();
+    cur().items[i][k]=k==='pct'?(+inp.value||0):inp.value;
+    save();updateAmounts();renderSummary();
   });
   tb.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{cur().items.splice(+b.dataset.rm,1);save();renderItems();renderSummary();});
 }
-function updatePcts(){
+// % of build is the fixed input; recompute the dollar amounts (and design %) when % or build cost changes.
+function updateAmounts(){
   const c=calc(cur());
-  document.querySelectorAll('#itemsTbl tbody .pctcell[data-p]').forEach(function(td){
-    const i=+td.dataset.p, it=cur().items[i]; if(!it) return;
-    td.textContent=(c.subtotal>0?((+it.amount||0)/c.subtotal*100):0).toFixed(1)+'%';
+  document.querySelectorAll('#itemsTbl tbody .amtcell[data-a]').forEach(function(td){
+    const i=+td.dataset.a; td.textContent=AUD(c.amounts[i]||0);
   });
   var dp=document.getElementById('designPct'); if(dp) dp.textContent=(c.subtotal>0?(c.design/c.subtotal*100):0).toFixed(1)+'%';
 }
@@ -196,16 +213,17 @@ function renderSummary(){
 }
 function renderAll(){renderProjSel();renderFields();renderItems();renderSummary();}
 
-['p_name','p_location','p_sqm','p_margin','p_ourmargin','p_gst'].forEach(idn=>{
+['p_name','p_location','p_sqm','p_build','p_margin','p_ourmargin','p_gst'].forEach(idn=>{
   document.getElementById(idn).addEventListener('input',()=>{
     const p=cur();
     p.name=document.getElementById('p_name').value;
     p.location=document.getElementById('p_location').value;
     p.sqm=+document.getElementById('p_sqm').value||0;
+    p.buildTotal=+document.getElementById('p_build').value||0;
     p.marginPct=+document.getElementById('p_margin').value||0;
     p.ourMarginPct=+document.getElementById('p_ourmargin').value||0;
     p.gstPct=+document.getElementById('p_gst').value||0;
-    save();renderSummary();
+    save();updateAmounts();renderSummary();
     if(idn==='p_name') renderProjSel();
   });
 });

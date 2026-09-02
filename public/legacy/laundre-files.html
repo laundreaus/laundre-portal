@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Files</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);window.__FIXED_LOC=q.get('loc')||'';window.__EMBED=q.get('embed')==='1';var s0=null;try{s0=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}window.__ADMIN=!!(s0&&s0.role==='admin');if(window.__EMBED){document.addEventListener('DOMContentLoaded',function(){var s=document.createElement('style');s.textContent='header{display:none!important}main{padding-top:10px!important}';document.head.appendChild(s);});}}catch(e){}})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  input,select{font-family:inherit;font-size:13.5px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:8px 10px;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:920px;margin:0 auto;padding:16px 22px 60px;}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:16px 18px;margin-bottom:16px;}
+  .card h3{margin:0 0 12px;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);}
+  .frow{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #f0ece2;} .frow:last-child{border-bottom:none;}
+  .fi{width:34px;height:34px;border-radius:8px;background:#EBE4D5;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .ft{flex:1;} .ft b{color:var(--green-d);font-size:14px;} .ft span{display:block;color:#8a9790;font-size:12px;}
+  .cat{display:inline-block;border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:700;background:#EFEADD;color:#7a6f52;text-transform:capitalize;margin-left:6px;}
+  .fopen{font-size:12.5px;font-weight:700;color:var(--green);text-decoration:none;border:1px solid var(--cream-line);border-radius:7px;padding:7px 11px;}
+  .xdel{background:transparent;border:none;color:#B4472F;font-size:15px;cursor:pointer;}
+  .addrow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;} .addrow label{font-size:11px;color:#5f7469;font-weight:600;display:block;margin-bottom:3px;}
+  .empty{padding:24px;text-align:center;color:#8a9790;} #msg{font-size:12.5px;color:#B4472F;min-height:15px;margin-top:8px;}
+</style>
+</head>
+<body>
+<header><span class="ttl">Files</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-portal.html">← Portal</a></header>
+<main>
+  <div class="card"><h3>Documents</h3><div id="list"><div class="empty">Loading…</div></div></div>
+  <div class="card" id="addCard" style="display:none">
+    <h3>Upload a file</h3>
+    <div class="addrow">
+      <div><label>Title</label><input id="f_name" placeholder="e.g. Head lease — executed" style="width:230px"></div>
+      <div><label>Category</label><select id="f_cat"><option value="lease">Lease</option><option value="brochure">Brochure</option><option value="other">Other</option></select></div>
+      <div><label>File</label><input type="file" id="f_file"></div>
+      <button class="btn btn-green" id="f_up">Upload</button>
+    </div>
+    <div id="msg"></div>
+  </div>
+</main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(j){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(j)h['Content-Type']='application/json';return h;}
+function apiGet(u){return fetch(u,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:b?JSON.stringify(b):null}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();});}
+function uploadFile(f){var fd=new FormData();fd.append('file',f,f.name);return fetch('/upload-api',{method:'POST',headers:hdrs(false),credentials:'same-origin',body:fd}).then(function(r){if(!r.ok)throw new Error('upload HTTP '+r.status);return r.json();});}
+var LOC=window.__FIXED_LOC||new URLSearchParams(location.search).get('loc')||'';
+var ADMIN=!!window.__ADMIN;
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function kb(n){if(!n)return '';return n>1048576?(Math.round(n/104857.6)/10+' MB'):(Math.round(n/1024)+' KB');}
+function load(){
+  if(ADMIN) document.getElementById('addCard').style.display='';
+  apiGet('/location-files-api?loc='+encodeURIComponent(LOC)).then(function(rows){
+    rows=(rows||[]).filter(function(x){return x.category!=='insurance';}); // insurance lives in its own module
+    var el=document.getElementById('list');
+    if(!rows.length){el.innerHTML='<div class="empty">No files yet'+(ADMIN?' — upload the lease, brochures or other documents below.':'.')+'</div>';return;}
+    el.innerHTML=rows.map(function(f){return '<div class="frow"><div class="fi">📄</div><div class="ft"><b>'+esc(f.name)+'</b><span class="cat">'+esc(f.category)+'</span><span>'+esc(f.file_name||'')+(f.size?(' · '+kb(f.size)):'')+(f.uploaded_by?(' · '+esc(f.uploaded_by)):'')+'</span></div>'
+      +'<a class="fopen" href="'+esc(f.file_path)+'" target="_blank" rel="noopener">Open ↗</a>'+(ADMIN?'<button class="xdel" data-del="'+f.id+'">×</button>':'')+'</div>';}).join('');
+    el.querySelectorAll('[data-del]').forEach(function(b){b.onclick=function(){if(confirm('Delete this file?'))apiSend('/location-files-api/'+b.dataset.del,'DELETE').then(load).catch(function(e){alert(e.message);});};});
+  }).catch(function(e){document.getElementById('list').innerHTML='<div class="empty">Could not load: '+e.message+'</div>';});
+}
+if(ADMIN){
+  document.getElementById('f_up').onclick=function(){
+    var msg=document.getElementById('msg'); msg.textContent='';
+    var name=document.getElementById('f_name').value.trim(), f=document.getElementById('f_file').files[0];
+    if(!name){msg.textContent='Enter a title.';return;} if(!f){msg.textContent='Choose a file.';return;}
+    if(f.size>25*1024*1024){msg.textContent='File too large (max 25MB).';return;}
+    msg.style.color='#6b7d73'; msg.textContent='Uploading…';
+    uploadFile(f).then(function(up){
+      return apiSend('/location-files-api','POST',{location_id:Number(LOC),category:document.getElementById('f_cat').value,name:name,file_path:up.url,file_name:up.name,size:f.size});
+    }).then(function(){document.getElementById('f_name').value='';document.getElementById('f_file').value='';msg.style.color='#2f6b46';msg.textContent='Uploaded ✓';load();}).catch(function(e){msg.style.color='#B4472F';msg.textContent='Could not upload: '+e.message;});
+  };
+}
+load();
+</script>
+</body>
+</html>

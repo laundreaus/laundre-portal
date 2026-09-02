@@ -15,6 +15,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
         // Admin read-only "view as user" preview (runs after session/auth are available).
         $middleware->appendToGroup('web', \App\Http\Middleware\Impersonate::class);
+        // R&D audit log — records all authenticated activity.
+        $middleware->appendToGroup('web', \App\Http\Middleware\LogActivity::class);
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);

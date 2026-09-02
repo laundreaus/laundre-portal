@@ -69,7 +69,8 @@ class UserController extends Controller {
     private function rules(Request $r, bool $creating): array {
         return $r->validate([
             'name'=>'required|string',
-            'email'=>'required|string|unique:users,email'.($creating?'':(','.$r->route('user')->id)),
+            // Uniqueness ignores soft-deleted users so a removed account's email can be reused.
+            'email'=>'required|string|unique:users,email,'.($creating?'NULL':$r->route('user')->id).',id,deleted_at,NULL',
             'phone'=>'nullable|string',
             'password'=>'nullable|string|min:8',
             'role'=>'required|in:admin,franchisee,cleaner,maintenance,potential_franchisee,potential_investor,investor,user',

@@ -255,7 +255,10 @@ const TOOLS=[
   {icon:'📈',name:'Data Dashboard',href:'laundre-investor-dashboard.html',roles:['investor'],desc:'Live trading revenue for the laundromats assigned to your account.',fname:'Data Dashboard',fdesc:'Live trading revenue for the laundromats assigned to you.'},
   {icon:'💳',name:'Membership Card',href:'laundre-card.html',roles:['admin','franchisee','user','investor'],desc:'Your Laundré digital membership card — view it and add it to Apple / Google Wallet.',fname:'My Membership Card',fdesc:'Your Laundré digital membership card — add it to Apple / Google Wallet.'},
   {icon:'📹',name:'CCTV',href:'laundre-cctv.html',roles:['admin','franchisee'],store:true,desc:'Enter 4 camera feed embeds per laundromat; each franchisee sees only their store.',fname:'CCTV',fdesc:'Live camera feeds for your laundromat.'},
-  {icon:'✍️',name:'NDA',href:'laundre-nda-admin.html',roles:['admin'],updated:true,desc:'Every signed non-disclosure agreement — signer, role, date and IP — with a downloadable executed PDF for each.'}
+  {icon:'ℹ️',name:'About',href:'laundre-about.html',roles:['admin','franchisee','investor'],store:true,updated:true,desc:'Laundromat details, lease terms and key contacts for each site.',fname:'About this store',fdesc:'Your laundromat details, lease terms and key contacts.'},
+  {icon:'🛡️',name:'Insurance',href:'laundre-insurance.html',roles:['admin','franchisee','investor'],store:true,updated:true,desc:'Certificates of currency uploaded for each laundromat.',fname:'Insurance',fdesc:'The certificate of currency on file for your laundromat.'},
+  {icon:'✍️',name:'NDA',href:'laundre-nda-admin.html',roles:['admin'],updated:true,desc:'Every signed non-disclosure agreement — signer, role, date and IP — with a downloadable executed PDF for each.'},
+  {icon:'🗂️',name:'Activity Log',href:'laundre-activity.html',roles:['admin'],updated:true,desc:'Full audit trail — logins, admin actions, franchisee browsing and record changes across the portal.'}
 ];
 function renderTiles(role){
   const grid=document.getElementById('grid');
@@ -424,6 +427,8 @@ function renderStats(){
 }
 
 /* ---------- Admin alerts (Bubblepay, investors, onboarding follow-ups) ---------- */
+function dismissedAlerts(){try{var a=JSON.parse(localStorage.getItem('laundre_dismissed_alerts')||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}}
+function dismissAlert(key){try{var d=dismissedAlerts();if(d.indexOf(key)<0){d.push(key);localStorage.setItem('laundre_dismissed_alerts',JSON.stringify(d));}}catch(e){}}
 async function renderAlerts(){
   var host=document.getElementById('alerts'); if(!host) return;
   var out=[];
@@ -442,12 +447,17 @@ async function renderAlerts(){
     var due=(ob||[]).filter(function(o){return o.nda_signed_at && o.contact_due_at && (new Date(o.contact_due_at)-new Date())/864e5 <= 3 && o.crm_stage!=='pending_approval' && o.crm_stage!=='approved';});
     if(due.length){ out.push({cls:'warn',icon:'⏰',txt:due.length+' onboarding follow-up'+(due.length>1?'s are':' is')+' due within 3 days (14-day contact).',href:'laundre-onboarding.html',cta:'Open tracker'}); }
   }catch(e){}
+  var dis=dismissedAlerts(); out=out.filter(function(a){return dis.indexOf(a.txt)<0;});
   if(!out.length){host.innerHTML='';return;}
   host.innerHTML='<div style="margin:6px 0 20px">'+out.map(function(a){
     var bg=a.cls==='warn'?'#FBE9E2':'#E7EFE9', bd=a.cls==='warn'?'#e6cabb':'#bcd8c4', cl=a.cls==='warn'?'#9a3a22':'#2f6b46';
-    return '<a href="'+a.href+'" style="display:flex;align-items:center;gap:12px;text-decoration:none;background:'+bg+';border:1px solid '+bd+';color:'+cl+';border-radius:12px;padding:12px 16px;margin-bottom:10px;font-size:14px;font-weight:600">'
-      +'<span style="font-size:18px">'+a.icon+'</span><span style="flex:1">'+esc(a.txt)+'</span><span style="font-weight:700;white-space:nowrap">'+esc(a.cta)+' →</span></a>';
+    return '<div class="cb-alert" data-key="'+esc(a.txt)+'" style="display:flex;align-items:center;gap:12px;background:'+bg+';border:1px solid '+bd+';color:'+cl+';border-radius:12px;padding:12px 16px;margin-bottom:10px;font-size:14px;font-weight:600">'
+      +'<span style="font-size:18px">'+a.icon+'</span>'
+      +'<a href="'+a.href+'" style="flex:1;display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit"><span style="flex:1">'+esc(a.txt)+'</span><span style="font-weight:700;white-space:nowrap">'+esc(a.cta)+' →</span></a>'
+      +'<button class="cb-x" title="Dismiss" aria-label="Dismiss" style="background:transparent;border:none;color:inherit;font-size:17px;line-height:1;cursor:pointer;opacity:.65;padding:2px 4px">✕</button>'
+      +'</div>';
   }).join('')+'</div>';
+  host.querySelectorAll('.cb-alert').forEach(function(el){var x=el.querySelector('.cb-x');if(x)x.onclick=function(e){e.preventDefault();e.stopPropagation();dismissAlert(el.dataset.key);el.remove();};});
 }
 
 /* ---------- Sales dashboard (admin only) ---------- */

@@ -20,9 +20,15 @@ class MaintenanceController extends Controller {
         $loc = (int)($data['location_id'] ?? 0);
         if (!$loc || !in_array($loc, $u->locationIds())) $loc = (int)$u->location_id;
         abort_if(!$loc, 422, 'No store assigned');
-        return MaintenanceLog::updateOrCreate(
+        $log = MaintenanceLog::updateOrCreate(
             ['location_id'=>$loc,'date'=>$data['date']],
             ['user_id'=>$u->id,'by'=>$u->name,'items'=>$data['items']??[], 'notes'=>$data['notes']??null,'issues'=>$data['issues']??null,'photos'=>$data['photos']??[],'geo'=>$data['geo']??null]
         );
+        if ($log->wasRecentlyCreated) {
+            \App\Services\AdminNotifier::notify('maintenance_completed',
+                'Maintenance completed at '.(\App\Models\Location::find($loc)?->name ?? 'Laundromat').' by '.$u->name,
+                ['location'=>\App\Models\Location::find($loc)?->name,'by'=>$u->name,'date'=>$data['date'],'issues'=>$data['issues']??null]);
+        }
+        return $log;
     }
 }

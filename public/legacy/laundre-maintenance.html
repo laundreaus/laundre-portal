@@ -77,6 +77,17 @@
   .replist .rl b{display:block;color:var(--green-d);font-size:14px;} .replist .rl span{color:#8a9790;font-size:12px;}
   .replist .rr{display:flex;align-items:center;gap:8px;white-space:nowrap;} .replist .open{color:var(--accent);font-weight:700;font-size:13px;}
   .replist .rpill{border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;} .replist .rpill.iss{background:#F5E3DB;color:#B4472F;} .replist .rpill.ph{background:#EDF1EC;color:#2f6b46;}
+  /* month calendar */
+  .calbar{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:12px;}
+  .calbar .calm{font-size:15px;font-weight:800;color:var(--green-d);min-width:170px;text-align:center;}
+  .calbar .btn{padding:7px 13px;}
+  .cal-dows{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+  .cal-dows div{text-align:center;font-size:10.5px;font-weight:700;color:#8a9790;text-transform:uppercase;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cal-cell{aspect-ratio:1/1;border:1px solid var(--cream-line);border-radius:9px;display:flex;align-items:flex-start;justify-content:flex-end;padding:5px 7px;font-size:12px;font-weight:600;color:#8a9790;background:#fff;}
+  .cal-cell.empty{border:none;background:transparent;}
+  .cal-cell.done{background:#DDEEE1;border-color:#a9cdb4;color:#2f6b46;}
+  .cal-cell.iss{background:#F6E5DA;border-color:#e2bda9;color:#B4472F;}
 </style>
 </head>
 <body>
@@ -120,7 +131,7 @@ function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function laundromats(){return LOCS;}
 function locName(id){const l=LOCS.find(x=>x.id==id);return l?l.name:(id||'—');}
-function findSub(locId,date){return LOGS.find(x=>x.locationId===locId && x.date===date);}
+function findSub(locId,date){return LOGS.find(x=>String(x.locationId)===String(locId) && x.date===date);}
 function dayLabel(ds){const d=new Date(ds+'T00:00');return d.toLocaleDateString('en-AU',{weekday:'short'})+' '+d.getDate();}
 function guideVisible(g){ if(window.__FIXED_LOC) return g.visibility==='all'||(''+g.visibility)===(''+window.__FIXED_LOC); if(ADMIN) return true; return g.visibility==='all'||(''+g.visibility)===(''+ME.locationId); }
 
@@ -188,19 +199,16 @@ function renderAdmin(){
   const main=document.getElementById('main');
   const locs=laundromats(); const today=todayStr();
   const doneToday=locs.filter(l=>findSub(l.id,today)).length;
-  const gaps={}; locs.forEach(l=>gaps[l.id]=daysSince(lastSubDate(l.id)));
-  const overdue=locs.filter(l=>gaps[l.id]>=2);
   let h='<h2>Maintenance</h2><div class="sub">Machine &amp; technology guides, plus maintenance logs across all laundromats · '+doneToday+' of '+locs.length+' logged today</div>';
-  if(overdue.length){ h+='<div class="alert">⚠ '+overdue.length+' store'+(overdue.length>1?'s':'')+' overdue — no maintenance log for 2+ days: '
-    +overdue.map(l=>esc(l.name)+' ('+(gaps[l.id]===Infinity?'never':gaps[l.id]+' days')+')').join(' · ')+'</div>'; }
   // guides mgmt
   h+='<div class="card"><h3>Guides &amp; Instructions <span class="spacer"></span><button class="btn btn-green" id="addGuide" style="padding:7px 13px;font-size:12.5px">＋ Add guide</button></h3><div id="guideList"></div></div>';
+  h+=monthCalHtml();
   // submissions matrix
   const days=[];for(let i=0;i<10;i++){const d=new Date();d.setDate(d.getDate()-i);days.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));}
   h+='<div class="card" style="padding:0;overflow:hidden"><h3 style="padding:18px 20px 0">Maintenance Logs</h3>';
   if(locs.length){
     h+='<div class="matrix" style="border:none"><table><thead><tr><th class="l">Laundromat</th>'+days.map(d=>'<th>'+dayLabel(d)+'</th>').join('')+'</tr></thead><tbody>';
-    locs.forEach(l=>{const badge=gaps[l.id]>=2?' <span class="warn">⚠ '+(gaps[l.id]===Infinity?'never':gaps[l.id]+'d')+'</span>':'';h+='<tr><td class="l">'+esc(l.name)+badge+'</td>'+days.map(d=>{const s=findSub(l.id,d);if(s){return '<td><span class="mk yes'+(s.issues?' iss':'')+'" data-loc="'+l.id+'" data-date="'+d+'">✓</span></td>';}return '<td><span class="mk no">✗</span></td>';}).join('')+'</tr>';});
+    locs.forEach(l=>{h+='<tr><td class="l">'+esc(l.name)+'</td>'+days.map(d=>{const s=findSub(l.id,d);if(s){return '<td><span class="mk yes'+(s.issues?' iss':'')+'" data-loc="'+l.id+'" data-date="'+d+'">✓</span></td>';}return '<td><span class="mk no">✗</span></td>';}).join('')+'</tr>';});
     h+='</tbody></table></div><div class="sub" style="padding:12px 20px 18px;margin:0">✓ logged · ✗ none · orange = issue. Click a ✓ for detail.</div>';
   } else h+='<div class="empty">No laundromats yet.</div>';
   h+='</div>';
@@ -221,9 +229,32 @@ function renderAdmin(){
   }
   main.innerHTML=h;
   renderGuideList();
+  wireCal();
   document.getElementById('addGuide').onclick=()=>openGuideEditor(null);
   main.querySelectorAll('.mk.yes').forEach(b=>b.onclick=()=>openLogDetail(b.dataset.loc,b.dataset.date));
   main.querySelectorAll('.reprow').forEach(b=>b.onclick=()=>openLogDetail(b.dataset.loc,b.dataset.date));
+}
+/* ---- Month calendar (green = maintenance logged, orange = an issue that day) ---- */
+var calDate=(function(){var d=new Date();d.setDate(1);return d;})();
+function calScopeLogs(){var loc=window.__FIXED_LOC;return loc?LOGS.filter(function(x){return String(x.locationId)===String(loc);}):LOGS;}
+function monthCalHtml(){
+  var y=calDate.getFullYear(), m=calDate.getMonth();
+  var first=new Date(y,m,1), startDow=(first.getDay()+6)%7, dim=new Date(y,m+1,0).getDate();
+  var done={}, iss={};
+  calScopeLogs().forEach(function(x){var d=new Date(x.date+'T00:00');if(d.getFullYear()===y&&d.getMonth()===m){done[d.getDate()]=true;if(x.issues)iss[d.getDate()]=true;}});
+  var cells='';
+  for(var i=0;i<startDow;i++)cells+='<div class="cal-cell empty"></div>';
+  for(var day=1;day<=dim;day++){var cls=iss[day]?'iss':(done[day]?'done':'');cells+='<div class="cal-cell '+cls+'"><span>'+day+'</span></div>';}
+  return '<div class="card"><h3>Maintenance calendar</h3>'
+    +'<div class="calbar"><button class="btn btn-ghost" id="calPrev">←</button><div class="calm">'+first.toLocaleDateString('en-AU',{month:'long',year:'numeric'})+'</div><button class="btn btn-ghost" id="calNext">→</button></div>'
+    +'<div class="cal-dows"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>'
+    +'<div class="cal-grid">'+cells+'</div>'
+    +'<div class="sub" style="margin-top:10px">Green = maintenance logged · orange = an issue was flagged. Use ← → to change month.</div></div>';
+}
+function wireCal(){
+  var p=document.getElementById('calPrev'), n=document.getElementById('calNext');
+  if(p)p.onclick=function(){calDate.setMonth(calDate.getMonth()-1);renderAdmin();};
+  if(n)n.onclick=function(){calDate.setMonth(calDate.getMonth()+1);renderAdmin();};
 }
 function renderGuideList(){
   const el=document.getElementById('guideList');

@@ -20,6 +20,7 @@ class LocationController extends Controller {
             'lat'=>'nullable|numeric','lng'=>'nullable|numeric',
             'radius'=>'nullable|numeric','unit'=>'nullable|in:km,m',
             'status'=>'nullable|in:active,inactive','date_approved'=>'nullable|date','notes'=>'nullable|string',
+            'about'=>'nullable|array','modules'=>'nullable|array',
         ]);
     }
 }

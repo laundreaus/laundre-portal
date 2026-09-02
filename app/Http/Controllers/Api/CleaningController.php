@@ -22,10 +22,16 @@ class CleaningController extends Controller {
         $loc = (int)($data['location_id'] ?? 0);
         if (!$loc || !in_array($loc, $u->locationIds())) $loc = (int)$u->location_id;
         abort_if(!$loc, 422, 'No store assigned');
-        return CleaningLog::updateOrCreate(
+        $log = CleaningLog::updateOrCreate(
             ['location_id'=>$loc,'date'=>$data['date']],
             ['user_id'=>$u->id,'by'=>$u->name,'items'=>$data['items']??[], 'labels'=>$data['labels']??[], 'notes'=>$data['notes']??null,'issues'=>$data['issues']??null,'photos'=>$data['photos']??[],'geo'=>$data['geo']??null]
         );
+        if ($log->wasRecentlyCreated) {
+            \App\Services\AdminNotifier::notify('laundromat_cleaned',
+                (\App\Models\Location::find($loc)?->name ?? 'Laundromat').' cleaned by '.$u->name,
+                ['location'=>\App\Models\Location::find($loc)?->name,'by'=>$u->name,'date'=>$data['date'],'issues'=>$data['issues']??null]);
+        }
+        return $log;
     }
     private const DEFAULT_ITEMS = ['Bins emptied','Lint traps emptied','Floors mopped','Surfaces wiped','Machines & benches wiped'];
     // Per-laundromat cleaning checklist. Each store starts from the shared template and can be customised.

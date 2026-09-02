@@ -11,18 +11,42 @@
   html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
   button{font-family:inherit;cursor:pointer;}
   .top{background:var(--green-d);color:#EAF0EC;padding:12px 22px;display:flex;align-items:center;gap:14px;}
-  .top a.back{color:#EAF0EC;text-decoration:none;font-size:13px;font-weight:700;border:1px solid rgba(255,255,255,.25);border-radius:7px;padding:7px 12px;}
-  .top a.back:hover{background:rgba(255,255,255,.1);}
+  .top a.back,.top button.hbtn{color:#EAF0EC;text-decoration:none;font-size:13px;font-weight:700;border:1px solid rgba(255,255,255,.25);border-radius:7px;padding:7px 12px;background:transparent;}
+  .top a.back:hover,.top button.hbtn:hover{background:rgba(255,255,255,.1);}
   .top .name{font-size:17px;font-weight:800;} .top .addr{font-size:12px;color:#b9c7bf;margin-top:1px;}
   .top .spacer{flex:1;}
-  .tabs{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;gap:2px;padding:0 14px;overflow-x:auto;position:sticky;top:0;z-index:10;}
-  .tab{border:none;background:transparent;color:#5f7469;font-size:13.5px;font-weight:700;padding:13px 15px;border-bottom:3px solid transparent;white-space:nowrap;}
-  .tab:hover{color:var(--green-d);}
-  .tab.active{color:var(--green-d);border-bottom-color:var(--accent);}
-  .frames{position:relative;}
-  iframe{display:none;width:100%;border:none;background:var(--cream);height:calc(100vh - 118px);}
-  iframe.active{display:block;}
+  main{max-width:1120px;margin:0 auto;padding:22px;}
+  /* module grid: 6 across */
+  .grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;}
+  @media(max-width:1000px){.grid{grid-template-columns:repeat(4,1fr);}}
+  @media(max-width:680px){.grid{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:460px){.grid{grid-template-columns:repeat(2,1fr);}}
+  .tile{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:16px 10px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:transform .08s,box-shadow .08s;}
+  .tile:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(51,71,61,.12);border-color:#cdbfa6;}
+  .tile .ic{font-size:26px;line-height:1;} .tile .lb{font-size:12.5px;font-weight:700;color:var(--green-d);line-height:1.2;}
+  .hint{color:#8a9790;font-size:12.5px;margin:2px 0 16px;}
+  /* module viewer */
+  .viewer{display:none;}
+  .viewer.show{display:block;}
+  .vbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  .vbar .vt{font-size:16px;font-weight:800;color:var(--green-d);}
+  iframe{width:100%;border:none;background:var(--cream);height:calc(100vh - 180px);border:1px solid var(--cream-line);border-radius:12px;}
   .loading{padding:50px;text-align:center;color:#8a9790;font-size:14px;}
+  /* setup modal */
+  #ov{position:fixed;inset:0;background:rgba(30,42,36,.55);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow-y:auto;padding:44px 16px;}
+  #ov.show{display:flex;}
+  .modal{background:var(--cream);border-radius:14px;width:560px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .mhead{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--cream-line);} .mhead h3{margin:0;font-size:16px;color:var(--green-d);} .mhead .spacer{flex:1;}
+  .close{background:transparent;border:none;font-size:22px;color:#8a9790;cursor:pointer;}
+  .mbody{padding:14px 20px;} .mbody p{font-size:12.5px;color:#6b7d73;margin:0 0 12px;}
+  .togrow{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--cream-line);border-radius:9px;margin-bottom:8px;background:#fff;}
+  .togrow .ic{font-size:18px;} .togrow .lb{flex:1;font-size:13.5px;font-weight:600;}
+  .sw{position:relative;width:42px;height:24px;flex:0 0 auto;}
+  .sw input{opacity:0;width:0;height:0;} .sw .tk{position:absolute;inset:0;background:#d8d0c0;border-radius:20px;transition:.2s;}
+  .sw .tk:before{content:'';position:absolute;height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
+  .sw input:checked + .tk{background:var(--green);} .sw input:checked + .tk:before{transform:translateX(18px);}
+  .mfoot{display:flex;gap:10px;justify-content:flex-end;padding:0 20px 18px;} .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  #setmsg{font-size:12px;color:#6b7d73;flex:1;align-self:center;}
 </style>
 </head>
 <body>
@@ -30,51 +54,100 @@
   <a class="back" href="laundre-portal.html">← Laundromats</a>
   <div><div class="name" id="sName">Laundromat</div><div class="addr" id="sAddr"></div></div>
   <span class="spacer"></span>
+  <button class="hbtn" id="setupBtn">⚙ Set up modules</button>
 </div>
-<div class="tabs" id="tabs"></div>
-<div class="frames" id="frames"><div class="loading" id="ld">Loading…</div></div>
+<main id="main"><div class="loading" id="ld">Loading…</div></main>
+
+<div id="ov"><div class="modal">
+  <div class="mhead"><h3>Modules for this laundromat</h3><span class="spacer"></span><button class="close" id="setClose">×</button></div>
+  <div class="mbody"><p>Turn modules on or off for this laundromat. Off modules are hidden from the laundromat page.</p><div id="togs"></div></div>
+  <div class="mfoot"><span id="setmsg"></span><button class="btn btn-ghost" id="setCancel">Cancel</button><button class="btn btn-green" id="setSave">Save</button></div>
+</div></div>
+
 <script>
 var CSRF=window.LAUNDRE_CSRF||'';
-function apiGet(u){return fetch(u,{headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF},credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function hdrs(j){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(j)h['Content-Type']='application/json';return h;}
+function apiGet(u){return fetch(u,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(b)}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
 var LOC=new URLSearchParams(location.search).get('loc')||'';
-// tool page (clean path, no .html so the query string survives) + embed flag
-var TABS=[
-  {k:'dashboard', label:'Dashboard',        page:'laundre-store-dashboard'},
-  {k:'maint',     label:'Maintenance',      page:'laundre-maintenance'},
-  {k:'clean',     label:'Cleaning',         page:'laundre-cleaning'},
-  {k:'cctv',      label:'CCTV',             page:'laundre-cctv'},
-  {k:'book',      label:'Bookkeeping',      page:'laundre-bookkeeping'},
-  {k:'support',   label:'Support tickets',  page:'laundre-support'},
-  {k:'checklist', label:'Opening checklist',page:'laundre-checklist'},
-  {k:'onboard',   label:'Onboarding',       page:'laundre-onboarding-content'}
+// canonical module set
+var MODS=[
+  {k:'dashboard', label:'Dashboard',        ic:'📊', page:'laundre-store-dashboard'},
+  {k:'profit',    label:'Profit',           ic:'💰', page:'laundre-profit'},
+  {k:'about',     label:'About',            ic:'ℹ️', page:'laundre-about'},
+  {k:'maintenance',label:'Maintenance',     ic:'🛠️', page:'laundre-maintenance'},
+  {k:'cleaning',  label:'Cleaning',         ic:'🧹', page:'laundre-cleaning'},
+  {k:'machines',  label:'Machines',         ic:'🌀', page:'laundre-machines'},
+  {k:'cctv',      label:'CCTV',             ic:'📹', page:'laundre-cctv'},
+  {k:'bookkeeping',label:'Bookkeeping',     ic:'📒', page:'laundre-bookkeeping'},
+  {k:'insurance', label:'Insurance',        ic:'🛡️', page:'laundre-insurance'},
+  {k:'files',     label:'Files',            ic:'🗂️', page:'laundre-files'},
+  {k:'support',   label:'Support',          ic:'🆘', page:'laundre-support'},
+  {k:'checklist', label:'Opening checklist',ic:'✅', page:'laundre-checklist'},
+  {k:'onboard',   label:'Onboarding',       ic:'🎓', page:'laundre-onboarding-content'},
+  {k:'connected', label:'Connected systems',ic:'🔌', page:'laundre-connected'}
 ];
-var loaded={};
-function show(k){
-  TABS.forEach(function(t){
-    var btn=document.getElementById('tab_'+t.k), fr=document.getElementById('fr_'+t.k);
-    var on=(t.k===k);
-    btn.classList.toggle('active',on);
-    if(on&&!loaded[t.k]){ fr.src=t.page+'?loc='+encodeURIComponent(LOC)+'&embed=1'; loaded[t.k]=true; }
-    fr.classList.toggle('active',on);
-  });
-  try{localStorage.setItem('laundromat_tab_'+LOC,k);}catch(e){}
+var LOCOBJ=null, MODCFG={};
+function on(k){ if(!MODCFG||!(k in MODCFG)) return true; return !!MODCFG[k]; }
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function renderGrid(){
+  var m=document.getElementById('main');
+  var vis=MODS.filter(function(t){return on(t.k);});
+  var h='<div class="hint">Choose a module to open. Use ⚙ Set up modules to show or hide modules for this laundromat.</div>';
+  h+='<div class="grid" id="grid">'+vis.map(function(t){return '<div class="tile" data-k="'+t.k+'"><div class="ic">'+t.ic+'</div><div class="lb">'+esc(t.label)+'</div></div>';}).join('')+'</div>';
+  h+='<div class="viewer" id="viewer"><div class="vbar"><button class="btn btn-ghost" id="vback">← Modules</button><span class="vt" id="vtitle"></span></div><div id="vframe"></div></div>';
+  m.innerHTML=h;
+  document.querySelectorAll('.tile').forEach(function(el){el.onclick=function(){openModule(el.dataset.k);};});
+  document.getElementById('vback').onclick=closeModule;
 }
-function build(){
-  var tabsEl=document.getElementById('tabs'), fr=document.getElementById('frames');
-  document.getElementById('ld').remove();
-  tabsEl.innerHTML=TABS.map(function(t){return '<button class="tab" id="tab_'+t.k+'">'+t.label+'</button>';}).join('');
-  fr.innerHTML=TABS.map(function(t){return '<iframe id="fr_'+t.k+'" title="'+t.label+'"></iframe>';}).join('');
-  TABS.forEach(function(t){document.getElementById('tab_'+t.k).onclick=function(){show(t.k);};});
-  var start='dashboard';try{var sv=localStorage.getItem('laundromat_tab_'+LOC);if(sv&&TABS.some(function(t){return t.k===sv;}))start=sv;}catch(e){}
-  show(start);
+function openModule(k){
+  var t=MODS.find(function(x){return x.k===k;}); if(!t)return;
+  document.getElementById('grid').style.display='none';
+  document.getElementById('vtitle').textContent=t.label;
+  document.getElementById('vframe').innerHTML='<iframe id="mframe" title="'+esc(t.label)+'"></iframe>';
+  document.getElementById('mframe').src=t.page+'?loc='+encodeURIComponent(LOC)+'&embed=1';
+  document.getElementById('viewer').classList.add('show');
+  try{localStorage.setItem('laundromat_mod_'+LOC,k);}catch(e){}
 }
-if(!LOC){document.getElementById('frames').innerHTML='<div class="loading">No laundromat selected. <a href="laundre-portal.html">Back to portal</a></div>';}
+function closeModule(){
+  document.getElementById('viewer').classList.remove('show');
+  document.getElementById('vframe').innerHTML='';
+  document.getElementById('grid').style.display='';
+  try{localStorage.removeItem('laundromat_mod_'+LOC);}catch(e){}
+}
+/* ---- setup modal ---- */
+function openSetup(){
+  var box=document.getElementById('togs');
+  box.innerHTML=MODS.map(function(t){return '<div class="togrow"><span class="ic">'+t.ic+'</span><span class="lb">'+esc(t.label)+'</span>'
+    +'<label class="sw"><input type="checkbox" data-k="'+t.k+'"'+(on(t.k)?' checked':'')+'><span class="tk"></span></label></div>';}).join('');
+  document.getElementById('setmsg').textContent='';
+  document.getElementById('ov').classList.add('show');
+}
+function saveSetup(){
+  var cfg={};
+  document.querySelectorAll('#togs input[data-k]').forEach(function(c){cfg[c.dataset.k]=c.checked;});
+  var msg=document.getElementById('setmsg'); msg.style.color='#6b7d73'; msg.textContent='Saving…';
+  apiSend('/locations-api/'+LOC,'PUT',{name:LOCOBJ.name,modules:cfg}).then(function(l){
+    LOCOBJ=l; MODCFG=l.modules||{}; msg.style.color='#2f6b46'; msg.textContent='Saved ✓';
+    document.getElementById('ov').classList.remove('show'); renderGrid();
+  }).catch(function(e){msg.style.color='#B4472F';msg.textContent='Could not save: '+e.message;});
+}
+document.getElementById('setupBtn').onclick=openSetup;
+document.getElementById('setClose').onclick=function(){document.getElementById('ov').classList.remove('show');};
+document.getElementById('setCancel').onclick=function(){document.getElementById('ov').classList.remove('show');};
+document.getElementById('setSave').onclick=saveSetup;
+
+if(!LOC){document.getElementById('main').innerHTML='<div class="loading">No laundromat selected. <a href="laundre-portal.html">Back to portal</a></div>';}
 else{
   apiGet('/locations-api').then(function(list){
-    var loc=(list||[]).find(function(l){return String(l.id)===String(LOC);});
-    if(loc){document.getElementById('sName').textContent=loc.name||'Laundromat';document.getElementById('sAddr').textContent=loc.address||'';document.title='Laundré · '+(loc.name||'Laundromat');}
-    build();
-  }).catch(function(){build();});
+    LOCOBJ=(list||[]).find(function(l){return String(l.id)===String(LOC);})||{name:'Laundromat'};
+    MODCFG=LOCOBJ.modules||{};
+    document.getElementById('sName').textContent=LOCOBJ.name||'Laundromat';
+    document.getElementById('sAddr').textContent=LOCOBJ.address||'';
+    document.title='Laundré · '+(LOCOBJ.name||'Laundromat');
+    document.getElementById('ld').remove();
+    renderGrid();
+  }).catch(function(){document.getElementById('main').innerHTML='<div class="loading">Could not load this laundromat.</div>';});
 }
 </script>
 </body>

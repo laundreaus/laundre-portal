@@ -29,7 +29,8 @@ class NdaController extends Controller
     {
         abort_unless($r->user()->isAdmin(), 403);
         $obs = Onboarding::whereNotNull('nda_signed_at')->get()->keyBy('user_id');
-        $users = User::whereNotNull('nda_signed_at')->orderByDesc('nda_signed_at')->get();
+        // withTrashed so signed NDAs of deleted users are still listed (NDAs are retained after deletion).
+        $users = User::withTrashed()->whereNotNull('nda_signed_at')->orderByDesc('nda_signed_at')->get();
         return $users->map(function (User $u) use ($obs) {
             $o = $obs->get($u->id);
             return [
@@ -50,9 +51,11 @@ class NdaController extends Controller
     }
 
     /** Admin: download the executed NDA for one signer as a PDF. */
-    public function pdf(Request $r, User $user)
+    public function pdf(Request $r, $user)
     {
         abort_unless($r->user()->isAdmin(), 403);
+        // withTrashed so a deleted signer's NDA PDF is still downloadable.
+        $user = User::withTrashed()->findOrFail($user);
         abort_unless($user->nda_signed_at, 404, 'This user has not signed an NDA.');
 
         $o = Onboarding::where('user_id', $user->id)->first();

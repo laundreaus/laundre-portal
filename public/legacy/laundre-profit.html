@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Profit</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);window.__FIXED_LOC=q.get('loc')||'';window.__EMBED=q.get('embed')==='1';if(window.__EMBED){document.addEventListener('DOMContentLoaded',function(){var s=document.createElement('style');s.textContent='header{display:none!important}main{padding-top:10px!important}';document.head.appendChild(s);});}}catch(e){}})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;--red:#B4472F;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;}
+  .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;}
+  .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  input,select{font-family:inherit;font-size:13.5px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:8px 10px;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;}
+  header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:1050px;margin:0 auto;padding:16px 22px 60px;}
+  .toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .seg{display:inline-flex;background:#EFEADD;border:1px solid var(--cream-line);border-radius:9px;overflow:hidden;}
+  .seg button{background:transparent;border:none;padding:8px 15px;font-size:13px;font-weight:700;color:#6b8073;} .seg button.on{background:var(--green);color:#fff;}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+  .stat{background:#fff;border:1px solid var(--cream-line);border-radius:12px;padding:14px 16px;}
+  .stat .n{font-size:21px;font-weight:800;} .stat .l{font-size:11.5px;color:#7a8b84;margin-top:2px;}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:16px 18px;margin-bottom:18px;}
+  .card h3{margin:0 0 12px;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);}
+  table{width:100%;border-collapse:collapse;} th,td{padding:8px 10px;font-size:13px;border-bottom:1px solid #f0ece2;text-align:right;} th:first-child,td:first-child{text-align:left;}
+  th{background:var(--green-d);color:#EAF0EC;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;}
+  td.pos{color:#2f6b46;font-weight:700;} td.neg{color:var(--red);font-weight:700;}
+  .exprow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px;}
+  .exprow label{font-size:11px;color:#5f7469;font-weight:600;display:block;margin-bottom:3px;}
+  .xdel{background:transparent;border:none;color:var(--red);font-size:15px;cursor:pointer;}
+  .empty{padding:26px;text-align:center;color:#8a9790;}
+</style>
+</head>
+<body>
+<header><span class="ttl">Profit</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-portal.html">← Portal</a></header>
+<main>
+  <div class="toolbar">
+    <div class="seg" id="gran"><button data-g="month" class="on">Monthly</button><button data-g="year">Yearly</button></div>
+    <span class="spacer"></span>
+    <span style="font-size:11.5px;color:#8a9790">Revenue is shown ex‑GST · expenses entered ex‑GST</span>
+  </div>
+  <div id="body"><div class="empty">Loading…</div></div>
+  <div class="card">
+    <h3>Add an expense</h3>
+    <div class="exprow">
+      <div><label>Month</label><input type="month" id="e_month"></div>
+      <div><label>Category</label><input id="e_cat" placeholder="e.g. Rent, Utilities, Wages" style="width:190px"></div>
+      <div><label>Amount (ex GST)</label><input type="number" id="e_amt" step="0.01" min="0" style="width:130px"></div>
+      <button class="btn btn-green" id="e_add">Add expense</button>
+    </div>
+    <div id="emsg" style="font-size:12.5px;color:var(--red);margin-top:8px;min-height:14px"></div>
+    <div style="font-size:11.5px;color:#8a9790;margin-top:6px">Manual for now — this will auto‑sync from Xero once your organisation is connected.</div>
+  </div>
+</main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(){return {'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};}
+function apiGet(u){return fetch(u,{headers:hdrs(),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function apiSend(u,m,b){return fetch(u,{method:m,headers:Object.assign({'Content-Type':'application/json'},hdrs()),credentials:'same-origin',body:b?JSON.stringify(b):null}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();});}
+var LOC=window.__FIXED_LOC||new URLSearchParams(location.search).get('loc')||'';
+var GRAN='month', SALESREV={}, EXP=[], EXPBY={};
+function d10(s){return (''+s).slice(0,10);}
+function money(n){return (n<0?'-$':'$')+Math.abs(Math.round(n)).toLocaleString('en-AU');}
+function monthKey(dateStr){return d10(dateStr).slice(0,7);}
+function load(){
+  if(!LOC){document.getElementById('body').innerHTML='<div class="empty">No laundromat selected.</div>';return;}
+  Promise.all([
+    apiGet('/sales-api?location_id='+encodeURIComponent(LOC)+'&loc='+encodeURIComponent(LOC)),
+    apiGet('/expenses-api?loc='+encodeURIComponent(LOC))
+  ]).then(function(res){
+    SALESREV={}; (res[0]||[]).forEach(function(s){var m=monthKey(s.date); SALESREV[m]=(SALESREV[m]||0)+(+s.revenue||0);});
+    EXP=res[1]||[]; EXPBY={}; EXP.forEach(function(e){EXPBY[e.month]=(EXPBY[e.month]||0)+(+e.amount||0);});
+    render();
+  }).catch(function(e){document.getElementById('body').innerHTML='<div class="empty">Could not load: '+e.message+'</div>';});
+}
+function render(){
+  var el=document.getElementById('body');
+  var months=Object.keys(SALESREV).concat(Object.keys(EXPBY));
+  months=months.filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
+  if(!months.length){el.innerHTML='<div class="empty">No sales or expenses yet for this laundromat.</div>';return;}
+  var rows, totRev=0, totExp=0;
+  if(GRAN==='month'){
+    rows=months.map(function(m){var rev=(SALESREV[m]||0)/1.1, exp=EXPBY[m]||0, pr=rev-exp; totRev+=rev; totExp+=exp;
+      return {k:m,label:new Date(m+'-01T00:00').toLocaleDateString('en-AU',{month:'short',year:'numeric'}),rev:rev,exp:exp,profit:pr};});
+  } else {
+    var byY={}; months.forEach(function(m){var y=m.slice(0,4); byY[y]=byY[y]||{rev:0,exp:0}; byY[y].rev+=(SALESREV[m]||0)/1.1; byY[y].exp+=(EXPBY[m]||0);});
+    rows=Object.keys(byY).sort().map(function(y){var o=byY[y]; totRev+=o.rev; totExp+=o.exp; return {k:y,label:y,rev:o.rev,exp:o.exp,profit:o.rev-o.exp};});
+  }
+  var totProfit=totRev-totExp;
+  var h='<div class="stats">'
+    +'<div class="stat"><div class="n" style="color:var(--green)">'+money(totRev)+'</div><div class="l">Revenue (ex GST)</div></div>'
+    +'<div class="stat"><div class="n" style="color:var(--accent)">'+money(totExp)+'</div><div class="l">Expenses</div></div>'
+    +'<div class="stat"><div class="n" style="color:'+(totProfit>=0?'#2f6b46':'#B4472F')+'">'+money(totProfit)+'</div><div class="l">Profit</div></div>'
+    +'<div class="stat"><div class="n">'+(totRev>0?Math.round(totProfit/totRev*100):0)+'%</div><div class="l">Margin</div></div>'
+    +'</div>';
+  h+='<div class="card"><h3>Revenue vs expenses · '+(GRAN==='month'?'monthly':'yearly')+'</h3>'
+    +'<table><thead><tr><th>'+(GRAN==='month'?'Month':'Year')+'</th><th>Revenue (ex GST)</th><th>Expenses</th><th>Profit</th><th>Margin</th></tr></thead><tbody>'
+    +rows.map(function(r){return '<tr><td>'+r.label+'</td><td>'+money(r.rev)+'</td><td>'+money(r.exp)+'</td><td class="'+(r.profit>=0?'pos':'neg')+'">'+money(r.profit)+'</td><td>'+(r.rev>0?Math.round(r.profit/r.rev*100):0)+'%</td></tr>';}).join('')
+    +'</tbody></table></div>';
+  // expense detail (manual entries, deletable)
+  if(EXP.length){
+    h+='<div class="card"><h3>Expense entries</h3><table><thead><tr><th>Month</th><th>Category</th><th>Amount</th><th></th></tr></thead><tbody>'
+      +EXP.slice().sort(function(a,b){return a.month<b.month?1:-1;}).map(function(e){return '<tr><td>'+e.month+'</td><td>'+esc(e.category||'—')+'</td><td>'+money(+e.amount||0)+'</td><td><button class="xdel" data-del="'+e.id+'">×</button></td></tr>';}).join('')
+      +'</tbody></table></div>';
+  }
+  el.innerHTML=h;
+  el.querySelectorAll('[data-del]').forEach(function(b){b.onclick=function(){if(confirm('Delete this expense?'))apiSend('/expenses-api/'+b.dataset.del,'DELETE').then(load).catch(function(e){alert(e.message);});};});
+}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+document.querySelectorAll('#gran button').forEach(function(b){b.onclick=function(){GRAN=b.dataset.g;document.querySelectorAll('#gran button').forEach(function(x){x.classList.toggle('on',x===b);});render();};});
+document.getElementById('e_add').onclick=function(){
+  var m=document.getElementById('e_month').value, cat=document.getElementById('e_cat').value.trim(), amt=+document.getElementById('e_amt').value;
+  var msg=document.getElementById('emsg'); msg.textContent='';
+  if(!m){msg.textContent='Pick a month.';return;} if(!(amt>0)){msg.textContent='Enter an amount.';return;}
+  apiSend('/expenses-api','POST',{location_id:Number(LOC),month:m,category:cat,amount:amt}).then(function(){document.getElementById('e_amt').value='';document.getElementById('e_cat').value='';load();}).catch(function(e){msg.textContent='Could not save: '+e.message;});
+};
+load();
+</script>
+</body>
+</html>

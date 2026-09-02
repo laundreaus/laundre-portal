@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Connected Systems</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);window.__FIXED_LOC=q.get('loc')||'';window.__EMBED=q.get('embed')==='1';if(window.__EMBED){document.addEventListener('DOMContentLoaded',function(){var s=document.createElement('style');s.textContent='header{display:none!important}main{padding-top:10px!important}';document.head.appendChild(s);});}}catch(e){}})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:840px;margin:0 auto;padding:18px 22px 60px;}
+  .sub{color:#7a8b84;font-size:13px;margin:0 0 18px;}
+  .sys{display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:18px 20px;margin-bottom:16px;}
+  .logo{width:46px;height:46px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;flex:0 0 auto;}
+  .sys .body{flex:1;} .sys h3{margin:0 0 3px;font-size:15px;} .sys p{margin:0;font-size:12.5px;color:#7a8b84;}
+  .status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border-radius:20px;padding:4px 11px;margin-top:9px;}
+  .status.on{background:#E1EDE4;color:#2f6b46;} .status.off{background:#F5EEE2;color:#9a7b48;}
+  .dot{width:8px;height:8px;border-radius:50%;} .dot.on{background:#2f6b46;} .dot.off{background:#c7a35f;}
+  .actions{display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+</style>
+</head>
+<body>
+<header><span class="ttl">Connected Systems</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-portal.html">← Portal</a></header>
+<main>
+  <p class="sub" id="sub">External systems connected to this laundromat.</p>
+
+  <div class="sys">
+    <div class="logo" style="background:#5B6EC8">B</div>
+    <div class="body">
+      <h3>Bubble Pay</h3>
+      <p>Payments &amp; transaction data. Sales feed into the dashboard and profit view.</p>
+      <div class="status on"><span class="dot on"></span> Connected · syncing</div>
+    </div>
+    <div class="actions"><a class="btn btn-ghost" href="laundre-store-dashboard.html">View data</a></div>
+  </div>
+
+  <div class="sys">
+    <div class="logo" style="background:#13B5EA">X</div>
+    <div class="body">
+      <h3>Xero</h3>
+      <p>Accounting. Each laundromat is its own Xero organisation — expenses sync into the Profit view.</p>
+      <div class="status off" id="xstat"><span class="dot off"></span> Not connected</div>
+    </div>
+    <div class="actions" id="xactions"></div>
+  </div>
+
+  <p style="font-size:11.5px;color:#8a9790;margin-top:6px">Fagor machine sync is managed on the Machines tab.</p>
+</main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(j){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(j)h['Content-Type']='application/json';return h;}
+function apiGet(u){return fetch(u,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:b?JSON.stringify(b):null}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+var LOC=window.__FIXED_LOC||new URLSearchParams(location.search).get('loc')||'';
+var ADMIN=(function(){try{var s=JSON.parse(localStorage.getItem('laundre_session')||'null');return !!(s&&s.role==='admin');}catch(e){return false;}})();
+function renderXero(st){
+  var stat=document.getElementById('xstat'), act=document.getElementById('xactions');
+  if(st.xero){
+    stat.className='status on'; stat.innerHTML='<span class="dot on"></span> Connected'+(st.xero_mode==='demo'?' · demo data':' · syncing');
+    act.innerHTML='<a class="btn btn-ghost" href="laundre-profit.html'+(LOC?('?loc='+encodeURIComponent(LOC)):'')+'">View in Profit</a>'+(ADMIN?'<button class="btn btn-ghost" id="xdisc">Disconnect</button>':'');
+    if(ADMIN){var d=document.getElementById('xdisc');if(d)d.onclick=function(){apiSend('/connections-api/xero-disconnect','POST',{location_id:Number(LOC)}).then(function(s){renderXero(s);}).catch(function(e){alert(e.message);});};}
+  } else {
+    stat.className='status off'; stat.innerHTML='<span class="dot off"></span> Not connected';
+    act.innerHTML=ADMIN?'<button class="btn btn-green" id="xconn">Connect Xero</button>':'<span style="font-size:11.5px;color:#8a9790">Not connected</span>';
+    if(ADMIN){document.getElementById('xconn').onclick=function(){
+      var b=document.getElementById('xconn'); b.textContent='Connecting…'; b.disabled=true;
+      apiSend('/connections-api/xero-demo','POST',{location_id:Number(LOC)}).then(function(s){renderXero(s);}).catch(function(e){b.disabled=false;b.textContent='Connect Xero';alert('Could not connect: '+e.message);});
+    };}
+  }
+}
+if(LOC){apiGet('/connections-api?loc='+encodeURIComponent(LOC)).then(renderXero).catch(function(){renderXero({xero:false});});}
+else{renderXero({xero:false});}
+</script>
+</body>
+</html>

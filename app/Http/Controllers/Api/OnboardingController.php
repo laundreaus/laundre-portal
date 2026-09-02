@@ -41,7 +41,13 @@ class OnboardingController extends Controller {
         $u->nda_signature   = $d['signature'];
         $u->nda_address     = $d['address'];
         if ($u->timeLimitedRole() && !$u->access_expires_at) { $u->access_expires_at = now()->addDays(21); }
+        $wasUnsigned = !$u->getOriginal('nda_signed_at');
         $u->save();
+        if ($wasUnsigned) {
+            \App\Services\AdminNotifier::notify('nda_signed',
+                'NDA signed by '.$d['typed_name'].' ('.$u->role.')',
+                ['user_id'=>$u->id,'name'=>$d['typed_name'],'role'=>$u->role,'email'=>$d['email']??$u->email,'ip'=>$r->ip()]);
+        }
 
         // Onboarding-role extras (franchisee / investor tracker)
         if ($u->isOnboarding()) {
