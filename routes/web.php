@@ -7,7 +7,8 @@ use App\Http\Controllers\Api\{UserController, LocationController, SettingControl
     CleaningController, MaintenanceController, DocumentController, GuideController, BookkeepingController,
     SupplierController, SaleController, FranchiseController, UploadController, MaintenanceDocController,
     OnboardingController, TaskController, CrmController, MembershipController, NdaController, InvestorController,
-    ActivityController, ExpenseController, MachineController, LocationFileController, ConnectionController};
+    ActivityController, ExpenseController, MachineController, LocationFileController, ConnectionController,
+    SiteProspectController};
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -134,6 +135,13 @@ Route::middleware('auth')->group(function () {
         Route::patch('/pipeline-api/{card}/move', [CrmController::class, 'moveCard']);
         Route::delete('/pipeline-api/{card}', [CrmController::class, 'destroyCard']);
         Route::put('/pipeline-columns-api', [CrmController::class, 'saveColumns']);
+
+        // Site acquisition pipeline (prospective centres) for the Site Analyzer.
+        Route::get('/site-prospects-api', [SiteProspectController::class, 'index']);
+        Route::post('/site-prospects-api', [SiteProspectController::class, 'store']);
+        Route::match(['put','patch'], '/site-prospects-api/{site_prospect}', [SiteProspectController::class, 'update']);
+        Route::patch('/site-prospects-api/{site_prospect}/move', [SiteProspectController::class, 'move']);
+        Route::delete('/site-prospects-api/{site_prospect}', [SiteProspectController::class, 'destroy']);
 
         Route::post('/documents-api', [DocumentController::class, 'store']);
         Route::match(['put','patch'], '/documents-api/{document}', [DocumentController::class, 'update']);
