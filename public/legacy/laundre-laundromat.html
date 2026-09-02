@@ -21,7 +21,7 @@
   @media(max-width:1000px){.grid{grid-template-columns:repeat(4,1fr);}}
   @media(max-width:680px){.grid{grid-template-columns:repeat(3,1fr);}}
   @media(max-width:460px){.grid{grid-template-columns:repeat(2,1fr);}}
-  .tile{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:16px 10px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:transform .08s,box-shadow .08s;}
+  .tile{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:16px 10px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:transform .08s,box-shadow .08s;text-decoration:none;color:inherit;}
   .tile:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(51,71,61,.12);border-color:#cdbfa6;}
   .tile .ic{font-size:26px;line-height:1;} .tile .lb{font-size:12.5px;font-weight:700;color:var(--green-d);line-height:1.2;}
   .hint{color:#8a9790;font-size:12.5px;margin:2px 0 16px;}
@@ -94,26 +94,9 @@ function renderGrid(){
   var m=document.getElementById('main');
   var vis=MODS.filter(function(t){return on(t.k);});
   var h='<div class="hint">Choose a module to open. Use ⚙ Set up modules to show or hide modules for this laundromat.</div>';
-  h+='<div class="grid" id="grid">'+vis.map(function(t){return '<div class="tile" data-k="'+t.k+'"><div class="ic">'+t.ic+'</div><div class="lb">'+esc(t.label)+'</div></div>';}).join('')+'</div>';
-  h+='<div class="viewer" id="viewer"><div class="vbar"><button class="btn btn-ghost" id="vback">← Modules</button><span class="vt" id="vtitle"></span></div><div id="vframe"></div></div>';
+  // Each tile navigates to the individual module page for this laundromat (no embedding).
+  h+='<div class="grid">'+vis.map(function(t){return '<a class="tile" href="'+t.page+'?loc='+encodeURIComponent(LOC)+'"><div class="ic">'+t.ic+'</div><div class="lb">'+esc(t.label)+'</div></a>';}).join('')+'</div>';
   m.innerHTML=h;
-  document.querySelectorAll('.tile').forEach(function(el){el.onclick=function(){openModule(el.dataset.k);};});
-  document.getElementById('vback').onclick=closeModule;
-}
-function openModule(k){
-  var t=MODS.find(function(x){return x.k===k;}); if(!t)return;
-  document.getElementById('grid').style.display='none';
-  document.getElementById('vtitle').textContent=t.label;
-  document.getElementById('vframe').innerHTML='<iframe id="mframe" title="'+esc(t.label)+'"></iframe>';
-  document.getElementById('mframe').src=t.page+'?loc='+encodeURIComponent(LOC)+'&embed=1';
-  document.getElementById('viewer').classList.add('show');
-  try{localStorage.setItem('laundromat_mod_'+LOC,k);}catch(e){}
-}
-function closeModule(){
-  document.getElementById('viewer').classList.remove('show');
-  document.getElementById('vframe').innerHTML='';
-  document.getElementById('grid').style.display='';
-  try{localStorage.removeItem('laundromat_mod_'+LOC);}catch(e){}
 }
 /* ---- setup modal ---- */
 function openSetup(){
