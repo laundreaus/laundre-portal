@@ -202,6 +202,7 @@ function renderAdmin(){
   let h='<h2>Maintenance</h2><div class="sub">Machine &amp; technology guides, plus maintenance logs across all laundromats · '+doneToday+' of '+locs.length+' logged today</div>';
   // guides mgmt
   h+='<div class="card"><h3>Guides &amp; Instructions <span class="spacer"></span><button class="btn btn-green" id="addGuide" style="padding:7px 13px;font-size:12.5px">＋ Add guide</button></h3><div id="guideList"></div></div>';
+  h+=monthCalHtml();
   // submissions matrix
   const days=[];for(let i=0;i<10;i++){const d=new Date();d.setDate(d.getDate()-i);days.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));}
   h+='<div class="card" style="padding:0;overflow:hidden"><h3 style="padding:18px 20px 0">Maintenance Logs</h3>';
