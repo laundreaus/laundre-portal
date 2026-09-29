@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Live Laundromats</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;--muted:#8a9790;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:800;font-size:15px;color:var(--green-d);} header .spacer{flex:1;}
+  main{max-width:1080px;margin:0 auto;padding:20px 22px 70px;}
+  .lead{color:var(--muted);font-size:13.5px;margin:0 0 16px;}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+  .kpi{background:#fff;border:1px solid var(--cream-line);border-radius:12px;padding:14px 16px;} .kpi .n{font-size:24px;font-weight:900;color:var(--green-d);} .kpi .l{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:18px 20px;text-decoration:none;color:inherit;display:block;transition:.14s;}
+  .card:hover{border-color:var(--green);box-shadow:0 8px 22px rgba(52,73,61,.12);transform:translateY(-2px);}
+  .card .nm{font-size:17px;font-weight:800;color:var(--green-d);} .card .ad{font-size:12.5px;color:var(--muted);margin-top:3px;min-height:32px;}
+  .badge{display:inline-block;border-radius:20px;padding:2px 11px;font-size:11px;font-weight:800;} .badge.on{background:#E1EDE4;color:#2f6b46;} .badge.off{background:#F5EEE2;color:#9a7b48;}
+  .meta{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:#5f7469;} .meta b{color:var(--green-d);}
+  .empty{padding:40px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--cream-line);border-radius:14px;}
+</style>
+</head>
+<body>
+<header><span class="ttl">🧺 Live Laundromats</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-portal.html">← Portal</a></header>
+<main>
+  <p class="lead">Every operating laundromat — the source of truth for each site, holding its acquisition history, delivery timeline and live operations. Open one to see its full record.</p>
+  <div class="kpis" id="kpis"></div>
+  <div class="grid" id="grid"><div class="empty" style="grid-column:1/-1">Loading…</div></div>
+</main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function apiGet(u){return fetch(u,{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function fdate(d){ if(!d) return ''; var x=new Date((''+d).slice(0,10)+'T00:00'); return isNaN(x)?'':x.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}); }
+Promise.all([apiGet('/locations-api').catch(function(){return[];}), apiGet('/sales-api').catch(function(){return[];})]).then(function(res){
+  var locs=res[0]||[], sales=res[1]||[];
+  var rev={}; sales.forEach(function(s){ var id=String(s.location_id); rev[id]=(rev[id]||0)+(+s.revenue||0); });
+  var active=locs.filter(function(l){return (l.status||'active')==='active';});
+  var opened=active.filter(function(l){return l.opening_date;}).length;
+  var totRev=Object.keys(rev).reduce(function(a,k){return a+rev[k];},0);
+  document.getElementById('kpis').innerHTML=
+     '<div class="kpi"><div class="n">'+active.length+'</div><div class="l">Live laundromats</div></div>'
+    +'<div class="kpi"><div class="n">'+opened+'</div><div class="l">Open &amp; trading</div></div>'
+    +'<div class="kpi"><div class="n">'+(active.length-opened)+'</div><div class="l">In build / pre-open</div></div>'
+    +'<div class="kpi"><div class="n">$'+Math.round(totRev).toLocaleString('en-AU')+'</div><div class="l">Revenue (all data)</div></div>';
+  var grid=document.getElementById('grid');
+  if(!active.length){ grid.innerHTML='<div class="empty" style="grid-column:1/-1">No live laundromats yet. Sites move here once a Sites Acquisition quote is signed.</div>'; return; }
+  active.sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
+  grid.innerHTML=active.map(function(l){
+    var open=l.opening_date, badge=open?'<span class="badge on">● Trading</span>':'<span class="badge off">In build</span>';
+    return '<a class="card" href="laundre-laundromat?loc='+encodeURIComponent(l.id)+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div class="nm">'+esc(l.name)+'</div>'+badge+'</div>'
+      +'<div class="ad">'+esc(l.address||'')+'</div>'
+      +'<div class="meta">'+(open?('<span>Opened <b>'+fdate(open)+'</b></span>'):(l.keys_date?('<span>Keys <b>'+fdate(l.keys_date)+'</b></span>'):''))
+      +'<span>Revenue <b>$'+Math.round(rev[String(l.id)]||0).toLocaleString('en-AU')+'</b></span></div></a>';
+  }).join('');
+}).catch(function(e){ document.getElementById('grid').innerHTML='<div class="empty" style="grid-column:1/-1">Could not load: '+esc(e.message)+'</div>'; });
+</script>
+</body>
+</html>

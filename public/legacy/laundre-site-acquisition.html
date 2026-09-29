@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Sites Acquisition</title>
+<script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}if(!a||(s&&s.role&&s.role!=='admin'))location.replace('laundre-portal.html');})();</script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;--muted:#8a9790;--ok:#2f6b46;--warn:#B4472F;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:8px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-accent{background:var(--accent);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:30;} header .ttl{font-weight:800;font-size:15px;color:var(--green-d);} header .spacer{flex:1;}
+  main{max-width:1180px;margin:0 auto;padding:18px 22px 80px;}
+  .lead{color:var(--muted);font-size:13.5px;margin:0 0 14px;}
+  /* list view */
+  .scard{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:16px 18px;cursor:pointer;transition:.14s;}
+  .pill{display:inline-block;border-radius:20px;padding:2px 10px;font-size:10.5px;font-weight:800;background:#EEF3EF;color:var(--green);}
+  .pill.done{background:#E1EDE4;color:var(--ok);} .pill.pkg{background:#F5E7DD;color:var(--accent);}
+  /* editor */
+  .top{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+  .top input.name{font-size:19px;font-weight:800;color:var(--green-d);border:1px solid transparent;background:transparent;border-radius:8px;padding:5px 8px;min-width:280px;}
+  .top input.name:focus{border-color:var(--cream-line);background:#fff;}
+  .stepbar{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:14px;}
+  .step{flex:0 0 auto;border:1px solid var(--cream-line);background:#fff;border-radius:20px;padding:7px 13px;font-size:12px;font-weight:700;color:#5f7469;white-space:nowrap;cursor:pointer;}
+  .step.on{background:var(--green-d);color:#fff;border-color:var(--green-d);} .step.done{background:#E1EDE4;color:var(--ok);border-color:#cfe2d5;}
+  .layout{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;}
+  @media(max-width:900px){ .layout{grid-template-columns:1fr;} }
+  .panel{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:18px 20px;}
+  .panel h3{margin:0 0 4px;font-size:15px;color:var(--green-d);} .panel .hint{font-size:12px;color:var(--muted);margin:0 0 14px;}
+  .fld{margin-bottom:14px;} .fld label{display:block;font-size:12px;font-weight:700;color:#5f7469;margin-bottom:5px;}
+  .fld input,.fld textarea,.fld select{width:100%;font-family:inherit;font-size:13.5px;color:var(--ink);background:#FBF9F4;border:1px solid var(--cream-line);border-radius:8px;padding:10px 12px;}
+  .fld input:focus,.fld textarea:focus,.fld select:focus{outline:none;border-color:var(--green);background:#fff;}
+  .fld textarea{min-height:80px;resize:vertical;line-height:1.5;}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px;} .two .fld{margin-bottom:0;}
+  .two{margin-bottom:14px;}
+  /* address autocomplete */
+  .addr-wrap{position:relative;}
+  .addr-results{position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--cream-line);border-radius:8px;margin-top:4px;box-shadow:0 10px 26px rgba(0,0,0,.14);z-index:60;max-height:250px;overflow-y:auto;display:none;}
+  .addr-results.show{display:block;}
+  .addr-results div{padding:10px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid #F1ECE1;line-height:1.4;}
+  .addr-results div:last-child{border-bottom:none;} .addr-results div:hover{background:#F4EFE6;}
+  #map{height:340px;border-radius:12px;border:1px solid var(--cream-line);}
+  .maplegend{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.7;} .dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle;margin-right:5px;}
+  .overlap{margin-top:10px;font-size:12.5px;padding:9px 12px;border-radius:8px;} .overlap.clash{background:#F7E4DE;color:var(--warn);font-weight:700;} .overlap.clear{background:#E4EFE7;color:var(--ok);font-weight:700;}
+  .navrow{display:flex;justify-content:space-between;gap:10px;margin-top:16px;}
+  .savebar{position:sticky;bottom:0;background:linear-gradient(transparent,var(--cream) 40%);padding:14px 0 0;display:flex;gap:10px;align-items:center;}
+  .savenote{font-size:12px;color:var(--muted);}
+  .pkgbox{background:#FBF6EF;border:1px solid #EBD9C6;border-radius:10px;padding:14px 16px;margin-top:8px;}
+  .linkrow{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;} .linkrow input{flex:1;min-width:220px;background:#fff;border:1px solid var(--cream-line);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--green-d);font-family:inherit;}
+  .sharebox{background:#FBF6EF;border:1px solid #EBD9C6;border-radius:12px;padding:15px 17px;margin-top:16px;} .sharebox .sharehd{font-size:14px;font-weight:800;color:var(--green-d);}
+  /* native cost calculator wizard */
+  .cwiz-steps{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .cwiz-st{flex:1;min-width:110px;display:flex;align-items:center;gap:8px;background:#FBF9F4;border:1px solid var(--cream-line);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--muted);font-weight:700;cursor:pointer;}
+  .cwiz-st .cn{width:20px;height:20px;border-radius:50%;background:#EFE7D6;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex:0 0 auto;}
+  .cwiz-st.on{border-color:var(--green);color:var(--green-d);} .cwiz-st.on .cn{background:var(--green);color:#fff;}
+  .cwiz-st.done .cn{background:#D9A73E;color:#33473d;}
+  .cwiz-nav{display:flex;justify-content:space-between;gap:10px;margin-top:16px;}
+  .cpill{display:inline-block;background:#EAF0EC;color:var(--green-d);border-radius:20px;padding:4px 12px;font-weight:800;font-size:13px;margin-bottom:12px;}
+  .clines{margin-top:8px;} .cln{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1ECE1;font-size:14px;}
+  .cln.big{font-weight:900;font-size:16px;color:var(--green-d);border-bottom:none;padding-top:11px;}
+  .cln .mut{color:var(--muted);font-weight:400;font-size:12px;}
+  /* step 3 machines */
+  .c3sticky{position:sticky;top:66px;z-index:15;background:#33473D;color:#EAF0EC;border-radius:12px;padding:12px 15px;margin-bottom:12px;box-shadow:0 8px 22px rgba(51,71,61,.25);}
+  .c3top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;} .c3lab{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:#b9c8bf;font-weight:800;} .c3lab .mut{color:#93a89b;font-weight:400;text-transform:none;letter-spacing:0;}
+  .c3sel{font-size:23px;font-weight:900;line-height:1.1;} .c3tgt{font-size:16px;font-weight:800;color:#cdd9d1;}
+  .c3track{height:11px;border-radius:20px;background:rgba(255,255,255,.16);position:relative;overflow:hidden;margin:9px 0 5px;} .c3fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#8fb89e,#C4703F 140%);width:0;transition:width .35s;} .c3fill.over{background:linear-gradient(90deg,#e0a06f,#c0392b);}
+  .c3diff{font-size:12px;font-weight:700;color:#cdd9d1;} .c3items{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;max-height:60px;overflow:auto;} .c3items .it{background:rgba(255,255,255,.12);border-radius:16px;padding:3px 9px;font-size:11px;white-space:nowrap;} .c3items .none{color:#93a89b;font-size:12px;}
+  .c3guide{margin-bottom:10px;} .c3gh{font-weight:700;color:var(--green);font-size:12.5px;margin-bottom:5px;}
+  .ctbl{width:100%;border-collapse:collapse;font-size:12px;} .ctbl th{background:var(--green-d);color:#EAF0EC;font-size:9.5px;text-transform:uppercase;padding:5px 6px;text-align:left;} .ctbl th.r,.ctbl td.r{text-align:right;} .ctbl td{padding:5px 6px;border-bottom:1px solid #F1ECE1;} .ctbl tr.hit td{background:#EAF0EC;font-weight:800;color:var(--green-d);}
+  .c3tog{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:10px 0;font-size:12.5px;color:#5f7469;font-weight:700;} .c3tog label{display:flex;align-items:center;gap:6px;cursor:pointer;} .c3tog input[type=checkbox]{width:auto;}
+  .c3disc{margin-left:auto;display:inline-flex;align-items:center;gap:8px;} .c3disc input{width:78px;font-family:inherit;font-size:13px;text-align:right;background:#FBF9F4;border:1px solid var(--cream-line);border-radius:7px;padding:7px 9px;color:var(--ink);}
+  .mtbl{width:100%;border-collapse:collapse;font-size:12.5px;} .mtbl thead th{position:sticky;top:0;background:#fff;font-size:9.5px;text-transform:uppercase;letter-spacing:.03em;color:#8a9790;text-align:left;padding:6px;border-bottom:1px solid var(--cream-line);} .mtbl th.r,.mtbl td.r{text-align:right;}
+  .mtbl td{padding:5px 6px;vertical-align:middle;border-bottom:1px solid #F5F0E6;} .mtbl tr.ccat td{background:#F4EFE6;color:var(--green-d);font-weight:800;font-size:11px;padding:7px 8px;} .mtbl tr.coff{opacity:.4;}
+  .mtbl .l{font-weight:600;color:var(--ink);} .mtbl .ccode{font-size:10px;color:#a7a99f;font-family:ui-monospace,Menlo,monospace;}
+  .mtbl .cnum{width:100%;font-family:inherit;font-size:12.5px;text-align:right;background:#FBF9F4;border:1px solid var(--cream-line);border-radius:6px;padding:6px 7px;color:var(--ink);}
+  .mtbl .cnetc{font-weight:700;color:var(--green-d);white-space:nowrap;}
+  .colqty{width:70px;} .colpct{width:78px;}
+  .cfin{background:#FBF9F4;border:1px solid var(--cream-line);border-radius:12px;padding:14px 16px;margin-top:14px;} .cfinh{font-size:15px;font-weight:800;color:var(--green-d);}
+  .cfin-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;} .cfin-grid .fld{margin-bottom:0;}
+  .cfin-out{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:12px;} .cfin-out .b{background:#fff;border:1px solid var(--cream-line);border-radius:10px;padding:10px 12px;} .cfin-out .b .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:800;} .cfin-out .b .v{font-size:17px;font-weight:800;color:var(--green-d);margin-top:2px;font-variant-numeric:tabular-nums;}
+</style>
+</head>
+<body>
+<header>
+  <span class="ttl">📍 Sites Acquisition</span>
+  <span class="spacer"></span>
+  <span id="hdrActions"></span>
+  <a class="btn btn-ghost" href="laundre-portal.html">← Portal</a>
+</header>
+<main>
+  <div id="view"></div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(j){var h={'Accept':'application/json','X-Requested-With':'XMLHttpRequest'};if(j){h['Content-Type']='application/json';h['X-CSRF-TOKEN']=CSRF;}return h;}
+function apiGet(u){return fetch(u,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){return r.ok?r.json():null;});}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function uid(){return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function money(n){return '$'+Math.round(+n||0).toLocaleString('en-AU');}
+function fdate(d){ if(!d)return ''; var x=new Date((''+d).slice(0,10)+'T00:00'); return isNaN(x)?'':x.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}); }
+
+var KEY='site_acq_v1', PDKEY='project_delivery_v1';
+var STATE={sites:[]}, LOCS=[], USERS=[], cur=null, dirty=false, map=null, layers=[], listMap=null;
+
+/* Stage definitions. "accepted" is a status-only stage (auto-set on signing) — not shown in the step bar. */
+var STAGES=[
+  {k:'intake', t:'Agent email', fields:[
+    {k:'agent_email',l:"Agent's email (paste the offer or reply)",ta:1},
+    {k:'centre',l:'Centre / building',half:1},{k:'tenancy',l:'Tenancy',half:1},
+    {k:'contact_name',l:'Key contact name',half:1},{k:'contact_company',l:'Company / agency',half:1},
+    {k:'contact_phone',l:'Contact phone',half:1},{k:'contact_email',l:'Contact email',half:1},
+    {k:'intake_notes',l:'Notes',ta:1}]},
+  {k:'location', t:'Location & territory', map:1, fields:[
+    {k:'suburb',l:'Suburb',half:1},{k:'state',l:'State',half:1},
+    {k:'lat',l:'Latitude',half:1},{k:'lng',l:'Longitude',half:1},
+    {k:'radius',l:'Protected radius (km)',half:1,type:'number'},{k:'population',l:'Catchment population',half:1},
+    {k:'territory_notes',l:'Territory & suburb notes',ta:1}]},
+  {k:'more_info', t:'More information', fields:[
+    {k:'keys_date',l:'Keys date',type:'date',half:1},{k:'fitout_date',l:'Fit-out start',type:'date',half:1},
+    {k:'opening_date',l:'Opening date',type:'date',half:1},
+    {k:'competitors',l:'Competitors within catchment (name, distance, size)',ta:1},
+    {k:'competitor_verdict',l:'Verdict on competition',ta:1},
+    {k:'growth',l:'Growth outlook (development, population trend, demand)',ta:1},
+    {k:'terms_theirs',l:"Landlord's terms (rent, term, options, incentive)",ta:1},
+    {k:'terms_suggested',l:'Suggested terms',ta:1},
+    {k:'flags',l:'Flags / risks (power, water, gas, trade waste, access)',ta:1},
+    {k:'works_landlord',l:'Works — landlord scope',ta:1},
+    {k:'works_laundre',l:'Works — Laundré needs',ta:1}]},
+  {k:'floorplan', t:'Floor plan', img:1, fields:[
+    {k:'floorplan_link',l:'Floor plan / mock-up link'},
+    {k:'floorplan_notes',l:'Layout notes',ta:1}]},
+  {k:'price', t:'Cost Calculator', calc:1, fields:[
+    {k:'price_notes',l:'Pricing notes',ta:1}]},
+  {k:'notes', t:'Notes', fields:[
+    {k:'notes',l:'General notes',ta:1}]},
+  {k:'package', t:'Package & preview', pkg:1, fields:[]},
+  {k:'allocation', t:'Send / allocate', alloc:1, fields:[]},
+  {k:'accepted', t:'Accepted', status:1, fields:[]}
+];
+function stageIdx(k){for(var i=0;i<STAGES.length;i++)if(STAGES[i].k===k)return i;return 0;}
+
+/* ---------- persistence ---------- */
+function load(){
+  return Promise.all([apiGet('/settings-api/'+KEY),apiGet('/locations-api').catch(function(){return[];}),apiGet('/users-api').catch(function(){return[];})]).then(function(r){
+    var v=r[0]; if(v&&v.sites&&Array.isArray(v.sites)) STATE=v; LOCS=r[1]||[]; USERS=(r[2]||[]).filter(function(u){return u&&u.email;});
+  });
+}
+function save(){
+  var b=document.getElementById('saveBtn'); if(b){b.disabled=true;b.textContent='Saving…';}
+  return fetch('/settings-api/'+KEY,{method:'PUT',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({value:STATE})})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(){ dirty=false; if(b){b.disabled=false;b.textContent='Save';} var n=document.getElementById('saveNote'); if(n)n.textContent='Saved ✓'; syncSupplier(cur); })
+    .catch(function(e){ if(b){b.disabled=false;b.textContent='Save';} alert('Could not save: '+e.message); throw e; });
+}
+/* Auto-add a site's key contact into Suppliers & Contacts (once). */
+function syncSupplier(s){
+  if(!s||!s.f)return; var f=s.f; if(f.supplier_synced||!f.contact_name)return;
+  var nm=f.contact_company||f.contact_name;
+  fetch('/suppliers-api',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({
+    name:nm,category:'Site acquisition contact',contact:f.contact_name,phone:f.contact_phone||'',email:f.contact_email||'',
+    notes:'Auto-added from Sites Acquisition — '+(s.name||'site')
+  })}).then(function(r){ if(r.ok){ f.supplier_synced=true; } }).catch(function(){});
+}
+function markDirty(){ dirty=true; var n=document.getElementById('saveNote'); if(n)n.textContent='Unsaved changes'; }
+
+/* ---------- list view: map + filterable table ---------- */
+function renderList(){
+  cur=null; if(map){map=null;} document.getElementById('hdrActions').innerHTML='<button class="btn btn-green" id="newSite">+ New site</button>';
+  var v=document.getElementById('view');
+  v.innerHTML='<p class="lead">Every prospective site on one map, with a filterable table below. Open a site to work through territory, terms, pricing, packaging and sign-off — a signed quote becomes a Live Laundromat with a Project Delivery timeline automatically.</p>'
+    +'<div class="panel" style="padding:14px"><div id="listMap" style="height:340px;border-radius:10px;border:1px solid var(--cream-line)"></div>'
+    +'<div class="maplegend"><span class="dot" style="background:#C4703F"></span>Prospective sites &nbsp; <span class="dot" style="background:#435E53"></span>Live Laundromats</div></div>'
+    +'<div class="bar" style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 10px">'
+    +'<input id="tq" placeholder="Search name, suburb, state…" style="min-width:220px;font-family:inherit;font-size:13px;border:1px solid var(--cream-line);border-radius:8px;padding:9px 12px;background:#fff">'
+    +'<select id="tStage" style="font-family:inherit;font-size:13px;border:1px solid var(--cream-line);border-radius:8px;padding:9px 12px;background:#fff"><option value="">All stages</option>'+STAGES.map(function(x){return '<option value="'+x.k+'">'+esc(x.t)+'</option>';}).join('')+'</select></div>'
+    +'<table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--cream-line);border-radius:12px;overflow:hidden">'
+    +'<thead><tr>'+['Name','Suburb','State','Radius','Turnkey','Stage'].map(function(h){return '<th style="background:#33473D;color:#EAF0EC;font-size:11px;text-transform:uppercase;text-align:left;padding:10px 12px">'+h+'</th>';}).join('')+'</tr></thead><tbody id="siteRows"></tbody></table>';
+  document.getElementById('newSite').onclick=function(){ var s={id:uid(),name:'',stage:'intake',f:{radius:3},created:new Date().toISOString()}; STATE.sites.push(s); markDirty(); openSite(s.id); };
+  ['tq','tStage'].forEach(function(id){var el=document.getElementById(id);if(el)el.addEventListener('input',renderRows);});
+  renderRows(); drawListMap();
+}
+function renderRows(){
+  var q=(document.getElementById('tq')&&document.getElementById('tq').value||'').toLowerCase();
+  var stg=document.getElementById('tStage')&&document.getElementById('tStage').value||'';
+  var body=document.getElementById('siteRows'); if(!body)return;
+  var list=STATE.sites.filter(function(s){
+    if(stg&&(s.stage||'intake')!==stg)return false;
+    if(q){var hay=((s.name||'')+' '+((s.f&&s.f.suburb)||'')+' '+((s.f&&s.f.state)||'')+' '+((s.f&&s.f.address)||'')).toLowerCase();if(hay.indexOf(q)<0)return false;}
+    return true;
+  });
+  if(!list.length){ body.innerHTML='<tr><td colspan="6" style="padding:26px;text-align:center;color:var(--muted)">No sites'+(q||stg?' match':' yet')+'. Use “+ New site”.</td></tr>'; return; }
+  body.innerHTML=list.map(function(s){
+    var st=STAGES[stageIdx(s.stage||'intake')], f=s.f||{};
+    var cls=s.stage==='accepted'?'done':(s.stage==='package'||s.stage==='allocation'?'pkg':'');
+    return '<tr class="srow" data-open="'+s.id+'" style="cursor:pointer">'
+      +'<td style="padding:11px 12px;border-bottom:1px solid #F1ECE1;font-size:13.5px"><b>'+esc(s.name||'Untitled site')+'</b></td>'
+      +'<td style="padding:11px 12px;border-bottom:1px solid #F1ECE1;font-size:13.5px">'+esc(f.suburb||'—')+'</td>'
+      +'<td style="padding:11px 12px;border-bottom:1px solid #F1ECE1;font-size:13.5px">'+esc(f.state||'—')+'</td>'
+      +'<td style="padding:11px 12px;border-bottom:1px solid #F1ECE1;font-size:13.5px">'+(f.radius?esc(f.radius)+' km':'—')+'</td>'
+      +'<td style="padding:11px 12px;border-bottom:1px solid #F1ECE1;font-size:13.5px">'+(f.turnkey_price?money(f.turnkey_price):'—')+'</td>'
+      +'<td style="padding:11px 12px;border-bottom:1px solid #F1ECE1"><span class="pill '+cls+'">'+esc(st.t)+'</span></td></tr>';
+  }).join('');
+  body.querySelectorAll('.srow').forEach(function(r){r.onclick=function(){openSite(r.dataset.open);};});
+}
+function drawListMap(){
+  var el=document.getElementById('listMap'); if(!el||!window.L)return;
+  if(listMap){listMap.remove();listMap=null;}
+  listMap=L.map('listMap',{scrollWheelZoom:false}); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(listMap);
+  var pts=[];
+  LOCS.forEach(function(l){ if(l.lat&&l.lng){ L.circleMarker([l.lat,l.lng],{radius:6,color:'#435E53',fillColor:'#435E53',fillOpacity:.9}).addTo(listMap).bindPopup(esc(l.name)); L.circle([l.lat,l.lng],{radius:((+l.radius||3)*1000),color:'#435E53',weight:1,fillOpacity:.05}).addTo(listMap); pts.push([l.lat,l.lng]); } });
+  STATE.sites.forEach(function(s){ var f=s.f||{}; var la=parseFloat(f.lat),ln=parseFloat(f.lng); if(!isNaN(la)&&!isNaN(ln)){ var mk=L.circleMarker([la,ln],{radius:7,color:'#C4703F',fillColor:'#C4703F',fillOpacity:1}).addTo(listMap).bindPopup(esc(s.name||'Site')); mk.on('click',function(){openSite(s.id);}); L.circle([la,ln],{radius:(parseFloat(f.radius)||3)*1000,color:'#C4703F',weight:1,fillOpacity:.08}).addTo(listMap); pts.push([la,ln]); } });
+  if(pts.length){ try{listMap.fitBounds(pts,{padding:[30,30],maxZoom:11});}catch(e){listMap.setView(pts[0],10);} } else { listMap.setView([-25.5,152.7],6); }
+  setTimeout(function(){listMap.invalidateSize();},60);
+}
+
+/* ---------- editor ---------- */
+function openSite(id){
+  cur=STATE.sites.filter(function(s){return s.id===id;})[0]; if(!cur)return renderList();
+  if(!cur.f)cur.f={}; if(!cur.stage)cur.stage='intake';
+  document.getElementById('hdrActions').innerHTML='<button class="btn btn-ghost" id="backList">All sites</button>';
+  document.getElementById('backList').onclick=function(){ if(dirty){save().then(renderList);}else renderList(); };
+  renderEditor();
+}
+/* Pair consecutive half-width fields into a .two grid row for consistent spacing. */
+function renderFields(fields){
+  var out='',i=0;
+  while(i<fields.length){
+    var f=fields[i];
+    if(f.half && fields[i+1] && fields[i+1].half){ out+='<div class="two">'+fieldCell(f)+fieldCell(fields[i+1])+'</div>'; i+=2; }
+    else { out+=fieldCell(f); i++; }
+  }
+  return out;
+}
+function fieldCell(f){
+  var val=esc(cur.f[f.k]||'');
+  var inp=f.ta?('<textarea data-f="'+f.k+'">'+val+'</textarea>'):('<input data-f="'+f.k+'" type="'+(f.type||'text')+'" value="'+val+'">');
+  return '<div class="fld"><label>'+esc(f.l)+'</label>'+inp+'</div>';
+}
+function renderEditor(){
+  var s=cur, si=stageIdx(s.stage), st=STAGES[si];
+  var v=document.getElementById('view');
+  var visible=STAGES.filter(function(x){return !x.status;});
+  var steps=visible.map(function(x,vi){var gi=stageIdx(x.k);var c=gi===si?'on':(gi<si?'done':'');return '<div class="step '+c+'" data-step="'+x.k+'">'+(vi+1)+'. '+esc(x.t)+'</div>';}).join('');
+  var left='<div class="panel"><h3>'+esc(st.t)+'</h3>';
+  if(st.status){ left+=renderAccept(s); }
+  else if(st.pkg){ left+=renderPackage(s); }
+  else if(st.alloc){ left+=renderAlloc(s); }
+  else if(st.calc){ left+='<p class="hint">Price the fit-out and equipment through the steps below — size, fit-out guide, machines, then summary. The turnkey price saves against this site and flows into the proposal and the signable quote created at the Send step.</p>'+renderCalc(s)+'<div style="margin-top:14px">'+renderFields(st.fields)+'</div>'; }
+  else if(st.img){ left+='<p class="hint">Add the floor plan — upload an image and/or paste a link.</p>'+renderFields(st.fields)+renderFloorplan(s); }
+  else if(st.k==='location'){
+    left+='<p class="hint">Search an address to drop the map point, or fill the details by hand.</p>'
+      +'<div class="fld addr-wrap"><label>Address (type to search, then pick)</label>'
+      +'<input id="addrSearch" autocomplete="off" placeholder="Start typing a street address…" value="'+esc(s.f.address||'')+'">'
+      +'<div id="addrResults" class="addr-results"></div></div>'
+      +renderFields(st.fields);
+  }
+  else { left+='<p class="hint">Free-text — capture whatever you have, refine later.</p>'+renderFields(st.fields); }
+  if(!st.status){
+    var lastBtn = st.alloc
+      ? '<button class="btn btn-accent" id="sendProposalNav">✉️ Send proposal &amp; quote</button>'
+      : '<button class="btn btn-green" id="nextStep">Next stage →</button>';
+    left+='<div class="navrow"><button class="btn btn-ghost" id="prevStep" '+(si===0?'disabled':'')+'>← Back</button>'+lastBtn+'</div>';
+  }
+  left+='</div>';
+  var showMap = !!st.map;
+  var right = showMap ? ('<div class="panel"><h3>Territory map</h3><p class="hint">Prospective site vs existing Laundré catchments — checking you\'re not inside another store\'s region.</p><div id="map"></div>'
+      +'<div class="maplegend"><span class="dot" style="background:#C4703F"></span>This site &amp; radius &nbsp; <span class="dot" style="background:#435E53"></span>Existing Laundromats &amp; radius</div>'
+      +'<div id="overlap"></div></div>') : '';
+  v.innerHTML='<div class="top"><input class="name" id="siteName" placeholder="Site name (e.g. Laundré Gympie)" value="'+esc(s.name||'')+'"></div>'
+      +'<div class="stepbar">'+steps+'</div><div class="layout"'+(showMap?'':' style="grid-template-columns:1fr"')+'>'+left+right+'</div>'
+      +'<div class="savebar"><button class="btn btn-green" id="saveBtn">Save</button><button class="btn btn-ghost" id="delSite">Delete site</button><span class="savenote" id="saveNote"></span></div>';
+  // wire
+  document.getElementById('siteName').addEventListener('input',function(e){s.name=e.target.value;markDirty();});
+  v.querySelectorAll('.step').forEach(function(el){el.onclick=function(){s.stage=el.dataset.step;renderEditor();};});
+  var pv=document.getElementById('prevStep'),nx=document.getElementById('nextStep');
+  if(pv)pv.onclick=function(){s.stage=visible[Math.max(0,visible.map(function(x){return x.k;}).indexOf(st.k)-1)].k;renderEditor();};
+  if(nx)nx.onclick=function(){var vi=visible.map(function(x){return x.k;}).indexOf(st.k);s.stage=visible[Math.min(visible.length-1,vi+1)].k;renderEditor();};
+  var spn=document.getElementById('sendProposalNav'); if(spn)spn.onclick=function(){sendProposal();};
+  document.getElementById('saveBtn').onclick=function(){save();};
+  document.getElementById('delSite').onclick=function(){ if(confirm('Delete this site?')){ STATE.sites=STATE.sites.filter(function(x){return x.id!==s.id;}); save().then(renderList); } };
+  v.querySelectorAll('[data-f]').forEach(function(inp){ inp.addEventListener('input',function(){ s.f[inp.dataset.f]=inp.value; markDirty(); if(inp.dataset.f==='lat'||inp.dataset.f==='lng'||inp.dataset.f==='radius')drawMap(); }); });
+  wireAddress();
+  wireFloorplan();
+  wireCalc();
+  // recipient dropdown
+  var us=document.getElementById('userSel');
+  if(us){ us.onchange=function(){ var o=us.options[us.selectedIndex]; s.f.assigned_email=us.value; s.f.assigned_name=o?o.getAttribute('data-name')||'':''; markDirty(); renderEditor(); }; }
+  // download PDF
+  var dl=document.getElementById('dlPdf');
+  if(dl){ dl.onclick=function(){ var el=document.getElementById('propPreview'); if(!el)return; if(!window.html2pdf){alert('PDF library still loading — try again in a moment.');return;} html2pdf().set({margin:8,filename:(s.name||'site-proposal').replace(/[^a-z0-9]+/gi,'-')+'.pdf',image:{type:'jpeg',quality:.95},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).from(el).save(); }; }
+  drawMap();
+}
+
+/* ---------- address autocomplete (OpenStreetMap Nominatim) ---------- */
+var __addrTmr=null, __addrList=[];
+function wireAddress(){
+  var as=document.getElementById('addrSearch'); if(!as)return;
+  as.addEventListener('input',function(){
+    cur.f.address=as.value; markDirty();
+    clearTimeout(__addrTmr); var q=as.value.trim();
+    if(q.length<3){ hideAddr(); return; }
+    __addrTmr=setTimeout(function(){ searchAddr(q); },400);
+  });
+  as.addEventListener('blur',function(){ setTimeout(hideAddr,180); });
+}
+function searchAddr(q){
+  fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&countrycodes=au&limit=6&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}})
+    .then(function(r){return r.json();}).then(function(list){ __addrList=list||[]; showAddr(); }).catch(function(){});
+}
+function showAddr(){
+  var box=document.getElementById('addrResults'); if(!box)return;
+  if(!__addrList.length){ box.classList.remove('show'); box.innerHTML=''; return; }
+  box.innerHTML=__addrList.map(function(r,i){return '<div data-ai="'+i+'">'+esc(r.display_name)+'</div>';}).join('');
+  box.classList.add('show');
+  box.querySelectorAll('[data-ai]').forEach(function(d){ d.onmousedown=function(ev){ ev.preventDefault(); pickAddr(__addrList[+d.dataset.ai]); }; });
+}
+function hideAddr(){ var b=document.getElementById('addrResults'); if(b)b.classList.remove('show'); }
+function pickAddr(r){
+  if(!r)return; var a=r.address||{};
+  cur.f.address=r.display_name;
+  cur.f.suburb=a.suburb||a.city||a.town||a.village||a.municipality||a.city_district||cur.f.suburb||'';
+  cur.f.state=a.state||cur.f.state||'';
+  cur.f.lat=(+r.lat).toFixed(6); cur.f.lng=(+r.lon).toFixed(6);
+  markDirty(); hideAddr(); renderEditor();
+}
+
+/* ---------- floor plan image ---------- */
+function wireFloorplan(){
+  var s=cur;
+  var fpU=document.getElementById('fpUpload'), fpI=document.getElementById('fpInput'), fpR=document.getElementById('fpRemove');
+  if(fpU&&fpI){ fpU.onclick=function(){fpI.click();}; fpI.onchange=function(){ var file=fpI.files[0]; if(!file)return; if(file.size>2500000){alert('Please use an image under 2.5MB.');return;} var rd=new FileReader(); rd.onload=function(){ s.f.floorplan_img=rd.result; markDirty(); renderEditor(); }; rd.readAsDataURL(file); }; }
+  if(fpR){ fpR.onclick=function(){ delete s.f.floorplan_img; markDirty(); renderEditor(); }; }
+}
+function renderFloorplan(s){
+  var img=s.f.floorplan_img||'';
+  return '<div class="pkgbox"><b>Floor plan image</b>'
+    +(img?'<div style="margin:10px 0"><img src="'+img+'" style="max-width:100%;border:1px solid var(--cream-line);border-radius:8px"></div>':'')
+    +'<div style="margin-top:8px;display:flex;gap:8px"><button class="btn btn-ghost" id="fpUpload">'+(img?'Replace image':'Upload image')+'</button>'+(img?'<button class="btn btn-ghost" id="fpRemove">Remove</button>':'')+'</div>'
+    +'<input type="file" id="fpInput" accept="image/*" style="display:none"></div>';
+}
+
+/* ================= native cost calculator (rebuilt from the standalone tool) ================= */
+var MARGIN=0.20;
+/* sizing table (Spencer Systems / Fagor package guide) */
+var TABLE=[
+  {sqm:50,units:10,washers:6,dryers:4,equip:129394,delivery:16821,totalEx:146215,totalInc:160836,perSqm:3217},
+  {sqm:55,units:11,washers:6,dryers:5,equip:138190,delivery:17965,totalEx:156154,totalInc:171770,perSqm:3123},
+  {sqm:60,units:12,washers:7,dryers:5,equip:151142,delivery:19648,totalEx:170790,totalInc:187869,perSqm:3131},
+  {sqm:65,units:13,washers:7,dryers:6,equip:158338,delivery:20584,totalEx:178921,totalInc:196814,perSqm:3028},
+  {sqm:70,units:14,washers:7,dryers:7,equip:168734,delivery:21935,totalEx:190669,totalInc:209736,perSqm:2996},
+  {sqm:75,units:15,washers:8,dryers:7,equip:180006,delivery:23401,totalEx:203406,totalInc:223747,perSqm:2983},
+  {sqm:80,units:16,washers:8,dryers:8,equip:188802,delivery:24544,totalEx:213346,totalInc:234680,perSqm:2934}
+];
+/* machine catalogue (Fagor) */
+var CAT=[
+  {cat:'Washers — rigid mount (Fagor LN TP2, 200G extract — needs concrete slab)'},
+  {code:'LN-11 TP2 E',name:'10kg washer',type:'washer',unit:9995,disc:.175,plinth:'LN-11-PLINTH-250'},
+  {code:'LN-14 TP2 E',name:'14kg washer',type:'washer',unit:10995,disc:.175,plinth:'LN-14-PLINTH-250'},
+  {code:'LN-18 TP2 E',name:'18kg washer',type:'washer',unit:12995,disc:.175,plinth:'LN-18-PLINTH-250'},
+  {code:'LN-22 TP2 E',name:'22kg washer',type:'washer',unit:14995,disc:.175,plinth:'LN-22-PLINTH-250'},
+  {code:'LN-28 TP2 E',name:'28kg washer',type:'washer',unit:13596,disc:0,plinth:'LN-28-PLINTH-250'},
+  {cat:'Washers — suspended mount (Fagor LA TP2 — no slab required)'},
+  {code:'LA-11 TP2 E',name:'10kg washer',type:'washer',unit:9596,disc:0,plinth:'KZ-11'},
+  {code:'LA-14 TP2 E',name:'13kg washer',type:'washer',unit:13596,disc:0,plinth:'KZ-14'},
+  {code:'LA-18 TP2 E',name:'18kg washer',type:'washer',unit:16796,disc:0,plinth:'19060844'},
+  {code:'LA-22 TP2 E',name:'22kg washer',type:'washer',unit:18396,disc:0,plinth:'19060844'},
+  {code:'LA-28 TP2 E',name:'28kg washer',type:'washer',unit:22396,disc:0,plinth:'19060845'},
+  {cat:'Plinths (steel anti-vibration — auto-matched to washers)'},
+  {code:'LN-11-PLINTH-250',name:'Plinth — LN-11',type:'plinth',unit:995,disc:.20},
+  {code:'LN-14-PLINTH-250',name:'Plinth — LN-14',type:'plinth',unit:995,disc:.20},
+  {code:'LN-18-PLINTH-250',name:'Plinth — LN-18',type:'plinth',unit:1095,disc:.20},
+  {code:'LN-22-PLINTH-250',name:'Plinth — LN-22',type:'plinth',unit:1195,disc:.20},
+  {code:'LN-28-PLINTH-250',name:'Plinth — LN-28',type:'plinth',unit:1036,disc:0},
+  {code:'KZ-11',name:'Genuine plinth — LA-11 (10kg)',type:'plinth',unit:636,disc:0},
+  {code:'KZ-14',name:'Genuine plinth — LA-14 (13kg)',type:'plinth',unit:636,disc:0},
+  {code:'19060844',name:'Plinth — LA-18 / LA-22',type:'plinth',unit:716,disc:0},
+  {code:'19060845',name:'Steel plinth — LA-28',type:'plinth',unit:796,disc:0},
+  {cat:'Dryers — Fagor SR ADVANCE (gas, KARE fire-safety)'},
+  {code:'SR-2-18 TP2 G',name:'2×18kg ADVANCE stack dryer',type:'dryer',unit:17995,disc:.175},
+  {code:'SR-2-22 TP2 G XP',name:'2×22kg ADVANCE stack dryer',type:'dryer',unit:18995,disc:.175},
+  {code:'SR-16 TP2 G',name:'18kg ADVANCE single dryer',type:'dryer',unit:7995,disc:.25},
+  {code:'SR-18 TP2 G',name:'18kg single dryer',type:'dryer',unit:7196,disc:0},
+  {code:'SR-22 TP2 G',name:'22kg single dryer',type:'dryer',unit:8796,disc:0},
+  {code:'SR-35 TP2 G',name:'35kg single dryer',type:'dryer',unit:10396,disc:0},
+  {cat:'Stack washer/dryers (combined wash + dry in one unit)'},
+  {code:'SLN-18',name:'18kg stack washer/dryer',type:'stackwd',unit:15196,disc:0},
+  {code:'LAP-SRP-10 TP2 E G',name:'10kg stack washer/dryer',type:'stackwd',unit:11192,disc:0},
+  {cat:'Other'},
+  {code:'LT-100-1',name:'Lint arrestor',type:'other',unit:2497.50,disc:0},
+  {code:'Delivery',name:'Delivery to site (tailgate)',type:'delivery',unit:3800,disc:0},
+  {code:'Installation',name:'Installation (delivery, travel & accom.)',type:'install',unit:18000,disc:0}
+];
+function pickRow(sqm){var best=TABLE[0],bd=1e9;TABLE.forEach(function(r){var d=Math.abs(r.sqm-(+sqm||0));if(d<bd){bd=d;best=r;}});return best;}
+function fitoutDefault(sqm){return Math.round((2208*(+sqm||0)+15360)/100)*100;}
+function AUD(n){return '$'+Math.round(+n||0).toLocaleString('en-AU');}
+
+function calcInit(s){
+  if(s.f.calc&&s.f.calc.machState) return s.f.calc;
+  var C={sqm:+s.f.sqm||0,fitout:+s.f.fitout||0,machState:{},plinth:true,delivery:true,install:true,globalDisc:0,fin:{dep:15,term:5,rate:9,freq:12}};
+  // Delivery + Installation are auto-included (qty 1). Discounts start at 0 — a single
+  // global discount (C.globalDisc, %) applies across all lines, not per machine.
+  CAT.forEach(function(x){if(x.code)C.machState[x.code]={qty:(x.type==='delivery'||x.type==='install')?1:0};});
+  s.f.calc=C; return C;
+}
+function autoPlinths(C){
+  CAT.forEach(function(x){if(x.type==='plinth'&&C.machState[x.code])C.machState[x.code].qty=0;});
+  CAT.forEach(function(x){if(x.type==='washer'&&x.plinth&&C.machState[x.plinth]){C.machState[x.plinth].qty+=(C.machState[x.code].qty||0);}});
+}
+function calcNet(C){
+  var gd=(+C.globalDisc||0)/100;   // single global discount across every line
+  var list=0,net=0,equip=0,items=[],anyMach=false;
+  CAT.forEach(function(x){ if(!x.code)return; var st=C.machState[x.code]||{qty:0};
+    var dis=(x.type==='plinth'&&!C.plinth)||(x.type==='delivery'&&!C.delivery)||(x.type==='install'&&!C.install);
+    if(dis)return;
+    var l=x.unit*(st.qty||0), n=l*(1-gd);
+    list+=l; net+=n;
+    if(x.type!=='delivery'&&x.type!=='install') equip+=n;
+    if((st.qty||0)>0){ items.push({code:x.code,name:x.name,qty:st.qty,net:n}); if(x.type==='washer'||x.type==='dryer'||x.type==='stackwd')anyMach=true; }
+  });
+  return {list:list,net:net,equip:equip,gst:net*0.1,tot:net*1.1,items:items,anyMach:anyMach};
+}
+function calcSummary(s){
+  var C=s.f.calc, r=calcNet(C);
+  var machEx=r.anyMach?r.net:pickRow(C.sqm).totalEx;   // fall back to sizing-table package until machines picked
+  var fitout=+C.fitout||fitoutDefault(C.sqm), sub=machEx+fitout, marg=sub*MARGIN, tot=sub+marg;
+  return {machEx:machEx,fitout:fitout,sub:sub,marg:marg,tot:tot,gstInc:tot*1.1,r:r};
+}
+function calcCommit(s){
+  var sm=calcSummary(s);
+  s.f.turnkey_price=Math.round(sm.tot); s.f.sqm=s.f.calc.sqm; s.f.fitout=s.f.calc.fitout;
+  s.f.machines=sm.r.items.filter(function(i){return i.code!=='Delivery'&&i.code!=='Installation'&&CAT.filter(function(x){return x.code===i.code;})[0].type!=='plinth';}).map(function(i){return {name:i.name,qty:i.qty,code:i.code};});
+  markDirty();
+}
+function financeCalc(amt,fin){
+  var dep=Math.min(100,Math.max(0,+fin.dep||0)),term=Math.max(0,+fin.term||0),rate=Math.max(0,+fin.rate||0),freq=+fin.freq||12;
+  var deposit=amt*dep/100, principal=amt-deposit, n=term*freq, i=(rate/100)/freq, pay=0;
+  if(n>0)pay=i>0?principal*i/(1-Math.pow(1+i,-n)):principal/n;
+  return {pay:pay,deposit:deposit,repaid:pay*n,allIn:deposit+pay*n,freq:freq};
+}
+
+function cLine(t,mut,val,id){return '<div class="cln"><span>'+t+(mut?' <span class="mut">'+mut+'</span>':'')+'</span><b id="'+id+'">'+val+'</b></div>';}
+function cLineBig(t,val,id){return '<div class="cln big"><span>'+t+'</span><b id="'+id+'">'+val+'</b></div>';}
+
+function renderCalc(s){
+  var C=calcInit(s); if(!s._cstep)s._cstep=1;
+  var names=['Size','Fit-out guide','Machines','Summary'];
+  var head='<div class="cwiz-steps">'+names.map(function(t,i){var n=i+1;return '<div class="cwiz-st'+(n===s._cstep?' on':(n<s._cstep?' done':''))+'" data-cstep="'+n+'"><span class="cn">'+n+'</span>'+t+'</div>';}).join('')+'</div>';
+  var body = s._cstep===1?calcStep1(s,C) : s._cstep===2?calcStep2(s,C) : s._cstep===3?calcStep3(s,C) : calcStep4(s,C);
+  return '<div class="calc"><div class="cwrap">'+head+'<div id="calcBody">'+body+'</div></div></div>';
+}
+function calcStep1(s,C){
+  return '<div class="fld" style="max-width:260px"><label>Tenancy size (m²)</label><input id="c_sqm" type="number" min="20" max="200" step="1" value="'+esc(C.sqm||'')+'" placeholder="e.g. 65"></div>'
+    +'<p class="hint" style="margin-top:4px">The fit-out estimate and the recommended machine package are both sized from this. You fine-tune each in the next steps.</p>';
+}
+function calcStep2(s,C){
+  if(!C.fitout)C.fitout=fitoutDefault(C.sqm);
+  var mach=pickRow(C.sqm).totalEx, sub=mach+(+C.fitout||0), marg=sub*MARGIN;
+  return '<div class="cpill">'+(C.sqm||'—')+' m²</div>'
+    +'<div class="two"><div class="fld"><label>Fit-out total — ex GST (incl builder margin)</label><input id="c_fitout" type="number" step="100" value="'+esc(C.fitout)+'"></div>'
+    +'<div class="fld"><label>Rate check</label><input readonly id="c_fitrate" style="background:#F1ECE1;color:#8a9790" value="'+(C.sqm?('$'+Math.round((+C.fitout||0)/C.sqm).toLocaleString('en-AU')+' / m²'):'—')+'"></div></div>'
+    +'<div class="clines">'
+    +cLine('Machines package for this size','(supply, delivery &amp; install, ex GST)',AUD(mach),'cl_mach')
+    +cLine('Fit-out','(incl builder margin)',AUD(C.fitout),'cl_fit')
+    +cLine('Project subtotal','ex GST',AUD(sub),'cl_sub')
+    +cLine('Laundré margin','20%',AUD(marg),'cl_marg')
+    +cLineBig('Indicative total',AUD(sub+marg),'cl_tot')
+    +'</div><p class="hint">The machine figure is the recommended package for this size — choose the actual machines next.</p>';
+}
+function calcStep3(s,C){
+  var target=pickRow(C.sqm).totalEx, r=calcNet(C), sel=r.net;   // includes delivery + installation
+  var sizeRows=TABLE.map(function(x){return '<tr'+(x.sqm===pickRow(C.sqm).sqm?' class="hit"':'')+'><td>'+x.sqm+'m²</td><td>'+x.units+'</td><td>'+x.washers+'</td><td>'+x.dryers+'</td><td class="r">'+AUD(x.totalEx)+'</td></tr>';}).join('');
+  var gd=(+C.globalDisc||0)/100;
+  var rows=CAT.map(function(x){
+    if(x.cat) return '<tr class="ccat"><td colspan="4">'+esc(x.cat)+'</td></tr>';
+    var st=C.machState[x.code]; var dis=(x.type==='plinth'&&!C.plinth)||(x.type==='delivery'&&!C.delivery)||(x.type==='install'&&!C.install);
+    var qty=dis?0:(st.qty||0), n=x.unit*qty*(1-gd), lock=dis||x.type==='plinth';
+    return '<tr'+(dis?' class="coff"':'')+'><td class="l">'+esc(x.name)+'<div class="ccode">'+esc(x.code)+'</div></td>'
+      +'<td class="r">'+AUD(x.unit)+'</td>'
+      +'<td class="colqty"><input class="cnum" data-code="'+x.code+'" data-f="qty" type="number" min="0" step="1" value="'+qty+'"'+(lock?' disabled':'')+'></td>'
+      +'<td class="r cnetc" data-net="'+x.code+'">'+AUD(n)+'</td></tr>';
+  }).join('');
+  var pct=target>0?Math.min(100,(sel/target)*100):0, over=sel>target;
+  return '<div class="c3sticky"><div class="c3top"><div><div class="c3lab">Selected machines <span class="mut">ex GST · supply + delivery + install</span></div><div class="c3sel" id="cb_sel">'+AUD(sel)+'</div></div>'
+    +'<div style="text-align:right"><div class="c3lab">Budget target <span class="mut">('+(C.sqm||'—')+' m²)</span></div><div class="c3tgt" id="cb_tgt">'+AUD(target)+'</div></div></div>'
+    +'<div class="c3track"><div class="c3fill'+(over?' over':'')+'" id="cb_fill" style="width:'+pct+'%"></div></div>'
+    +'<div class="c3diff" id="cb_diff">'+(Math.abs(sel-target)<1?'On budget ✓':(sel>target?AUD(sel-target)+' over target':AUD(target-sel)+' under target'))+'</div>'
+    +'<div class="c3items" id="cb_items">'+(r.items.filter(function(i){return i.code!=='Delivery'&&i.code!=='Installation'&&CAT.filter(function(x){return x.code===i.code;})[0].type!=='plinth';}).map(function(i){return '<span class="it">'+i.qty+'× '+esc(i.name)+'</span>';}).join('')||'<span class="none">Add machines below to build the quote.</span>')+'</div></div>'
+    +'<div class="c3guide"><div class="c3gh">Sizing-table guide</div><table class="ctbl"><tr><th>Size</th><th>Units</th><th>W</th><th>D</th><th class="r">Total ex GST</th></tr>'+sizeRows+'</table></div>'
+    +'<div class="c3tog"><label><input type="checkbox" data-tog="plinth"'+(C.plinth?' checked':'')+'> Plinths (auto-match washers)</label>'
+    +'<label><input type="checkbox" data-tog="delivery"'+(C.delivery?' checked':'')+'> Delivery</label>'
+    +'<label><input type="checkbox" data-tog="install"'+(C.install?' checked':'')+'> Installation</label>'
+    +'<span class="c3disc"><span>Discount %</span><input id="c_globaldisc" type="number" min="0" max="100" step="0.5" value="'+(+C.globalDisc||0)+'"><span class="mut" style="color:#8a9790;font-weight:400">applies to all lines</span></span></div>'
+    +'<table class="mtbl"><thead><tr><th class="l">Machine</th><th class="r">Unit $</th><th class="colqty">Qty</th><th class="r">Net ex GST</th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function calcStep4(s,C){
+  var sm=calcSummary(s), fin=C.fin||{dep:15,term:5,rate:9,freq:12};
+  if(fin.amt==null)fin.amt=Math.round(sm.gstInc);
+  var f=financeCalc(fin.amt,fin);
+  var flabel={12:'Monthly repayment',26:'Fortnightly repayment',52:'Weekly repayment'}[+fin.freq||12];
+  return '<div class="cpill">'+esc(s.name||(C.sqm+' m²'))+'</div>'
+    +'<div class="clines">'
+    +cLine('Machines','(supply, delivery &amp; install)',AUD(sm.machEx),'cs_mach')
+    +cLine('Fit-out','(incl builder margin)',AUD(sm.fitout),'cs_fit')
+    +cLine('Project subtotal','ex GST',AUD(sm.sub),'cs_sub')
+    +cLine('Laundré margin','20%',AUD(sm.marg),'cs_marg')
+    +cLineBig('Turnkey — total incl margin (ex GST)',AUD(sm.tot),'cs_tot')
+    +cLine('Total incl GST','',AUD(sm.gstInc),'cs_gst')
+    +'</div>'
+    +'<div class="cfin"><div class="cfinh">If financed</div><p class="hint" style="margin:2px 0 10px">Amortising loan on the project total. Deposit is paid upfront and not financed.</p>'
+    +'<div class="cfin-grid">'
+    +'<div class="fld"><label>Amount financed (incl GST)</label><input id="fin_amt" type="number" step="1000" value="'+esc(fin.amt)+'"></div>'
+    +'<div class="fld"><label>Deposit %</label><input id="fin_dep" type="number" step="1" value="'+esc(fin.dep)+'"></div>'
+    +'<div class="fld"><label>Term (years)</label><input id="fin_term" type="number" step="1" value="'+esc(fin.term)+'"></div>'
+    +'<div class="fld"><label>Interest % p.a.</label><input id="fin_rate" type="number" step="0.1" value="'+esc(fin.rate)+'"></div>'
+    +'<div class="fld"><label>Frequency</label><select id="fin_freq"><option value="12"'+(+fin.freq===12?' selected':'')+'>Monthly</option><option value="26"'+(+fin.freq===26?' selected':'')+'>Fortnightly</option><option value="52"'+(+fin.freq===52?' selected':'')+'>Weekly</option></select></div>'
+    +'</div>'
+    +'<div class="cfin-out"><div class="b"><div class="l" id="fin_lbl">'+flabel+'</div><div class="v" id="fin_pay">'+AUD(f.pay)+'</div></div>'
+    +'<div class="b"><div class="l">Deposit</div><div class="v" id="fin_depv">'+AUD(f.deposit)+'</div></div>'
+    +'<div class="b"><div class="l">Total repaid</div><div class="v" id="fin_rep">'+AUD(f.repaid)+'</div></div>'
+    +'<div class="b"><div class="l">All-in cost</div><div class="v" id="fin_all">'+AUD(f.allIn)+'</div></div></div></div>';
+}
+/* in-place refreshers (keep focus while typing) */
+function calcRefresh2(s){var C=s.f.calc;var mach=pickRow(C.sqm).totalEx,sub=mach+(+C.fitout||0),marg=sub*MARGIN;
+  var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+  set('cl_mach',AUD(mach));set('cl_fit',AUD(C.fitout));set('cl_sub',AUD(sub));set('cl_marg',AUD(marg));set('cl_tot',AUD(sub+marg));
+  var fr=document.getElementById('c_fitrate');if(fr)fr.value=(C.sqm?('$'+Math.round((+C.fitout||0)/C.sqm).toLocaleString('en-AU')+' / m²'):'—');
+  calcCommit(s);
+}
+function calcRefresh3(s){var C=s.f.calc;autoPlinths(C);var gd=(+C.globalDisc||0)/100;var r=calcNet(C),target=pickRow(C.sqm).totalEx,sel=r.net;
+  CAT.forEach(function(x){if(!x.code)return;var st=C.machState[x.code];var dis=(x.type==='plinth'&&!C.plinth)||(x.type==='delivery'&&!C.delivery)||(x.type==='install'&&!C.install);
+    var n=dis?0:x.unit*(st.qty||0)*(1-gd);var cell=document.querySelector('[data-net="'+x.code+'"]');if(cell)cell.textContent=AUD(n);
+    if(x.type==='plinth'){var qi=document.querySelector('.cnum[data-code="'+x.code+'"][data-f="qty"]');if(qi)qi.value=(dis?0:(st.qty||0));}});
+  var pct=target>0?Math.min(100,(sel/target)*100):0,over=sel>target;
+  var f=document.getElementById('cb_fill');if(f){f.style.width=pct+'%';f.classList.toggle('over',over);}
+  var setT=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+  setT('cb_sel',AUD(sel));setT('cb_tgt',AUD(target));
+  setT('cb_diff',sel<=0?'No machines selected yet':(Math.abs(sel-target)<1?'On budget ✓':(sel>target?AUD(sel-target)+' over target':AUD(target-sel)+' under target')));
+  var items=r.items.filter(function(i){return i.code!=='Delivery'&&i.code!=='Installation'&&CAT.filter(function(x){return x.code===i.code;})[0].type!=='plinth';});
+  var ci=document.getElementById('cb_items');if(ci)ci.innerHTML=items.length?items.map(function(i){return '<span class="it">'+i.qty+'× '+esc(i.name)+'</span>';}).join(''):'<span class="none">Add machines below to build the quote.</span>';
+  calcCommit(s);
+}
+function calcRefreshFin(s){var C=s.f.calc,fin=C.fin;var f=financeCalc(+fin.amt||0,fin);
+  var set=function(id,v){var e=document.getElementById(id);if(e)e.textContent=v;};
+  set('fin_lbl',{12:'Monthly repayment',26:'Fortnightly repayment',52:'Weekly repayment'}[+fin.freq||12]);
+  set('fin_pay',AUD(f.pay));set('fin_depv',AUD(f.deposit));set('fin_rep',AUD(f.repaid));set('fin_all',AUD(f.allIn));
+}
+function wireCalc(){
+  var host=document.getElementById('calcBody'); if(!host)return; var s=cur, C=s.f.calc;
+  // mini-stepper + nav
+  document.querySelectorAll('[data-cstep]').forEach(function(el){el.onclick=function(){var n=+el.dataset.cstep;if(n>1&&!(C.sqm>0)){alert('Enter the tenancy size first.');return;}s._cstep=n;renderEditor();};});
+  document.querySelectorAll('[data-cnav]').forEach(function(b){b.onclick=function(){
+    if(b.dataset.cnav==='next'){ if(s._cstep===1&&!(C.sqm>0)){alert('Enter the tenancy size first.');return;} if(s._cstep===1&&!C.fitout)C.fitout=fitoutDefault(C.sqm); s._cstep=Math.min(4,s._cstep+1); }
+    else s._cstep=Math.max(1,s._cstep-1);
+    renderEditor();
+  };});
+  // step 1
+  var sq=document.getElementById('c_sqm'); if(sq)sq.addEventListener('input',function(){C.sqm=parseFloat(sq.value)||0;calcCommit(s);});
+  // step 2
+  var fo=document.getElementById('c_fitout'); if(fo)fo.addEventListener('input',function(){C.fitout=parseFloat(fo.value)||0;calcRefresh2(s);});
+  // step 3 machine quantities
+  document.querySelectorAll('.cnum[data-f="qty"]').forEach(function(inp){inp.addEventListener('input',function(){
+    var c=inp.dataset.code,v=parseFloat(inp.value);if(isNaN(v))v=0;
+    C.machState[c].qty=Math.max(0,Math.round(v));
+    calcRefresh3(s);
+  });});
+  // single global discount % — applies across every line
+  var gdi=document.getElementById('c_globaldisc'); if(gdi)gdi.addEventListener('input',function(){C.globalDisc=Math.min(100,Math.max(0,parseFloat(gdi.value)||0));calcRefresh3(s);});
+  document.querySelectorAll('[data-tog]').forEach(function(cb){cb.onchange=function(){C[cb.dataset.tog]=cb.checked;markDirty();renderEditor();};});
+  // step 4 finance
+  ['fin_amt','fin_dep','fin_term','fin_rate','fin_freq'].forEach(function(id){var e=document.getElementById(id);if(e)e.addEventListener('input',function(){
+    C.fin.amt=parseFloat(document.getElementById('fin_amt').value)||0;
+    C.fin.dep=parseFloat(document.getElementById('fin_dep').value)||0;
+    C.fin.term=parseFloat(document.getElementById('fin_term').value)||0;
+    C.fin.rate=parseFloat(document.getElementById('fin_rate').value)||0;
+    C.fin.freq=parseInt(document.getElementById('fin_freq').value)||12;
+    calcRefreshFin(s);markDirty();
+  });});
+  calcCommit(s);
+}
+
+/* ---------- package / PDF preview ---------- */
+function proposalHtml(s){
+  var f=s.f||{};
+  var row=function(l,v){return v?('<tr><td style="color:#6b7d74;padding:7px 14px 7px 0;font-size:13px;width:160px;vertical-align:top;white-space:nowrap">'+esc(l)+'</td><td style="padding:7px 0;font-size:13px;color:#2E3D36">'+esc(v).replace(/\n/g,'<br>')+'</td></tr>'):'';};
+  var sect=function(t){return '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#C4703F;font-weight:800;margin:18px 0 4px">'+esc(t)+'</div>';};
+  var sm=(f.calc&&f.calc.machState)?calcSummary(s):null;
+  var machineList=(f.machines&&f.machines.length)?f.machines.map(function(m){return m.qty+'× '+m.name;}).join(' · '):'';
+  var cost='';
+  if(sm){
+    cost=sect('Investment')+'<table style="width:100%;border-collapse:collapse">'
+      +'<tr><td style="padding:8px 0;font-size:13px;color:#2E3D36">Laundry equipment — supply, delivery &amp; installation'+(machineList?'<div style="font-size:11px;color:#8a9790;margin-top:3px;line-height:1.5">'+esc(machineList)+'</div>':'')+'</td><td style="padding:8px 0;text-align:right;font-weight:700;white-space:nowrap;vertical-align:top">'+money(sm.machEx)+'</td></tr>'
+      +'<tr><td style="padding:8px 0;font-size:13px;color:#2E3D36">Fit-out — design, construction &amp; project management</td><td style="padding:8px 0;text-align:right;font-weight:700;white-space:nowrap">'+money(sm.fitout)+'</td></tr>'
+      +'<tr><td style="padding:9px 0;font-size:13px;color:#33473D;font-weight:800;border-top:1px solid #EEE7D9">Turnkey — ex GST</td><td style="padding:9px 0;text-align:right;font-weight:800;border-top:1px solid #EEE7D9;white-space:nowrap">'+money(sm.tot)+'</td></tr>'
+      +'<tr><td style="padding:5px 0;font-size:12.5px;color:#7a8b84">GST (10%)</td><td style="padding:5px 0;text-align:right;color:#7a8b84;white-space:nowrap">'+money(sm.gstInc-sm.tot)+'</td></tr>'
+      +'<tr><td style="padding:10px 0;font-size:15px;font-weight:900;color:#33473D;border-top:2px solid #33473D">Total incl GST</td><td style="padding:10px 0;text-align:right;font-size:15px;font-weight:900;color:#33473D;border-top:2px solid #33473D;white-space:nowrap">'+money(sm.gstInc)+'</td></tr>'
+      +'</table>'
+      +'<div style="display:flex;gap:8px;margin-top:12px">'
+      +['50% Deposit','30% Fit-out','20% Completion'].map(function(lab,i){return '<div style="flex:1;background:#FBF6EF;border:1px solid #EBD9C6;border-radius:10px;padding:9px 8px;text-align:center"><div style="font-size:10px;color:#C4703F;font-weight:800">'+lab+'</div><div style="font-size:14px;font-weight:800;color:#33473D;margin-top:2px">'+money(sm.gstInc*[0.5,0.3,0.2][i])+'</div></div>';}).join('')
+      +'</div>';
+  } else if(f.turnkey_price){
+    cost=sect('Investment')+'<div style="font-size:16px;font-weight:800;color:#33473D">'+money(f.turnkey_price)+' <span style="font-size:12px;color:#8a9790;font-weight:400">ex GST turnkey</span></div>';
+  }
+  return '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#2E3D36;background:#fff;border:1px solid #E4DBCB;border-radius:12px;overflow:hidden">'
+    +'<div style="border-top:5px solid #C4703F;background:#F4EFE6;padding:20px 26px;display:flex;align-items:center;justify-content:space-between;gap:16px">'
+      +'<img src="/laundre-logo.svg" alt="Laundré" style="height:34px;width:auto;display:block">'
+      +'<div style="text-align:right"><div style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#977f57;font-weight:800">Site Proposal</div><div style="font-size:20px;font-weight:800;color:#33473D;margin-top:2px">'+esc(s.name||'Laundré site')+'</div></div>'
+    +'</div>'
+    +'<div style="padding:6px 26px 24px">'
+    +sect('Location')+'<table style="width:100%;border-collapse:collapse">'+row('Suburb',f.suburb)+row('State',f.state)+row('Address',f.address)+row('Protected radius',f.radius?f.radius+' km':'')+row('Catchment population',f.population)+'</table>'
+    +((f.competitors||f.competitor_verdict||f.growth)?sect('Market'):'')+'<table style="width:100%;border-collapse:collapse">'+row('Competitors',f.competitors)+row('Verdict',f.competitor_verdict)+row('Growth outlook',f.growth)+'</table>'
+    +((f.terms_theirs||f.terms_suggested||f.flags||f.works_landlord||f.works_laundre)?sect('Terms & site'):'')+'<table style="width:100%;border-collapse:collapse">'+row('Landlord terms',f.terms_theirs)+row('Suggested terms',f.terms_suggested)+row('Flags / risks',f.flags)+row('Works — landlord',f.works_landlord)+row('Works — Laundré',f.works_laundre)+'</table>'
+    +((f.keys_date||f.fitout_date||f.opening_date)?sect('Key dates'):'')+'<table style="width:100%;border-collapse:collapse">'+row('Keys date',fdate(f.keys_date))+row('Fit-out start',fdate(f.fitout_date))+row('Opening date',fdate(f.opening_date))+'</table>'
+    +cost
+    +(f.notes?(sect('Notes')+'<div style="font-size:13px;color:#2E3D36;line-height:1.6">'+esc(f.notes).replace(/\n/g,'<br>')+'</div>'):'')
+    +(f.floorplan_img?('<div style="margin-top:8px">'+sect('Floor plan')+'<img src="'+f.floorplan_img+'" style="max-width:100%;border:1px solid #E4DBCB;border-radius:8px;display:block"></div>'):'')
+    +'</div>'
+    +'<div style="background:#33473D;color:#cdd9d1;text-align:center;font-size:11px;padding:11px;letter-spacing:.03em">Laundré Franchising · Commercial-in-confidence</div>'
+    +'</div>';
+}
+function renderPackage(s){
+  if(!s.shareToken)s.shareToken=uid()+uid();
+  var shareUrl = location.origin+'/site-proposal/'+s.shareToken;
+  return '<p class="hint">Preview the full proposal PDF built from everything above, then download it or share the signable link.</p>'
+    +'<div id="propPreview">'+proposalHtml(s)+'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-accent" id="dlPdf">⬇ Download PDF</button></div>'
+    +'<div class="sharebox"><div class="sharehd">🔗 Shareable &amp; signable link</div>'
+    +'<div class="linkrow"><input id="shareUrl" readonly value="'+esc(shareUrl)+'"><button class="btn btn-green" id="copyShare">Copy link</button></div>'
+    +'<p class="hint" style="margin:10px 0 0">Opens a public proposal page with this summary, the signable cost quote and an accept &amp; sign pad. Signing creates the Live Laundromat + Project Delivery timeline automatically.</p></div>';
+}
+/* ---------- allocation / send ---------- */
+function renderAlloc(s){
+  var opts='<option value="">— choose a registered user —</option>'+(USERS||[]).map(function(u){return '<option value="'+esc(u.email)+'" data-name="'+esc(u.name)+'"'+(s.f.assigned_email===u.email?' selected':'')+'>'+esc(u.name)+' ('+esc(u.email)+')</option>';}).join('');
+  return '<p class="hint">Choose who receives the proposal, then send it below. A signable, shareable quote link is included — when they sign, the site is marked Accepted and the Live Laundromat is created automatically.</p>'
+    +'<div class="fld"><label>Assign to a registered user</label><select id="userSel">'+opts+'</select></div>'
+    +'<div class="two"><div class="fld"><label>Recipient name</label><input data-f="assigned_name" value="'+esc(s.f.assigned_name||'')+'"></div>'
+    +'<div class="fld"><label>Recipient email</label><input data-f="assigned_email" value="'+esc(s.f.assigned_email||'')+'"></div></div>'
+    +'<p class="hint" style="margin:2px 0 0">The <b>Send proposal &amp; quote</b> button below emails this recipient the proposal with the signable quote link, saves the site, and returns you to the sites list.</p>'
+    +'<div class="savenote" id="sendNote" style="margin-top:8px"></div>';
+}
+function renderAccept(s){
+  var made = s.f.live_created;
+  return '<p class="hint">Status only. When the recipient signs the shared quote/proposal, the signed record is stored, admins are notified, and a Live Laundromat + Project Delivery timeline are created automatically.</p>'
+    +'<div class="pkgbox">'+(made
+      ? '<b style="color:var(--ok)">✓ Accepted — Live Laundromat created</b><p class="hint" style="margin:6px 0 0">'+esc(s.name||'This site')+' is now in Live Laundromats and Project Delivery.</p>'
+      : '<b style="color:var(--accent)">Accepted</b><p class="hint" style="margin:6px 0 0">Marked accepted — the Live Laundromat and delivery timeline are created from the signing flow.</p>')
+    +'</div>';
+}
+
+/* ---------- map + overlap ---------- */
+function haversine(a,b,c,d){var R=6371,t=Math.PI/180,dx=(c-a)*t,dy=(d-b)*t,x=Math.sin(dx/2)**2+Math.cos(a*t)*Math.cos(c*t)*Math.sin(dy/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+function drawMap(){
+  var el=document.getElementById('map'); if(!el||!window.L)return;
+  var lat=parseFloat(cur.f.lat), lng=parseFloat(cur.f.lng), rad=parseFloat(cur.f.radius)||3;
+  if(!map){ map=L.map('map',{scrollWheelZoom:false}); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map); }
+  layers.forEach(function(l){map.removeLayer(l);}); layers=[];
+  var pts=[];
+  LOCS.forEach(function(l){ if(l.lat&&l.lng){ var m=L.circleMarker([l.lat,l.lng],{radius:6,color:'#435E53',fillColor:'#435E53',fillOpacity:.9}).addTo(map).bindPopup(esc(l.name)); var c=L.circle([l.lat,l.lng],{radius:((+l.radius||3)*((l.unit==='m')?1:1000)),color:'#435E53',weight:1,fillOpacity:.06}).addTo(map); layers.push(m,c); pts.push([l.lat,l.lng]); } });
+  var ov=document.getElementById('overlap');
+  if(!isNaN(lat)&&!isNaN(lng)){
+    var m=L.circleMarker([lat,lng],{radius:8,color:'#C4703F',fillColor:'#C4703F',fillOpacity:1}).addTo(map).bindPopup(esc(cur.name||'This site'));
+    var c=L.circle([lat,lng],{radius:rad*1000,color:'#C4703F',weight:2,fillOpacity:.1}).addTo(map); layers.push(m,c); pts.push([lat,lng]);
+    var clash=null;
+    LOCS.forEach(function(l){ if(l.lat&&l.lng){ var d=haversine(lat,lng,+l.lat,+l.lng); var lr=(+l.radius||3); if(d < (rad+lr)){ if(!clash||d<clash.d)clash={name:l.name,d:d}; } } });
+    if(ov)ov.innerHTML = clash ? '<div class="overlap clash">⚠ Overlaps '+esc(clash.name)+' — '+clash.d.toFixed(1)+' km away. Review territory.</div>'
+                                : '<div class="overlap clear">✓ No overlap with existing Laundré catchments.</div>';
+  } else if(ov){ ov.innerHTML='<div class="overlap" style="background:#F1ECE1;color:#8a9790">Search an address (or add latitude &amp; longitude) to check territory overlap.</div>'; }
+  if(pts.length){ try{ map.fitBounds(pts,{padding:[30,30],maxZoom:12}); }catch(e){ map.setView(pts[0],11); } } else { map.setView([-25.5,152.7],9); }
+  setTimeout(function(){map.invalidateSize();},60);
+}
+
+/* ---------- actions ---------- */
+document.addEventListener('click',function(e){
+  if(e.target.id==='copyShare'){ var i=document.getElementById('shareUrl'); i.select(); try{document.execCommand('copy');e.target.textContent='Copied ✓';setTimeout(function(){e.target.textContent='Copy';},1500);}catch(x){} }
+  if(e.target.id==='sendProposal'){ sendProposal(); }
+});
+function sendProposal(){
+  var s=cur, note=document.getElementById('sendNote'); if(!s.f.assigned_email){ alert('Add an assigned email in the Recipient field first.'); return; }
+  if(!s.shareToken)s.shareToken=uid()+uid();
+  e_disable('sendProposalNav',true); if(note)note.textContent='Sending…';
+  var body={event:'site_proposal',to:[s.f.assigned_email],subject:'Your Laundré site quote & proposal — '+(s.name||''),
+    heading:'Your site proposal',summary:'See attached your site quote and proposal for '+(s.name||'your site')+'.',
+    lines:[['Site',s.name||''],['Suburb',s.f.suburb||''],['Turnkey price',s.f.turnkey_price?money(s.f.turnkey_price)+' ex GST':''],['Proposal link',location.origin+'/site-proposal/'+(s.shareToken||'')]],
+    note:'Open the link to review and sign online.'};
+  fetch('/notify-api/send',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(body)})
+    .then(function(r){return r.json().catch(function(){return{};}).then(function(j){return{ok:r.ok,j:j};});})
+    .then(function(o){ s.f.proposal_sent_at=new Date().toISOString(); if(s.stage!=='accepted')s.stage='allocation'; markDirty();
+      // Auto-save, then return to the sites list.
+      save().then(function(){ renderList(); }).catch(function(){ e_disable('sendProposalNav',false); if(note)note.textContent='Sent, but could not save — try Save.'; }); })
+    .catch(function(){ e_disable('sendProposalNav',false); if(note)note.textContent='Could not send. Check the connection and try again.'; });
+}
+function e_disable(id,v){var el=document.getElementById(id);if(el)el.disabled=v;}
+
+window.addEventListener('beforeunload',function(e){ if(dirty){e.preventDefault();e.returnValue='';} });
+load().then(renderList).catch(function(e){ document.getElementById('view').innerHTML='<p class="lead">Could not load: '+esc(e.message)+'</p>'; });
+</script>
+</body>
+</html>

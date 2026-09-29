@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Ask your data</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);window.__EMBED=q.get('embed')==='1';if(window.__EMBED){document.addEventListener('DOMContentLoaded',function(){var s=document.createElement('style');s.textContent='header{display:none!important}main{padding-top:10px!important}';document.head.appendChild(s);});}}catch(e){}})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:7px;padding:10px 16px;font-size:14px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);text-decoration:none;}
+  input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:9px;padding:11px 13px;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:760px;margin:0 auto;padding:22px;}
+  h2{font-size:20px;margin:0 0 4px;color:var(--green-d);} .sub{color:#6b7d73;font-size:13px;margin-bottom:18px;}
+  .askbar{display:flex;gap:10px;margin-bottom:10px;} .askbar textarea{flex:1;resize:vertical;min-height:48px;}
+  .row{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;} .chip{font-size:12.5px;background:#fff;border:1px solid var(--cream-line);border-radius:20px;padding:6px 12px;color:var(--green);cursor:pointer;} .chip:hover{background:#EFEADD;}
+  .answer{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:18px 20px;font-size:14.5px;line-height:1.6;white-space:pre-wrap;min-height:40px;}
+  .answer.empty{color:#8a9790;text-align:center;padding:34px;}
+  .warn{background:#F5EEDA;border:1px solid #e4d3a5;color:#8a6d2b;border-radius:12px;padding:11px 15px;font-size:12.5px;font-weight:600;margin-bottom:14px;}
+  pre{background:#F7F3EA;border:1px solid #EEE7D9;border-radius:10px;padding:12px;font-size:11.5px;overflow:auto;max-height:220px;}
+</style>
+</head>
+<body>
+<header><span class="ttl">Ask your data</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-portal.html">⌂ Portal</a></header>
+<main>
+  <h2>Ask about your laundromats</h2>
+  <div class="sub">Ask about revenue and weather in plain English. Answers use the last 30 days of data.</div>
+  <div id="warn"></div>
+  <div class="row"><label style="font-size:12px;color:#5f7469;font-weight:600">Scope</label><select id="scope" style="min-width:220px"></select></div>
+  <div class="askbar"><textarea id="q" placeholder="e.g. Which day last week had the highest revenue? Did rain affect sales?"></textarea><button class="btn btn-green" id="ask">Ask</button></div>
+  <div class="chips" id="chips">
+    <span class="chip">What was my total revenue last 30 days?</span>
+    <span class="chip">Which day was busiest?</span>
+    <span class="chip">Did rainy days have lower sales?</span>
+    <span class="chip">Compare my laundromats' revenue</span>
+  </div>
+  <div class="answer empty" id="answer">Your answer will appear here.</div>
+</main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(j){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(j)h['Content-Type']='application/json';return h;}
+function apiGet(u){return fetch(u,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(b)}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+var SESSION=(function(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{};}catch(e){return {};}})();
+var ADMIN=(SESSION.role==='admin');
+function fillScope(){
+  var sel=document.getElementById('scope');
+  if(ADMIN){
+    sel.innerHTML='<option value="">All laundromats</option>';
+    apiGet('/locations-api').then(function(list){(list||[]).forEach(function(l){sel.innerHTML+='<option value="'+l.id+'">'+esc(l.name)+'</option>';});}).catch(function(){});
+  } else {
+    var locs=Array.isArray(SESSION.locations)?SESSION.locations:[];
+    if(locs.length){ sel.innerHTML=(locs.length>1?'<option value="">All my laundromats</option>':'')+locs.map(function(l){return '<option value="'+l.id+'">'+esc(l.name)+'</option>';}).join(''); }
+    else { sel.innerHTML='<option value="'+(SESSION.locationId||'')+'">'+esc(SESSION.locationName||'My laundromat')+'</option>'; }
+  }
+}
+function ask(){
+  var q=document.getElementById('q').value.trim(); if(!q)return;
+  var loc=document.getElementById('scope').value;
+  var el=document.getElementById('answer'); el.className='answer'; el.textContent='Thinking…';
+  var body={q:q}; if(loc)body.loc=Number(loc);
+  apiSend('/ai-search-api','POST',body).then(function(d){
+    if(d.configured===false){
+      document.getElementById('warn').innerHTML='<div class="warn">⚙ AI search isn’t switched on yet — an API key needs to be added to enable live answers.</div>';
+      el.innerHTML=esc(d.answer)+'<pre>'+esc(JSON.stringify(d.data,null,2))+'</pre>';
+    } else {
+      document.getElementById('warn').innerHTML='';
+      el.textContent=d.answer||'No answer.';
+    }
+  }).catch(function(e){el.textContent='Could not get an answer: '+e.message;});
+}
+document.getElementById('ask').onclick=ask;
+document.getElementById('q').addEventListener('keydown',function(e){if((e.metaKey||e.ctrlKey)&&e.key==='Enter')ask();});
+document.querySelectorAll('#chips .chip').forEach(function(c){c.onclick=function(){document.getElementById('q').value=c.textContent;ask();};});
+fillScope();
+</script>
+</body>
+</html>

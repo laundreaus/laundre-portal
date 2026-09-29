@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Build Schedule</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);window.__EMBED=q.get('embed')==='1';if(window.__EMBED){document.addEventListener('DOMContentLoaded',function(){var s=document.createElement('style');s.textContent='header{display:none!important}main{padding-top:10px!important}';document.head.appendChild(s);});}}catch(e){}})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;--amber:#9a6b32;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);text-decoration:none;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:1180px;margin:0 auto;padding:16px 22px 70px;}
+  .toolbar{display:flex;align-items:center;gap:14px;margin-bottom:6px;flex-wrap:wrap;} .toolbar h2{font-size:19px;margin:0;color:var(--green-d);} .toolbar .spacer{flex:1;}
+  .sub{color:#6b7d73;font-size:13px;margin:0 0 16px;}
+  .seg{display:inline-flex;background:#EBE4D5;border-radius:9px;padding:3px;gap:3px;}
+  .seg button{border:none;background:transparent;border-radius:7px;padding:6px 13px;font-size:12.5px;font-weight:700;color:#6b7d73;}
+  .seg button.on{background:#fff;color:var(--green-d);box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .seg .lbl{align-self:center;font-size:11px;color:#8a9790;font-weight:700;padding:0 2px 0 6px;text-transform:uppercase;letter-spacing:.04em;}
+  .legend{display:flex;gap:16px;align-items:center;font-size:11.5px;color:#6b7d73;margin:6px 0 14px;flex-wrap:wrap;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .swatch{width:12px;height:12px;border-radius:3px;} .swatch.done{background:var(--green);} .swatch.rem{background:#CBBFA6;} .swatch.today{background:var(--accent);width:3px;height:14px;border-radius:2px;}
+  .panel{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:6px;overflow-x:auto;}
+  .chart{position:relative;}
+  .axis{position:relative;border-bottom:1px solid var(--cream-line);}
+  .axis .mo{position:absolute;top:4px;font-size:11px;color:var(--green-d);font-weight:800;letter-spacing:.02em;white-space:nowrap;transform:translateX(5px);}
+  .axis .mo2{position:absolute;bottom:4px;font-size:10px;color:#9aa8a0;font-weight:700;white-space:nowrap;transform:translateX(3px);}
+  .grid{position:absolute;bottom:0;width:100%;pointer-events:none;}
+  .grid .gl{position:absolute;top:0;bottom:0;width:1px;background:#F2ECDF;}
+  .grid .gl.strong{background:#E4DBCB;}
+  .grid .wke{position:absolute;top:0;bottom:0;background:#FAF6EE;}
+  .todayline{position:absolute;bottom:6px;width:2px;background:var(--accent);z-index:4;pointer-events:none;}
+  .todayline .cap{position:absolute;top:-2px;left:-16px;font-size:9.5px;font-weight:800;color:#fff;background:var(--accent);border-radius:10px;padding:1px 6px;white-space:nowrap;}
+  .row{position:relative;height:52px;border-bottom:1px solid #F4EFE6;}
+  .row:hover{background:#FBF9F4;}
+  .lbl{position:sticky;left:0;top:0;height:52px;display:flex;flex-direction:column;justify-content:center;padding:0 12px;overflow:hidden;z-index:5;background:linear-gradient(90deg,#fff 82%,rgba(255,255,255,0));}
+  .row:hover .lbl{background:linear-gradient(90deg,#FBF9F4 82%,rgba(251,249,244,0));}
+  .lbl a{color:var(--green-d);font-weight:800;font-size:13.5px;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lbl a:hover{color:var(--accent);}
+  .lbl .meta{font-size:11px;color:#8a9790;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lbl .meta b{color:var(--amber);}
+  .bar{position:absolute;height:16px;top:12px;border-radius:9px;background:#CBBFA6;z-index:1;box-shadow:inset 0 0 0 1px rgba(0,0,0,.04);}
+  .bar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:9px;background:var(--green);}
+  .bar.late .fill{background:#B4472F;}
+  .pin{position:absolute;top:9px;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #CBBFA6;transform:translateX(-6px);z-index:2;}
+  .pin.done{background:var(--green);border-color:var(--green);}
+  .pin.next{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(196,112,63,.18);}
+  .pin .tt{display:none;position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:var(--green-d);color:#fff;font-size:11px;font-weight:600;padding:5px 9px;border-radius:7px;white-space:nowrap;z-index:20;box-shadow:0 6px 18px rgba(0,0,0,.25);}
+  .pin .tt b{color:#f0d9c5;} .pin:hover .tt{display:block;}
+  .barcap{position:absolute;top:15px;font-size:10px;font-weight:800;color:#5f6f68;white-space:nowrap;z-index:2;}
+  .empty{padding:44px;text-align:center;color:#8a9790;}
+  /* Calendar (agenda) view */
+  .agenda{max-width:760px;}
+  .mgroup{margin-bottom:22px;}
+  .mgroup h3{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);font-weight:800;margin:0 0 10px;display:flex;align-items:center;gap:10px;}
+  .mgroup h3 .ln{flex:1;height:1px;background:var(--cream-line);}
+  .ev{background:#fff;border:1px solid var(--cream-line);border-radius:11px;padding:11px 14px;margin-bottom:9px;display:flex;gap:13px;align-items:center;}
+  .ev .day{flex:0 0 46px;text-align:center;}
+  .ev .day .d{font-size:19px;font-weight:800;color:var(--green-d);line-height:1;} .ev .day .w{font-size:10.5px;color:#8a9790;text-transform:uppercase;margin-top:2px;}
+  .ev .info{flex:1;min-width:0;} .ev .info h4{margin:0;font-size:14px;color:var(--green-d);} .ev .info .pj{font-size:12px;color:#6b7d73;margin-top:2px;}
+  .ev .st{flex:0 0 auto;border-radius:20px;padding:3px 10px;font-size:10.5px;font-weight:800;}
+  .st.done{background:#E1EDE4;color:#2f6b46;} .st.due{background:#F5E8D8;color:#9a6b32;} .st.late{background:#F5E0DA;color:#B4472F;} .st.up{background:#EFEADD;color:#7a6f52;}
+</style>
+</head>
+<body>
+<header><span class="ttl">🗓️ Build Schedule</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-project-delivery">Project Delivery →</a><a class="btn btn-ghost" href="laundre-portal.html">⌂ Portal</a></header>
+<main>
+  <div class="toolbar"><h2>Build Schedule</h2><span class="spacer"></span>
+    <div class="seg" id="scaleSeg"><button data-s="month" class="on">Month</button><button data-s="week">Week</button><button data-s="day">Day</button></div>
+    <div class="seg"><button id="vGantt" class="on">Timeline</button><button id="vCal">Calendar</button></div>
+  </div>
+  <p class="sub">Every build across the portfolio on one timeline — dates and progress flow from each site's plan in Project Delivery.</p>
+  <div class="legend">
+    <span><i class="swatch done"></i> Completed</span>
+    <span><i class="swatch rem"></i> Remaining</span>
+    <span><i class="swatch today"></i> Today</span>
+    <span style="color:#9aa8a0">Read-only overview · edit dates in Project Delivery</span>
+  </div>
+  <div id="ganttWrap" class="panel"><div id="gantt" class="chart"><div class="empty">Loading…</div></div></div>
+  <div id="calWrap" class="agenda" style="display:none"></div>
+</main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(){return {'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};}
+function apiGet(u){return fetch(u,{headers:hdrs(),credentials:'same-origin'}).then(function(r){return r.ok?r.json():null;});}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function toMs(d){if(!d)return null;var x=new Date((''+d).slice(0,10)+'T00:00');return isNaN(x)?null:x.getTime();}
+function fdate(t){if(t==null)return '—';var x=new Date(t);return isNaN(x)?'—':x.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});}
+var DAY=86400000, PROJECTS=[], LOCNAMES={}, curScale='month';
+
+function projDates(p){
+  var ds=[];
+  (p.milestones||[]).forEach(function(m){var t=toMs(m.d);if(t)ds.push(t);});
+  [p.keys_date,p.fitout_date,p.opening_date].forEach(function(d){var t=toMs(d);if(t)ds.push(t);});
+  if(!ds.length)return null;
+  var mn=Math.min.apply(null,ds), mx=Math.max.apply(null,ds);
+  if(mx<=mn)mx=mn+14*DAY;
+  return {start:mn,end:mx};
+}
+function pct(p){var ms=p.milestones||[];var d=ms.filter(function(m){return m.done;}).length;return ms.length?Math.round(d/ms.length*100):0;}
+function monthStart(t){var x=new Date(t);return new Date(x.getFullYear(),x.getMonth(),1).getTime();}
+function addMonth(t,n){var x=new Date(t);return new Date(x.getFullYear(),x.getMonth()+n,1).getTime();}
+function dayStart(t){var x=new Date(t);return new Date(x.getFullYear(),x.getMonth(),x.getDate()).getTime();}
+function weekStart(t){var x=new Date(dayStart(t));var dow=(x.getDay()+6)%7;return x.getTime()-dow*DAY;} // Monday
+function moLabel(d,withYear){return d.toLocaleDateString('en-AU',{month:'short'})+(withYear?" '"+String(d.getFullYear()).slice(2):'');}
+
+var SCALES={month:{ppd:2.5},week:{ppd:11},day:{ppd:34}};
+
+function renderGantt(){
+  var host=document.getElementById('gantt');
+  var rows=PROJECTS.map(function(p){return {p:p,d:projDates(p)};}).filter(function(r){return r.d;});
+  if(!rows.length){host.innerHTML='<div class="empty">No dated builds yet. A project appears here once it has milestone dates in Project Delivery.</div>';return;}
+  rows.sort(function(a,b){return a.d.start-b.d.start;});
+  var gmin=Math.min.apply(null,rows.map(function(r){return r.d.start;}));
+  var gmax=Math.max.apply(null,rows.map(function(r){return r.d.end;}));
+  var ppd=SCALES[curScale].ppd, now=Date.now();
+
+  var axisStart, axisEnd;
+  if(curScale==='month'){ axisStart=monthStart(gmin); axisEnd=addMonth(monthStart(gmax),1); }
+  else if(curScale==='week'){ axisStart=weekStart(gmin)-7*DAY; axisEnd=weekStart(gmax)+21*DAY; }
+  else { axisStart=dayStart(gmin)-3*DAY; axisEnd=dayStart(gmax)+4*DAY; }
+
+  var LEFT=210, track=Math.max(1,(axisEnd-axisStart)/DAY)*ppd, W=LEFT+track;
+  function x(t){return LEFT+((t-axisStart)/DAY)*ppd;}
+  var axisH=(curScale==='month')?26:42;
+
+  var h='<div style="min-width:'+W+'px">';
+  // ---- weekend shading (day view only) ----
+  var wke='';
+  if(curScale==='day'){
+    for(var t=axisStart;t<axisEnd;t+=DAY){var dow=new Date(t).getDay();if(dow===0||dow===6){wke+='<div class="wke" style="left:'+x(t)+'px;width:'+ppd+'px"></div>';}}
+  }
+  // ---- axis ----
+  h+='<div class="axis" style="height:'+axisH+'px">';
+  // major = month starts
+  var firstMonth=true;
+  for(var mt=monthStart(axisStart);mt<axisEnd;mt=addMonth(mt,1)){
+    if(mt>=axisStart-2*DAY){var d=new Date(mt);h+='<div class="mo" style="left:'+Math.max(0,x(mt))+'px">'+moLabel(d,firstMonth||d.getMonth()===0)+'</div>';firstMonth=false;}
+  }
+  // minor labels
+  if(curScale==='week'){
+    var w0=weekStart(axisStart); if(w0<axisStart)w0+=7*DAY;
+    for(var w=w0;w<axisEnd;w+=7*DAY){var d=new Date(w);h+='<div class="mo2" style="left:'+x(w)+'px">'+d.getDate()+'</div>';}
+  } else if(curScale==='day'){
+    for(var t=axisStart;t<axisEnd;t+=DAY){var d=new Date(t);h+='<div class="mo2" style="left:'+x(t)+'px">'+d.getDate()+'</div>';}
+  }
+  h+='</div>';
+  // ---- gridlines ----
+  h+='<div class="grid" style="top:'+axisH+'px">'+wke;
+  if(curScale==='month'){
+    for(var mt2=monthStart(axisStart);mt2<axisEnd;mt2=addMonth(mt2,1)){if(mt2>=axisStart){var d=new Date(mt2);h+='<div class="gl'+(d.getMonth()%3===0?' strong':'')+'" style="left:'+x(mt2)+'px"></div>';}}
+  } else if(curScale==='week'){
+    var w1=weekStart(axisStart); if(w1<axisStart)w1+=7*DAY;
+    for(var w=w1;w<axisEnd;w+=7*DAY){var strong=(new Date(w).getDate()<=7);h+='<div class="gl'+(strong?' strong':'')+'" style="left:'+x(w)+'px"></div>';}
+  } else {
+    for(var t=axisStart;t<axisEnd;t+=DAY){var d=new Date(t);var strong=(d.getDay()===1||d.getDate()===1);h+='<div class="gl'+(strong?' strong':'')+'" style="left:'+x(t)+'px"></div>';}
+  }
+  h+='</div>';
+  // ---- today ----
+  if(now>=axisStart&&now<=axisEnd){h+='<div class="todayline" style="left:'+x(now)+'px;top:'+(axisH-4)+'px"><span class="cap">Today</span></div>';}
+  // ---- rows ----
+  rows.forEach(function(r){
+    var p=r.p, bx=x(r.d.start), bw=Math.max(10,x(r.d.end)-x(r.d.start)), pc=pct(p);
+    var open=toMs(p.opening_date), late=(open&&open<now&&pc<100), loc=LOCNAMES[p.location_id]||'';
+    var ms=(p.milestones||[]).slice().filter(function(m){return m.d;}).sort(function(a,b){return toMs(a.d)-toMs(b.d);});
+    var nextIdx=-1; for(var i=0;i<ms.length;i++){if(!ms[i].done){nextIdx=i;break;}}
+    h+='<div class="row">';
+    h+='<div class="bar'+(late?' late':'')+'" style="left:'+bx+'px;width:'+bw+'px"><div class="fill" style="width:'+pc+'%"></div></div>';
+    ms.forEach(function(m,i){
+      var cls=m.done?'done':(i===nextIdx?'next':'');
+      h+='<div class="pin '+cls+'" style="left:'+x(toMs(m.d))+'px"><span class="tt"><b>'+esc(m.t||'Milestone')+'</b><br>'+fdate(toMs(m.d))+(m.done?' · done':'')+'</span></div>';
+    });
+    h+='<div class="barcap" style="left:'+(bx+bw+8)+'px">'+fdate(r.d.end)+'</div>';
+    h+='<div class="lbl" style="width:'+LEFT+'px"><a href="laundre-project-delivery">'+esc(p.name||'Project')+'</a>'
+      +'<div class="meta">'+(loc?esc(loc)+' · ':'')+'<b>'+pc+'%</b> · opens '+fdate(open)+'</div></div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  host.innerHTML=h;
+  // auto-scroll so Today sits ~a third in (nice when zoomed)
+  var wrap=document.getElementById('ganttWrap');
+  if(now>=axisStart&&now<=axisEnd){wrap.scrollLeft=Math.max(0,x(now)-LEFT-wrap.clientWidth*0.3);}
+}
+
+function renderCalendar(){
+  var wrap=document.getElementById('calWrap');
+  var events=[];
+  PROJECTS.forEach(function(p){(p.milestones||[]).forEach(function(m){var t=toMs(m.d);if(t)events.push({t:t,title:m.t||'Milestone',done:!!m.done,proj:p.name||'Project',loc:LOCNAMES[p.location_id]||''});});});
+  if(!events.length){wrap.innerHTML='<div class="empty">No dated milestones yet.</div>';return;}
+  events.sort(function(a,b){return a.t-b.t;});
+  var today=new Date(); today.setHours(0,0,0,0); var todayMs=today.getTime();
+  var groups={},order=[];
+  events.forEach(function(e){var x=new Date(e.t);var key=x.getFullYear()+'-'+x.getMonth();if(!groups[key]){groups[key]=[];order.push(key);}groups[key].push(e);});
+  var h='';
+  order.forEach(function(key){
+    var first=groups[key][0].t, lbl=new Date(first).toLocaleDateString('en-AU',{month:'long',year:'numeric'});
+    h+='<div class="mgroup"><h3>'+lbl+'<span class="ln"></span></h3>';
+    groups[key].forEach(function(e){
+      var x=new Date(e.t), stat,cls;
+      if(e.done){stat='Done';cls='done';}
+      else if(e.t<todayMs){stat='Overdue';cls='late';}
+      else if(e.t<todayMs+7*DAY){stat='Due soon';cls='due';}
+      else{stat='Upcoming';cls='up';}
+      h+='<div class="ev"><div class="day"><div class="d">'+x.getDate()+'</div><div class="w">'+x.toLocaleDateString('en-AU',{weekday:'short'})+'</div></div>'
+        +'<div class="info"><h4>'+esc(e.title)+'</h4><div class="pj">'+esc(e.proj)+(e.loc?' · '+esc(e.loc):'')+'</div></div>'
+        +'<span class="st '+cls+'">'+stat+'</span></div>';
+    });
+    h+='</div>';
+  });
+  wrap.innerHTML=h;
+}
+
+function show(view){
+  var g=view==='gantt';
+  document.getElementById('ganttWrap').style.display=g?'':'none';
+  document.getElementById('calWrap').style.display=g?'none':'';
+  document.getElementById('scaleSeg').style.display=g?'':'none';
+  document.getElementById('vGantt').classList.toggle('on',g);
+  document.getElementById('vCal').classList.toggle('on',!g);
+  if(g)renderGantt(); else renderCalendar();
+}
+document.getElementById('vGantt').onclick=function(){show('gantt');};
+document.getElementById('vCal').onclick=function(){show('cal');};
+document.querySelectorAll('#scaleSeg button').forEach(function(b){b.onclick=function(){
+  curScale=b.getAttribute('data-s');
+  document.querySelectorAll('#scaleSeg button').forEach(function(x){x.classList.toggle('on',x===b);});
+  renderGantt();
+};});
+
+Promise.all([
+  apiGet('/settings-api/project_delivery_v1'),
+  apiGet('/locations-api').catch(function(){return null;})
+]).then(function(res){
+  var v=res[0]; PROJECTS=(v&&v.projects)?v.projects:[];
+  var locs=res[1]; var arr=Array.isArray(locs)?locs:(locs&&locs.data?locs.data:[]);
+  (arr||[]).forEach(function(l){if(l&&l.id!=null)LOCNAMES[l.id]=l.name;});
+  renderGantt();
+}).catch(function(){renderGantt();});
+</script>
+</body>
+</html>

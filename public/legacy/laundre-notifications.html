@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Notifications</title>
+<script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}if(!a||(s&&s.role&&s.role!=='admin'))location.replace('laundre-portal.html');})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);text-decoration:none;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:1000px;margin:0 auto;padding:20px 22px 60px;}
+  h2{font-size:20px;margin:0 0 4px;color:var(--green-d);} .sub{color:#6b7d73;font-size:13px;margin-bottom:18px;}
+  .status{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700;border-radius:20px;padding:5px 12px;margin-bottom:18px;}
+  .status.on{background:#E1EDE4;color:#2f6b46;} .status.off{background:#F5E0DA;color:#B4472F;}
+  .dot{width:8px;height:8px;border-radius:50%;background:currentColor;}
+  .sectlabel{display:flex;align-items:center;gap:10px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);font-weight:800;margin:22px 0 12px;}
+  .sectlabel .ln{flex:1;height:1px;background:var(--cream-line);}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:13px;padding:15px 17px;margin-bottom:12px;display:flex;gap:14px;align-items:flex-start;}
+  .ic{width:40px;height:40px;border-radius:10px;background:#EBE4D5;display:flex;align-items:center;justify-content:center;font-size:19px;flex:0 0 auto;}
+  .body{flex:1;} .body h3{margin:0 0 3px;font-size:15px;color:var(--green-d);}
+  .when{font-size:12.5px;color:var(--accent);font-weight:700;margin-bottom:5px;}
+  .aud{font-size:13px;color:#5f6f68;line-height:1.5;} .aud b{color:var(--green-d);}
+  .pill{font-size:10.5px;font-weight:800;border-radius:20px;padding:3px 9px;white-space:nowrap;} .pill.on{background:#E1EDE4;color:#2f6b46;} .pill.off{background:#F1ECE1;color:#a7a297;}
+  .empty{padding:30px;text-align:center;color:#8a9790;}
+  .note{font-size:11.5px;color:#8a9790;margin-top:8px;}
+</style>
+</head>
+<body>
+<header><span class="ttl">Notifications</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-portal.html">⌂ Portal</a></header>
+<main>
+  <h2>Email notifications</h2>
+  <div class="sub">Every automated email the portal sends — when it fires and who receives it.</div>
+  <div id="status"></div>
+  <div id="list"><div class="empty">Loading…</div></div>
+  <div class="note" id="fromNote"></div>
+
+  <h2 style="margin-top:34px">Text (SMS) notifications</h2>
+  <div class="sub">The same admin alerts above are also sent as a brief text message to the mobile numbers below.</div>
+  <div id="smsStatus"></div>
+  <div class="card" style="display:block">
+    <label style="font-size:12px;font-weight:800;color:#5f7469;text-transform:uppercase;letter-spacing:.04em">Admin mobile numbers</label>
+    <p style="font-size:12.5px;color:#8a9790;margin:4px 0 10px">One per line, in full international format (e.g. +61412345678).</p>
+    <textarea id="smsNums" style="width:100%;min-height:92px;font-family:inherit;font-size:14px;border:1px solid var(--cream-line);border-radius:9px;padding:10px 12px;background:#FBF9F4" placeholder="+61412345678"></textarea>
+    <div style="margin-top:10px;display:flex;gap:10px;align-items:center">
+      <button class="btn" style="background:var(--green);color:#fff" id="smsSave">Save numbers</button>
+      <span class="note" id="smsNote"></span>
+    </div>
+  </div>
+</main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function apiGet(u){return fetch(u,{headers:{'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+var ICON={laundromat_cleaned:'🧹',maintenance_completed:'🛠️',nda_signed:'✍️',accounts_uploaded:'📒',support_ticket:'🆘',daily_tasks:'✅',weekly_revenue:'📈',monthly_sales_report:'📊',lead_received:'📥',investor_signup:'💼',laundromat_status:'🧺',site_approved:'✅',sales_sms_daily:'📲',sales_sms_weekly:'📲',sales_sms_monthly:'📲',admin_alerts_sms:'🔔'};
+apiGet('/notifications-api').then(function(d){
+  var st=document.getElementById('status');
+  st.innerHTML='<span class="status '+(d.sendgrid_configured?'on':'off')+'"><span class="dot"></span>'+(d.sendgrid_configured?'SendGrid connected — notifications are sending':'SendGrid not configured — emails paused')+'</span>';
+  var groups=[['Event','Event‑triggered','Sent the moment something happens'],['Scheduled','Scheduled','Sent automatically on a timer'],['SMS','Text (SMS) snapshots','Sent to your admin mobile numbers via Twilio']];
+  var html='';
+  groups.forEach(function(g){
+    var items=(d.triggers||[]).filter(function(t){return t.group===g[0];});
+    if(!items.length)return;
+    html+='<div class="sectlabel">'+g[1]+'<span class="ln"></span></div>';
+    items.forEach(function(t){
+      html+='<div class="card"><div class="ic">'+(ICON[t.key]||'✉️')+'</div><div class="body">'
+        +'<h3>'+esc(t.name)+'</h3>'
+        +'<div class="when">'+esc(t.when)+'</div>'
+        +'<div class="aud"><b>Sends to:</b> '+esc(t.audience)+'</div>'
+        +'</div><span class="pill '+(t.live?'on':'off')+'">'+(t.live?'LIVE':'PAUSED')+'</span></div>';
+    });
+  });
+  document.getElementById('list').innerHTML=html||'<div class="empty">No triggers defined.</div>';
+  if(d.from_email) document.getElementById('fromNote').textContent='All emails are sent from '+d.from_email+' via SendGrid dynamic templates.';
+  document.getElementById('smsStatus').innerHTML='<span class="status '+(d.twilio_configured?'on':'off')+'"><span class="dot"></span>'+(d.twilio_configured?'Twilio connected — texts are sending':'Twilio not configured — add TWILIO_SID / TWILIO_TOKEN / TWILIO_FROM to send texts')+'</span>';
+  document.getElementById('smsNums').value=d.sms_numbers||'';
+}).catch(function(e){document.getElementById('list').innerHTML='<div class="empty">Could not load: '+esc(e.message)+'</div>';});
+document.getElementById('smsSave').onclick=function(){
+  var b=this; b.disabled=true; var note=document.getElementById('smsNote'); note.textContent='Saving…';
+  fetch('/settings-api/admin_sms_numbers',{method:'PUT',headers:{'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin',body:JSON.stringify({value:document.getElementById('smsNums').value})})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(){b.disabled=false;note.textContent='Saved ✓';})
+    .catch(function(e){b.disabled=false;note.textContent='Failed: '+e.message;});
+};
+</script>
+</body>
+</html>

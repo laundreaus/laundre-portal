@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Contacts</title>
+<script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}if(!a||(s&&s.role&&s.role!=='admin'))location.replace('laundre-portal.html');})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;--muted:#8a9790;--ok:#2f6b46;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:8px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-accent{background:var(--accent);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  header{background:#F4EFE6;border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:14px;padding:14px 26px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:800;font-size:15px;color:var(--green-d);} header .spacer{flex:1;}
+  main{max-width:1100px;margin:0 auto;padding:20px 24px 70px;}
+  .lead{color:var(--muted);font-size:13.5px;margin:0 0 16px;}
+  .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;}
+  .bar input,.bar select{font-family:inherit;font-size:13px;border:1px solid var(--cream-line);border-radius:8px;padding:8px 11px;background:#fff;}
+  .kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+  .kpi{background:#fff;border:1px solid var(--cream-line);border-radius:11px;padding:10px 16px;} .kpi .n{font-size:20px;font-weight:900;color:var(--green-d);} .kpi .l{font-size:11px;color:var(--muted);}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--cream-line);border-radius:12px;overflow:hidden;}
+  th{background:var(--green-d);color:#EAF0EC;font-size:11px;text-transform:uppercase;letter-spacing:.03em;text-align:left;padding:10px 12px;}
+  td{padding:11px 12px;border-bottom:1px solid #F1ECE1;font-size:13.5px;} tr.row{cursor:pointer;} tr.row:hover td{background:#FBF7F0;}
+  .tag{display:inline-block;border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:800;}
+  .tag.franchisee{background:#E4EFE7;color:var(--ok);} .tag.investor{background:#E7EDF3;color:#3a5c78;} .tag.general{background:#F1ECE1;color:#8a7b5f;}
+  .st{font-size:11px;font-weight:800;border-radius:20px;padding:2px 9px;} .st.new{background:#F5E7DD;color:var(--accent);} .st.approved{background:#E1EDE4;color:var(--ok);} .st.dismissed{background:#eee;color:#999;}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+  /* drawer */
+  .ov{position:fixed;inset:0;background:rgba(40,50,45,.4);display:none;align-items:stretch;justify-content:flex-end;z-index:50;}
+  .ov.on{display:flex;} .draw{width:440px;max-width:94vw;background:var(--cream);height:100%;overflow-y:auto;box-shadow:-8px 0 30px rgba(0,0,0,.2);padding:22px 24px;}
+  .draw h3{margin:0 0 2px;font-size:20px;color:var(--green-d);} .draw .dsub{font-size:12.5px;color:var(--muted);margin-bottom:16px;}
+  .fld{margin-bottom:12px;} .fld .k{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#5f7469;margin-bottom:3px;} .fld .v{font-size:14px;} .fld .v.msg{white-space:pre-wrap;line-height:1.5;background:#fff;border:1px solid var(--cream-line);border-radius:9px;padding:11px 13px;}
+  .drawact{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;} .x{background:transparent;border:none;font-size:22px;color:#8a9790;cursor:pointer;float:right;}
+  .modal{position:fixed;inset:0;background:rgba(40,50,45,.4);display:none;align-items:center;justify-content:center;z-index:60;} .modal.on{display:flex;}
+  .mbox{background:#fff;border-radius:14px;padding:22px 24px;width:420px;max-width:94vw;} .mbox h3{margin:0 0 14px;color:var(--green-d);}
+  .mbox label{display:block;font-size:12px;font-weight:700;color:#5f7469;margin:10px 0 4px;} .mbox input,.mbox textarea,.mbox select{width:100%;font-family:inherit;font-size:14px;border:1px solid var(--cream-line);border-radius:8px;padding:9px 11px;background:#FBF9F4;}
+</style>
+</head>
+<body>
+<header><span class="ttl">📥 Contacts</span><span class="spacer"></span><button class="btn btn-green" id="addBtn">+ Add enquiry</button><a class="btn btn-ghost" href="laundre-portal.html">← Portal</a></header>
+<main>
+  <p class="lead">Franchise enquiries from the website land here. Open one to review it, then approve to move it into the Franchise CRM as a lead — or dismiss it.</p>
+  <div class="kpis" id="kpis"></div>
+  <div class="bar">
+    <input id="q" placeholder="Search name, email, city…" style="min-width:240px">
+    <select id="fType"><option value="">All types</option><option value="franchisee">Franchisee</option><option value="investor">Investor</option><option value="general">General</option></select>
+    <select id="fStatus"><option value="new">New</option><option value="">All statuses</option><option value="approved">Approved</option><option value="dismissed">Dismissed</option></select>
+  </div>
+  <table><thead><tr><th>Name</th><th>Type</th><th>Email</th><th>City</th><th>Received</th><th>Status</th></tr></thead>
+  <tbody id="rows"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody></table>
+</main>
+
+<div class="ov" id="drawer"><div class="draw" id="drawBody"></div></div>
+<div class="modal" id="addModal"><div class="mbox">
+  <h3>Add enquiry</h3>
+  <label>Name</label><input id="mName">
+  <label>Type</label><select id="mType"><option value="general">General</option><option value="franchisee">Franchisee</option><option value="investor">Investor</option></select>
+  <label>Email</label><input id="mEmail">
+  <label>Phone</label><input id="mPhone">
+  <label>City</label><input id="mCity">
+  <label>Message</label><textarea id="mMsg" style="min-height:70px"></textarea>
+  <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end"><button class="btn btn-ghost" id="mCancel">Cancel</button><button class="btn btn-green" id="mSave">Save</button></div>
+</div></div>
+
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(j){var h={'Accept':'application/json','X-Requested-With':'XMLHttpRequest','X-CSRF-TOKEN':CSRF};if(j){h['Content-Type']='application/json';}return h;}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function fdate(d){ if(!d)return ''; var x=new Date(d); return isNaN(x)?'':x.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}); }
+var ALL=[], cur=null;
+function load(){
+  return fetch('/enquiries-api',{headers:hdrs(false),credentials:'same-origin'}).then(function(r){return r.ok?r.json():[];}).then(function(d){ ALL=Array.isArray(d)?d:[]; render(); });
+}
+function render(){
+  var q=(document.getElementById('q').value||'').toLowerCase(), ft=document.getElementById('fType').value, fs=document.getElementById('fStatus').value;
+  var nNew=ALL.filter(function(e){return e.status==='new';}).length, nApp=ALL.filter(function(e){return e.status==='approved';}).length;
+  document.getElementById('kpis').innerHTML=
+     '<div class="kpi"><div class="n">'+nNew+'</div><div class="l">New enquiries</div></div>'
+    +'<div class="kpi"><div class="n">'+nApp+'</div><div class="l">Approved → CRM</div></div>'
+    +'<div class="kpi"><div class="n">'+ALL.length+'</div><div class="l">Total contacts</div></div>';
+  var list=ALL.filter(function(e){
+    if(ft&&e.type!==ft)return false; if(fs&&e.status!==fs)return false;
+    if(q){var hay=((e.name||'')+' '+(e.email||'')+' '+(e.city||'')+' '+(e.message||'')).toLowerCase();if(hay.indexOf(q)<0)return false;}
+    return true;
+  });
+  var body=document.getElementById('rows');
+  if(!list.length){ body.innerHTML='<tr><td colspan="6" class="empty">No enquiries'+(fs==='new'?' waiting':'')+'.</td></tr>'; return; }
+  body.innerHTML=list.map(function(e){
+    return '<tr class="row" data-id="'+e.id+'"><td><b>'+esc(e.name)+'</b></td>'
+      +'<td><span class="tag '+esc(e.type||'general')+'">'+esc(e.type||'general')+'</span></td>'
+      +'<td>'+esc(e.email||'—')+'</td><td>'+esc(e.city||'—')+'</td>'
+      +'<td>'+fdate(e.created_at)+'</td><td><span class="st '+esc(e.status)+'">'+esc(e.status)+'</span></td></tr>';
+  }).join('');
+  body.querySelectorAll('tr.row').forEach(function(tr){ tr.onclick=function(){ openDraw(+tr.dataset.id); }; });
+}
+function openDraw(id){
+  cur=ALL.filter(function(e){return e.id===id;})[0]; if(!cur)return;
+  var e=cur;
+  var acts = e.status==='new'
+    ? '<button class="btn btn-green" id="apprBtn">✓ Approve → CRM Leads</button><button class="btn btn-ghost" id="dismBtn">Dismiss</button>'
+    : (e.status==='approved' ? '<a class="btn btn-ghost" href="laundre-crm">Open in CRM →</a><button class="btn btn-ghost" id="delBtn">Delete</button>'
+                             : '<button class="btn btn-green" id="apprBtn">✓ Approve → CRM Leads</button><button class="btn btn-ghost" id="delBtn">Delete</button>');
+  document.getElementById('drawBody').innerHTML=
+     '<button class="x" id="closeDraw">×</button><h3>'+esc(e.name)+'</h3>'
+    +'<div class="dsub"><span class="tag '+esc(e.type||'general')+'">'+esc(e.type||'general')+'</span> &nbsp; <span class="st '+esc(e.status)+'">'+esc(e.status)+'</span> &nbsp; '+fdate(e.created_at)+'</div>'
+    +'<div class="fld"><div class="k">Email</div><div class="v">'+esc(e.email||'—')+'</div></div>'
+    +'<div class="fld"><div class="k">Phone</div><div class="v">'+esc(e.phone||'—')+'</div></div>'
+    +'<div class="fld"><div class="k">City</div><div class="v">'+esc(e.city||'—')+'</div></div>'
+    +'<div class="fld"><div class="k">Source</div><div class="v">'+esc(e.source||'—')+'</div></div>'
+    +'<div class="fld"><div class="k">Message</div><div class="v msg">'+esc(e.message||'—')+'</div></div>'
+    +'<div class="drawact">'+acts+'</div>';
+  document.getElementById('drawer').classList.add('on');
+  document.getElementById('closeDraw').onclick=closeDraw;
+  var ab=document.getElementById('apprBtn'); if(ab)ab.onclick=function(){ act('/enquiries-api/'+e.id+'/approve','POST'); };
+  var db=document.getElementById('dismBtn'); if(db)db.onclick=function(){ act('/enquiries-api/'+e.id,'PATCH',{status:'dismissed'}); };
+  var xb=document.getElementById('delBtn'); if(xb)xb.onclick=function(){ if(confirm('Delete this enquiry?')) act('/enquiries-api/'+e.id,'DELETE'); };
+}
+function closeDraw(){ document.getElementById('drawer').classList.remove('on'); }
+function act(url,method,body){
+  fetch(url,{method:method,headers:hdrs(!!body),credentials:'same-origin',body:body?JSON.stringify(body):undefined})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);})
+    .then(function(){ closeDraw(); load(); })
+    .catch(function(e){ alert('Failed: '+e.message); });
+}
+document.getElementById('drawer').addEventListener('click',function(e){ if(e.target.id==='drawer')closeDraw(); });
+['q','fType','fStatus'].forEach(function(id){ document.getElementById(id).addEventListener('input',render); });
+// add modal
+document.getElementById('addBtn').onclick=function(){ document.getElementById('addModal').classList.add('on'); };
+document.getElementById('mCancel').onclick=function(){ document.getElementById('addModal').classList.remove('on'); };
+document.getElementById('mSave').onclick=function(){
+  var body={name:document.getElementById('mName').value,type:document.getElementById('mType').value,email:document.getElementById('mEmail').value,phone:document.getElementById('mPhone').value,city:document.getElementById('mCity').value,message:document.getElementById('mMsg').value};
+  if(!body.name){ alert('Name is required'); return; }
+  fetch('/enquiries-api',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(body)})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(){ document.getElementById('addModal').classList.remove('on'); ['mName','mEmail','mPhone','mCity','mMsg'].forEach(function(i){document.getElementById(i).value='';}); load(); })
+    .catch(function(e){ alert('Failed: '+e.message); });
+};
+load();
+</script>
+</body>
+</html>

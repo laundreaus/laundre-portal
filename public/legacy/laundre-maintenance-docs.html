@@ -89,7 +89,7 @@ function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Re
 async function apiGet(u){var r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
 async function apiSend(u,method,body){var r=await fetch(u,{method:method,headers:hdrs(true),credentials:'same-origin',body:body?JSON.stringify(body):null});if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();}
 function ms(t){if(!t)return 0;var n=Date.parse(t);return isNaN(n)?0:n;}
-function uploadFile(f){return new Promise(function(res,rej){var rd=new FileReader();rd.onerror=function(){rej(new Error('read failed'));};rd.onload=function(){apiSend('/upload-api','POST',{data:rd.result,name:f.name}).then(res).catch(rej);};rd.readAsDataURL(f);});}
+function uploadFile(f){var fd=new FormData();fd.append('file',f,f.name);return fetch('/upload-api',{method:'POST',headers:hdrs(false),credentials:'same-origin',body:fd}).then(function(r){if(!r.ok)throw new Error('upload HTTP '+r.status);return r.json();});}
 var DOCS=[];
 function normDoc(d){return {id:d.id,title:d.title,category:d.category,machine:d.machine,note:d.note,fileName:d.file_name,fileSize:d.file_size,fileData:d.file_path,at:ms(d.created_at)};}
 async function reloadDocs(){DOCS=(await apiGet('/maintenance-docs-api')).map(normDoc);}

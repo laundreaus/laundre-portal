@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Laundré · Maintenance</title>
 <script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);var LOC=q.get("loc")||"";window.__FIXED_LOC=LOC;window.__EMBED=q.get("embed")==="1";if(window.__EMBED){document.addEventListener("DOMContentLoaded",function(){var s=document.createElement("style");s.textContent="header{display:none!important}main{padding-top:12px!important}";document.head.appendChild(s);});}if(LOC){var of=window.fetch;window.fetch=function(u,o){var url=(typeof u==="string")?u:(u&&u.url)||"";var m=(o&&o.method)||"GET";return of.apply(this,arguments).then(function(r){if(url.indexOf("/locations-api")>=0&&m==="GET"){return r.clone().json().then(function(j){if(Array.isArray(j)){var f=j.filter(function(x){return String(x.id)===String(LOC);});return new Response(JSON.stringify(f),{status:200,headers:{"Content-Type":"application/json"}});}return r;}).catch(function(){return r;});}return r;});};}}catch(e){}})();</script>
 <style>
   :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
   *{box-sizing:border-box;}
@@ -64,6 +65,29 @@
   .chk{font-size:13.5px;padding:3px 0;} .chk .y{color:#2f6b46;font-weight:700;} .chk .n{color:#B4472F;font-weight:700;}
   .close{background:transparent;border:none;font-size:22px;color:#8a9790;}
   .mfoot{display:flex;gap:10px;justify-content:flex-end;padding:0 20px 18px;}
+  .vidbox{position:relative;border-radius:12px;overflow:hidden;background:#22302a;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .vplay{width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;}
+  .vplay:after{content:'';border-style:solid;border-width:12px 0 12px 20px;border-color:transparent transparent transparent #33473D;margin-left:5px;}
+  .vcap{position:absolute;bottom:12px;left:14px;color:#eaf0ec;font-size:12.5px;background:rgba(30,42,36,.55);padding:4px 10px;border-radius:20px;}
+  .vph{font-size:11px;color:#B4472F;background:#F5E3DB;border-radius:20px;padding:2px 9px;font-weight:700;margin-left:8px;}
+  .vidbox iframe{width:100%;height:100%;border:0;position:absolute;inset:0;}
+  .replist .reprow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 6px;border-bottom:1px solid #f0ece2;cursor:pointer;}
+  .replist .reprow:last-child{border-bottom:none;}
+  .replist .reprow:hover{background:#F8F5EE;border-radius:8px;}
+  .replist .rl b{display:block;color:var(--green-d);font-size:14px;} .replist .rl span{color:#8a9790;font-size:12px;}
+  .replist .rr{display:flex;align-items:center;gap:8px;white-space:nowrap;} .replist .open{color:var(--accent);font-weight:700;font-size:13px;}
+  .replist .rpill{border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;} .replist .rpill.iss{background:#F5E3DB;color:#B4472F;} .replist .rpill.ph{background:#EDF1EC;color:#2f6b46;}
+  /* month calendar */
+  .calbar{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:12px;}
+  .calbar .calm{font-size:15px;font-weight:800;color:var(--green-d);min-width:170px;text-align:center;}
+  .calbar .btn{padding:7px 13px;}
+  .cal-dows{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+  .cal-dows div{text-align:center;font-size:10.5px;font-weight:700;color:#8a9790;text-transform:uppercase;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cal-cell{aspect-ratio:1/1;border:1px solid var(--cream-line);border-radius:9px;display:flex;align-items:flex-start;justify-content:flex-end;padding:5px 7px;font-size:12px;font-weight:600;color:#8a9790;background:#fff;}
+  .cal-cell.empty{border:none;background:transparent;}
+  .cal-cell.done{background:#DDEEE1;border-color:#a9cdb4;color:#2f6b46;}
+  .cal-cell.iss{background:#F6E5DA;border-color:#e2bda9;color:#B4472F;}
 </style>
 </head>
 <body>
@@ -82,6 +106,13 @@
 </div></div>
 
 <script>
+/* ---- Intro video (placeholder — set INTRO_VIDEO to a YouTube/Vimeo embed URL) ---- */
+var INTRO_VIDEO='';
+function ytEmbed(u){if(!u)return '';u=(''+u).trim();if(/youtube\.com\/embed\//.test(u)||/player\.vimeo\.com/.test(u))return u;var m=u.match(/[?&]v=([A-Za-z0-9_\-]{6,})/)||u.match(/youtu\.be\/([A-Za-z0-9_\-]{6,})/)||u.match(/youtube\.com\/shorts\/([A-Za-z0-9_\-]{6,})/);if(m)return 'https://www.youtube.com/embed/'+m[1];if(/^[A-Za-z0-9_\-]{6,15}$/.test(u))return 'https://www.youtube.com/embed/'+u;return u;}
+(function(){try{fetch('/settings-api/intro_video_maintenance',{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'}).then(function(r){return r.ok?r.json():null;}).then(function(v){if(typeof v==='string'&&v)INTRO_VIDEO=v;}).catch(function(){});}catch(e){}})();
+function videoCard(cap){return '<div class="card"><h3>Intro video</h3><div class="vidbox" onclick="playIntro(this)"><div class="vplay"></div><div class="vcap">'+cap+'</div></div></div>';}
+function playIntro(el){var u=ytEmbed(INTRO_VIDEO);if(u){el.innerHTML='<iframe src="'+u+(u.indexOf('?')>=0?'&':'?')+'autoplay=1" allow="autoplay;fullscreen" allowfullscreen></iframe>';}else{el.innerHTML='<div class="vcap" style="position:static;background:none;color:#eaf0ec;text-align:center;padding:22px">\u25B6 Intro video would play here.<br><span style="opacity:.7">(Placeholder \u2014 add the video embed in the tool.)</span></div>';}}
+
 const ITEMS=['Machines inspected','Filters / lint cleaned','Water & drainage checked','Payment system checked','Faults resolved / logged','Other (see notes)'];
 function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{role:'admin'};}catch(e){return {role:'admin'};}}
 const ME=SESSION(); const ADMIN=!(ME.role&&ME.role!=='admin');
@@ -90,9 +121,9 @@ function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Re
 async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
 async function apiSend(u,method,body){const r=await fetch(u,{method:method,headers:hdrs(true),credentials:'same-origin',body:body?JSON.stringify(body):null});if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();}
 function ms(t){if(!t)return 0;var n=Date.parse(t);return isNaN(n)?0:n;}
-function uploadFile(f){return new Promise((res,rej)=>{const rd=new FileReader();rd.onerror=()=>rej(new Error('read failed'));rd.onload=async()=>{try{const j=await apiSend('/upload-api','POST',{data:rd.result,name:f.name});res(j);}catch(e){rej(e);}};rd.readAsDataURL(f);});}
+function uploadFile(f){var fd=new FormData();fd.append('file',f,f.name);return fetch('/upload-api',{method:'POST',headers:hdrs(false),credentials:'same-origin',body:fd}).then(function(r){if(!r.ok)throw new Error('upload HTTP '+r.status);return r.json();});}
 let LOGS=[], GUIDES=[], LOCS=[];
-function normLog(r){return {id:r.id,locationId:r.location_id,date:(''+(r.date||'')).slice(0,10),by:r.by,items:r.items||{},notes:r.notes,issues:r.issues,photos:r.photos||[],submittedAt:ms(r.updated_at||r.created_at)};}
+function normLog(r){return {id:r.id,locationId:r.location_id,date:(''+(r.date||'')).slice(0,10),by:r.by,items:r.items||{},notes:r.notes,issues:r.issues,photos:r.photos||[],geo:r.geo||null,submittedAt:ms(r.updated_at||r.created_at)};}
 function normGuide(g){return {id:g.id,title:g.title,category:g.category,visibility:(g.visibility===''||g.visibility==null)?'all':(''+g.visibility),link:g.link,url:g.file_path,fileName:g.file_name,note:g.note,createdAt:ms(g.created_at)};}
 async function reloadLogs(){LOGS=(await apiGet('/maintenance-api')).map(normLog);}
 async function reloadGuides(){GUIDES=(await apiGet('/guides-api')).map(normGuide);}
@@ -100,9 +131,9 @@ function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function laundromats(){return LOCS;}
 function locName(id){const l=LOCS.find(x=>x.id==id);return l?l.name:(id||'—');}
-function findSub(locId,date){return LOGS.find(x=>x.locationId===locId && x.date===date);}
+function findSub(locId,date){return LOGS.find(x=>String(x.locationId)===String(locId) && x.date===date);}
 function dayLabel(ds){const d=new Date(ds+'T00:00');return d.toLocaleDateString('en-AU',{weekday:'short'})+' '+d.getDate();}
-function guideVisible(g){ if(ADMIN) return true; return g.visibility==='all'||(''+g.visibility)===(''+ME.locationId); }
+function guideVisible(g){ if(window.__FIXED_LOC) return g.visibility==='all'||(''+g.visibility)===(''+window.__FIXED_LOC); if(ADMIN) return true; return g.visibility==='all'||(''+g.visibility)===(''+ME.locationId); }
 
 /* ============ MAINTENANCE (staff) VIEW ============ */
 let pendingPhotos=[];
@@ -112,6 +143,7 @@ function renderStaff(){
   const done=existing?existing.items:{};
   const main=document.getElementById('main');
   let h='<h2>Maintenance</h2><div class="sub">'+esc(locName(loc))+' · '+new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</div>';
+  h+=videoCard('Watch the maintenance intro video');
   // guides
   const gs=GUIDES.filter(guideVisible);
   h+='<div class="card"><h3>Guides &amp; Instructions</h3>';
@@ -138,15 +170,26 @@ function renderStaff(){
   main.innerHTML=h;
   renderPhotos();
   main.querySelectorAll('.citem').forEach(el=>el.querySelector('input').addEventListener('change',e=>el.classList.toggle('done',e.target.checked)));
-  document.getElementById('photoInput').onchange=e=>{[...e.target.files].forEach(f=>{if(f.size>2.5*1024*1024){document.getElementById('msg').textContent='Some photos over 2.5MB were skipped.';return;}const rd=new FileReader();rd.onload=()=>{pendingPhotos.push(rd.result);renderPhotos();};rd.readAsDataURL(f);});e.target.value='';};
+  document.getElementById('photoInput').onchange=async e=>{
+    var files=[...e.target.files]; e.target.value='';
+    var msg=document.getElementById('msg');
+    for(var i=0;i<files.length;i++){ var f=files[i];
+      if(f.size>12*1024*1024){ msg.style.color='#B4472F'; msg.textContent='Some photos over 12MB were skipped.'; continue; }
+      msg.style.color='#6b7d73'; msg.textContent='Uploading photo…';
+      try{ var up=await uploadFile(f); pendingPhotos.push(up.url); renderPhotos(); }
+      catch(err){ msg.style.color='#B4472F'; msg.textContent='A photo failed to upload — please try again.'; }
+    }
+    if(msg.textContent==='Uploading photo…') msg.textContent='';
+  };
   document.getElementById('submitBtn').onclick=submitLog;
 }
 function renderPhotos(){const c=document.getElementById('photos');if(!c)return;c.innerHTML=pendingPhotos.map((p,i)=>'<div class="thumb"><img src="'+p+'"><button data-rp="'+i+'">×</button></div>').join('')+'<div class="addphoto" id="addphoto">+</div>';c.querySelectorAll('[data-rp]').forEach(b=>b.onclick=()=>{pendingPhotos.splice(+b.dataset.rp,1);renderPhotos();});document.getElementById('addphoto').onclick=()=>document.getElementById('photoInput').click();}
 function submitLog(){
   const items={};document.querySelectorAll('.citem').forEach(el=>{items[+el.dataset.ci]=el.querySelector('input').checked;});
   const body={date:todayStr(),items,notes:document.getElementById('c_notes').value.trim(),issues:document.getElementById('c_issues').value.trim(),photos:pendingPhotos.slice()};
-  const msg=document.getElementById('msg'),btn=document.getElementById('submitBtn');btn.disabled=true;msg.style.color='#6b7d73';msg.textContent='Saving…';
-  apiSend('/maintenance-api','POST',body).then(reloadLogs).then(renderStaff).catch(e=>{btn.disabled=false;msg.style.color='#B4472F';msg.textContent='Could not submit: '+e.message;});
+  const msg=document.getElementById('msg'),btn=document.getElementById('submitBtn');btn.disabled=true;msg.style.color='#6b7d73';msg.textContent='Capturing location…';
+  function finish(){msg.textContent='Saving…';apiSend('/maintenance-api','POST',body).then(reloadLogs).then(renderStaff).catch(e=>{btn.disabled=false;msg.style.color='#B4472F';msg.textContent='Could not submit: '+e.message;});}
+  if(navigator.geolocation){var done=false;var to=setTimeout(function(){if(done)return;done=true;body.geo={error:'timeout',at:Date.now()};finish();},9000);navigator.geolocation.getCurrentPosition(function(p){if(done)return;done=true;clearTimeout(to);body.geo={lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),acc:Math.round(p.coords.accuracy||0),at:Date.now()};finish();},function(err){if(done)return;done=true;clearTimeout(to);body.geo={error:(err&&err.message)||'denied',at:Date.now()};finish();},{enableHighAccuracy:true,timeout:8000,maximumAge:0});}else{body.geo={error:'unsupported',at:Date.now()};finish();}
 }
 
 /* ============ ADMIN VIEW: guides mgmt + submissions ============ */
@@ -156,11 +199,7 @@ function renderAdmin(){
   const main=document.getElementById('main');
   const locs=laundromats(); const today=todayStr();
   const doneToday=locs.filter(l=>findSub(l.id,today)).length;
-  const gaps={}; locs.forEach(l=>gaps[l.id]=daysSince(lastSubDate(l.id)));
-  const overdue=locs.filter(l=>gaps[l.id]>=2);
   let h='<h2>Maintenance</h2><div class="sub">Machine &amp; technology guides, plus maintenance logs across all laundromats · '+doneToday+' of '+locs.length+' logged today</div>';
-  if(overdue.length){ h+='<div class="alert">⚠ '+overdue.length+' store'+(overdue.length>1?'s':'')+' overdue — no maintenance log for 2+ days: '
-    +overdue.map(l=>esc(l.name)+' ('+(gaps[l.id]===Infinity?'never':gaps[l.id]+' days')+')').join(' · ')+'</div>'; }
   // guides mgmt
   h+='<div class="card"><h3>Guides &amp; Instructions <span class="spacer"></span><button class="btn btn-green" id="addGuide" style="padding:7px 13px;font-size:12.5px">＋ Add guide</button></h3><div id="guideList"></div></div>';
   // submissions matrix
@@ -168,14 +207,54 @@ function renderAdmin(){
   h+='<div class="card" style="padding:0;overflow:hidden"><h3 style="padding:18px 20px 0">Maintenance Logs</h3>';
   if(locs.length){
     h+='<div class="matrix" style="border:none"><table><thead><tr><th class="l">Laundromat</th>'+days.map(d=>'<th>'+dayLabel(d)+'</th>').join('')+'</tr></thead><tbody>';
-    locs.forEach(l=>{const badge=gaps[l.id]>=2?' <span class="warn">⚠ '+(gaps[l.id]===Infinity?'never':gaps[l.id]+'d')+'</span>':'';h+='<tr><td class="l">'+esc(l.name)+badge+'</td>'+days.map(d=>{const s=findSub(l.id,d);if(s){return '<td><span class="mk yes'+(s.issues?' iss':'')+'" data-loc="'+l.id+'" data-date="'+d+'">✓</span></td>';}return '<td><span class="mk no">✗</span></td>';}).join('')+'</tr>';});
+    locs.forEach(l=>{h+='<tr><td class="l">'+esc(l.name)+'</td>'+days.map(d=>{const s=findSub(l.id,d);if(s){return '<td><span class="mk yes'+(s.issues?' iss':'')+'" data-loc="'+l.id+'" data-date="'+d+'">✓</span></td>';}return '<td><span class="mk no">✗</span></td>';}).join('')+'</tr>';});
     h+='</tbody></table></div><div class="sub" style="padding:12px 20px 18px;margin:0">✓ logged · ✗ none · orange = issue. Click a ✓ for detail.</div>';
   } else h+='<div class="empty">No laundromats yet.</div>';
   h+='</div>';
+  // ---- Recent reports (clickable) ----
+  {
+    var subs=LOGS.slice().sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:((b.submittedAt||0)-(a.submittedAt||0));});
+    h+='<div class="card"><h3>Recent reports</h3>';
+    if(!subs.length){ h+='<div class="sub" style="margin:0">No maintenance reports have been submitted yet. When a maintenance report is logged, it appears here \u2014 click any row to open the full report.</div>'; }
+    else{
+      h+='<div class="replist">'+subs.slice(0,80).map(function(s){
+        var iss=s.issues?'<span class="rpill iss">issue</span>':'';
+        var ph=(s.photos&&s.photos.length)?'<span class="rpill ph">'+s.photos.length+' \ud83d\udcf7</span>':'';
+        var when=new Date(s.date+'T00:00').toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+        return '<div class="reprow" data-loc="'+s.locationId+'" data-date="'+s.date+'"><div class="rl"><b>'+esc(locName(s.locationId))+'</b><span>'+when+' \u00b7 by '+esc(s.by||'\u2014')+'</span></div><div class="rr">'+iss+ph+'<span class="open">Open \u2192</span></div></div>';
+      }).join('')+'</div>';
+    }
+    h+='</div>';
+  }
+  h+=monthCalHtml();
   main.innerHTML=h;
   renderGuideList();
+  wireCal();
   document.getElementById('addGuide').onclick=()=>openGuideEditor(null);
   main.querySelectorAll('.mk.yes').forEach(b=>b.onclick=()=>openLogDetail(b.dataset.loc,b.dataset.date));
+  main.querySelectorAll('.reprow').forEach(b=>b.onclick=()=>openLogDetail(b.dataset.loc,b.dataset.date));
+}
+/* ---- Month calendar (green = maintenance logged, orange = an issue that day) ---- */
+var calDate=(function(){var d=new Date();d.setDate(1);return d;})();
+function calScopeLogs(){var loc=window.__FIXED_LOC;return loc?LOGS.filter(function(x){return String(x.locationId)===String(loc);}):LOGS;}
+function monthCalHtml(){
+  var y=calDate.getFullYear(), m=calDate.getMonth();
+  var first=new Date(y,m,1), startDow=(first.getDay()+6)%7, dim=new Date(y,m+1,0).getDate();
+  var done={}, iss={};
+  calScopeLogs().forEach(function(x){var d=new Date(x.date+'T00:00');if(d.getFullYear()===y&&d.getMonth()===m){done[d.getDate()]=true;if(x.issues)iss[d.getDate()]=true;}});
+  var cells='';
+  for(var i=0;i<startDow;i++)cells+='<div class="cal-cell empty"></div>';
+  for(var day=1;day<=dim;day++){var cls=iss[day]?'iss':(done[day]?'done':'');cells+='<div class="cal-cell '+cls+'"><span>'+day+'</span></div>';}
+  return '<div class="card"><h3>Maintenance calendar</h3>'
+    +'<div class="calbar"><button class="btn btn-ghost" id="calPrev">←</button><div class="calm">'+first.toLocaleDateString('en-AU',{month:'long',year:'numeric'})+'</div><button class="btn btn-ghost" id="calNext">→</button></div>'
+    +'<div class="cal-dows"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>'
+    +'<div class="cal-grid">'+cells+'</div>'
+    +'<div class="sub" style="margin-top:10px">Green = maintenance logged · orange = an issue was flagged. Use ← → to change month.</div></div>';
+}
+function wireCal(){
+  var p=document.getElementById('calPrev'), n=document.getElementById('calNext');
+  if(p)p.onclick=function(){calDate.setMonth(calDate.getMonth()-1);renderAdmin();};
+  if(n)n.onclick=function(){calDate.setMonth(calDate.getMonth()+1);renderAdmin();};
 }
 function renderGuideList(){
   const el=document.getElementById('guideList');
@@ -202,6 +281,7 @@ function openGuideEditor(id){
     +'<div class="full"><label class="fld" style="margin-top:0">Note</label><input id="g_note" value="'+esc(g?g.note:'')+'"></div></div>'
     +'<div class="msg" id="gmsg"></div>';
   if(g&&g.visibility&&g.visibility!=='all') document.getElementById('g_visibility').value=g.visibility;
+  else if(!g&&window.__FIXED_LOC){var _gv=document.getElementById('g_visibility'); if(_gv) _gv.value=window.__FIXED_LOC;}
   document.getElementById('mFoot').innerHTML='<button class="btn btn-ghost" id="gCancel">Cancel</button><button class="btn btn-green" id="gSave">Save guide</button>';
   document.getElementById('overlay').classList.add('show');
   document.getElementById('gCancel').onclick=closeModal;
@@ -231,6 +311,7 @@ function openLogDetail(locId,date){
   h+='</div>';
   if(s.notes)h+='<div class="kv"><b>Notes:</b> '+esc(s.notes)+'</div>';
   if(s.issues)h+='<div class="kv"><b>Issues:</b> '+esc(s.issues)+'</div>';
+  if(s.geo){h+='<div class="kv"><b>Location:</b> '+(s.geo.lat?('<a href="https://maps.google.com/?q='+s.geo.lat+','+s.geo.lng+'" target="_blank" rel="noopener">'+s.geo.lat+', '+s.geo.lng+'</a> (±'+(s.geo.acc||0)+'m)'):('not captured'+(s.geo.error?' — '+esc(s.geo.error):'')))+(s.geo.at?(' at '+new Date(s.geo.at).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})):'')+'</div>';}
   if(s.photos&&s.photos.length)h+='<div class="kv"><b>Photos:</b></div><div class="photos">'+s.photos.map(p=>'<a class="thumb" href="'+p+'" target="_blank"><img src="'+p+'"></a>').join('')+'</div>';
   document.getElementById('mBody').innerHTML=h;
   document.getElementById('mFoot').innerHTML='';

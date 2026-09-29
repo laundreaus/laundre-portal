@@ -8,11 +8,25 @@ class SaleController extends Controller {
     public function index(Request $r) {
         $q = Sale::query()->with('location:id,name');
         $u = $r->user();
-        if (!$u->isAdmin()) { $q->where('location_id', $u->location_id); }
-        elseif ($r->filled('location_id')) { $q->where('location_id', $r->location_id); }
+        if (!$u->isAdmin()) {
+            // Multi-site users see all their assigned stores; ?loc narrows to one of them.
+            $ids = $u->locationIds();
+            if ($r->filled('loc') && in_array((int)$r->query('loc'), $ids)) $ids = [(int)$r->query('loc')];
+            $q->whereIn('location_id', $ids);
+        } elseif ($r->filled('location_id')) { $q->where('location_id', $r->location_id); }
         if ($r->filled('from')) { $q->whereDate('date','>=',$r->from); }
         if ($r->filled('to'))   { $q->whereDate('date','<=',$r->to); }
         return $q->orderBy('date')->get(['id','location_id','date','revenue','txns']);
+    }
+    // Group-wide daily series (all laundromats) for the dashboard average line — aggregate only, no
+    // per-store detail, so it is safe to expose to franchisees comparing against the group.
+    public function groupSeries(Request $r) {
+        $rows = Sale::query()
+            ->selectRaw('date, SUM(revenue) as total, COUNT(DISTINCT location_id) as n')
+            ->when($r->filled('from'), fn($q)=>$q->whereDate('date','>=',$r->from))
+            ->when($r->filled('to'),   fn($q)=>$q->whereDate('date','<=',$r->to))
+            ->groupBy('date')->orderBy('date')->get();
+        return $rows->map(fn($x)=>['date'=>substr((string)$x->date,0,10),'total'=>round((float)$x->total,2),'n'=>(int)$x->n]);
     }
     // Admin import of a month's aggregated daily rows for one store (client parses the CSV).
     public function import(Request $r) {

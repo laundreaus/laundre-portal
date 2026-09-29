@@ -58,8 +58,34 @@
   .ovbig b{font-size:26px;color:var(--green);display:block;}
   .efoot{display:flex;gap:10px;justify-content:flex-end;padding:14px 20px 20px;}
   .close{background:transparent;border:none;font-size:22px;color:#8a9790;}
+  /* ---- Acquisition pipeline: map + CRM board ---- */
+  .sectlabel{display:flex;align-items:center;gap:10px;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);font-weight:800;margin:4px 0 12px;}
+  .sectlabel .ln{flex:1;height:1px;background:var(--cream-line);}
+  #pmap{height:380px;width:100%;border-radius:14px;border:1px solid var(--cream-line);overflow:hidden;margin-bottom:8px;z-index:0;}
+  .leaflet-popup-content{font-family:inherit;} .mappop b{color:var(--green-d);} .mappop .st{display:inline-block;border-radius:20px;padding:1px 8px;font-size:10.5px;font-weight:700;color:#fff;margin-top:3px;}
+  .mappop a{color:var(--accent);font-weight:700;cursor:pointer;text-decoration:none;}
+  .board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(210px,1fr);gap:12px;overflow-x:auto;padding-bottom:8px;align-items:start;}
+  .col{background:#efe9db;border:1px solid var(--cream-line);border-radius:12px;padding:10px;min-height:80px;}
+  .col.drag{outline:2px dashed var(--green);outline-offset:-4px;}
+  .colhead{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:800;color:var(--green-d);margin:2px 4px 10px;}
+  .colhead .dot{width:9px;height:9px;border-radius:50%;} .colhead .ct{margin-left:auto;background:#fff;border-radius:20px;padding:1px 8px;font-size:11px;color:#7a8b84;}
+  .pcard{background:#fff;border:1px solid var(--cream-line);border-radius:10px;padding:10px 11px;margin-bottom:9px;cursor:grab;box-shadow:0 1px 3px rgba(52,73,61,.06);}
+  .pcard:hover{border-color:#cdbfa6;} .pcard.dragging{opacity:.5;}
+  .pcard .pn{font-weight:700;color:var(--green-d);font-size:13.5px;}
+  .pcard .pmeta{font-size:11.5px;color:#8a9790;margin-top:3px;display:flex;flex-wrap:wrap;gap:4px 8px;}
+  .pcard .pmeta .amt{color:var(--accent);font-weight:700;}
+  .pcard .pmeta .sc{background:#EBE4D5;color:#33473d;border-radius:6px;padding:0 6px;font-weight:800;}
+  .pcard .nopin{color:#b4472f;font-size:10.5px;}
+  .grid3b{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
   .msg{font-size:12px;color:#B4472F;padding:0 20px;min-height:15px;}
   .hintnote{font-size:11.5px;color:#8a9790;margin-top:16px;line-height:1.6;}
+  .calcbox{background:#fff;border:1px solid var(--cream-line);border-radius:10px;padding:6px 14px;margin-top:12px;}
+  .calcrow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f4efe4;font-size:13px;}
+  .calcrow:last-child{border-bottom:none;}
+  .calcrow span{flex:1;color:#5f7469;}
+  .calcrow b{width:120px;text-align:right;color:var(--green-d);}
+  .calcrow i{width:92px;text-align:right;color:#8a9790;font-style:normal;font-size:12px;}
+  .calcrow.tot b,.calcrow.tot span{color:var(--green);font-weight:800;}
 </style>
 </head>
 <body>
@@ -71,8 +97,21 @@
   <button class="btn btn-ghost" id="exportBtn">Export</button>
 </header>
 <main>
+  <!-- ===== Acquisition pipeline: map + CRM board ===== -->
   <div class="toolbar">
-    <h2>Site Analyzer</h2>
+    <h2>Site pipeline</h2>
+    <span class="scat" style="color:#7a8b84">Prospective centres — drag cards between stages</span>
+    <span class="spacer"></span>
+    <button class="btn btn-green" id="addProspect">＋ Add prospect</button>
+  </div>
+  <div id="pmap"></div>
+  <div style="font-size:11.5px;color:#8a9790;margin:0 2px 18px">Click a pin to open the site. Sites without a pin need coordinates set (open the card → Location).</div>
+  <div id="pboard" class="board"><div class="empty" style="grid-column:1/-1">Loading pipeline…</div></div>
+
+  <div id="scoringSection" style="display:none">
+  <div class="sectlabel" style="margin-top:30px">Site scoring (legacy)<span class="ln"></span></div>
+  <div class="toolbar">
+    <h2 style="font-size:16px">Site Analyzer</h2>
     <span class="scat" style="color:#7a8b84">Scores out of 10 · overall = average of 4 factors</span>
     <span class="spacer"></span>
     <button class="btn btn-green" id="addBtn">＋ Add site</button>
@@ -82,22 +121,73 @@
     Scoring is manual — enter each factor from your own research and notes. For a verified pass on a serious site (real catchment
     population, competitors and transit), paste the address into chat and it can be researched and the figures updated here.
   </div>
+  </div>
 </main>
+
+<div id="povl" style="position:fixed;inset:0;background:rgba(30,42,36,.55);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow-y:auto;padding:36px 16px;">
+  <div class="editor">
+    <div class="ehead"><h3 id="ptitle">Prospect</h3><span class="spacer"></span><button class="close" id="pclose">×</button></div>
+    <div class="ebody">
+      <div class="grid2">
+        <div class="full"><label>Site name / label</label><input id="p_name" placeholder="e.g. Belmont North" /></div>
+        <div><label>Stage</label><select id="p_stage"></select></div>
+        <div><label>Target timing</label><input id="p_target" placeholder="e.g. Feb 27, NOW" /></div>
+        <div><label>Amount / offer</label><input id="p_amount" placeholder="e.g. $300…" /></div>
+        <div><label>&nbsp;</label><span style="font-size:11.5px;color:#8a9790">Drag on the board to change stage too.</span></div>
+      </div>
+      <div class="sectlabel" style="margin-top:16px">Agent contact<span class="ln"></span></div>
+      <div class="grid3b">
+        <div><label>Name</label><input id="p_agent_name" /></div>
+        <div><label>Email</label><input id="p_agent_email" /></div>
+        <div><label>Phone</label><input id="p_agent_phone" /></div>
+      </div>
+      <div class="sectlabel" style="margin-top:16px">Centre / landlord contact<span class="ln"></span></div>
+      <div class="grid3b">
+        <div><label>Name</label><input id="p_centre_name" /></div>
+        <div><label>Email</label><input id="p_centre_email" /></div>
+        <div><label>Phone</label><input id="p_centre_phone" /></div>
+      </div>
+      <div class="sectlabel" style="margin-top:16px">Location (map pin)<span class="ln"></span></div>
+      <div class="grid2">
+        <div><label>Latitude</label><input id="p_lat" type="number" step="any" placeholder="-27.58" /></div>
+        <div><label>Longitude</label><input id="p_lng" type="number" step="any" placeholder="153.30" /></div>
+      </div>
+      <div class="sectlabel" style="margin-top:16px">Site scoring (0–10)<span class="ln"></span></div>
+      <div class="scorebox" style="margin-top:0">
+        <div class="srow"><span>Population / density</span><input type="range" min="0" max="10" step="0.5" id="ps_population" /><span class="val" id="pv_population">5</span></div>
+        <div class="srow"><span>Parking &amp; access</span><input type="range" min="0" max="10" step="0.5" id="ps_parking" /><span class="val" id="pv_parking">5</span></div>
+        <div class="srow"><span>Size &amp; competition</span><input type="range" min="0" max="10" step="0.5" id="ps_size" /><span class="val" id="pv_size">5</span></div>
+        <div class="srow"><span>Footfall &amp; rent value</span><input type="range" min="0" max="10" step="0.5" id="ps_footfall" /><span class="val" id="pv_footfall">5</span></div>
+        <div class="ovbig">Overall score<b id="pv_overall">5.0</b></div>
+      </div>
+      <label style="margin-top:14px">Notes</label>
+      <textarea id="p_notes" rows="3"></textarea>
+      <div class="msg" id="pmsg" style="color:#B4472F;min-height:15px;margin-top:8px"></div>
+    </div>
+    <div class="efoot"><button class="btn btn-danger" id="pdel" style="margin-right:auto">Delete</button><button class="btn btn-ghost" id="pcancel">Cancel</button><button class="btn btn-green" id="psave">Save</button></div>
+  </div>
+</div>
 
 <div id="overlay">
   <div class="editor">
     <div class="ehead"><h3 id="etitle">Add site</h3><span class="spacer"></span><button class="close" id="eclose">×</button></div>
     <div class="ebody">
       <div class="grid2">
-        <div class="full"><label>Site name / label</label><input id="f_name" placeholder="e.g. Northpoint SC, Toowoomba" /></div>
-        <div class="full"><label>Address</label><input id="f_address" /></div>
-        <div><label>Suburb</label><input id="f_suburb" /></div>
+        <div class="full"><label>Site name / label</label><input id="f_name" placeholder="e.g. North Belmont (Lake Macq.)" /></div>
+        <div><label>Premises</label><input id="f_premises" placeholder="e.g. Shop 1.12" /></div>
+        <div><label>Location / suburb</label><input id="f_location" /></div>
+        <div><label>Area (m²)</label><input id="f_area" type="number" step="any" oninput="recalc()" /></div>
+        <div><label>Term (years)</label><input id="f_term" type="number" step="any" /></div>
+        <div><label>Handover</label><input id="f_handover" placeholder="e.g. Q3 2027" /></div>
         <div><label>Status</label><select id="f_status"><option>Prospect</option><option>Shortlisted</option><option>Under offer</option><option>Rejected</option><option>Secured</option></select></div>
-        <div><label>Size (m²)</label><input id="f_sqm" type="number" /></div>
-        <div><label>Rent ($/week)</label><input id="f_rent" type="number" /></div>
-        <div><label>Parking spaces (nearby)</label><input id="f_parking" type="number" /></div>
-        <div><label>Est. catchment population</label><input id="f_pop" type="number" /></div>
+        <div><label>Base Rent ($ p.a.)</label><input id="f_base" type="number" step="any" oninput="recalc()" /></div>
+        <div><label>Outgoings ($ p.a.)</label><input id="f_outgoings" type="number" step="any" oninput="recalc()" /></div>
+        <div><label>Promo (% of base rent p.a.)</label><input id="f_promo" type="number" step="any" oninput="recalc()" /></div>
+        <div><label>Rent Reviews (% p.a.)</label><input id="f_reviews" type="number" step="any" /></div>
+        <div class="full"><label>Lease Security</label><input id="f_security" placeholder="e.g. 4 months BG and Director's Guarantees" /></div>
+        <div class="full"><label>Incentive</label><input id="f_incentive" placeholder="e.g. $36,300 plus GST fit-out contribution and/or rent-abatement" /></div>
       </div>
+      <div class="calcbox" id="calcBox"></div>
       <div class="scorebox">
         <h4>Factor scores (0–10)</h4>
         <div class="srow"><span>Population / density</span><input type="range" min="0" max="10" step="0.5" id="s_population" /><span class="val" id="v_population">5</span></div>
@@ -106,7 +196,7 @@
         <div class="srow"><span>Footfall &amp; rent value</span><input type="range" min="0" max="10" step="0.5" id="s_footfall" /><span class="val" id="v_footfall">5</span></div>
         <div class="ovbig">Overall score<b id="ovDisplay">5.0</b></div>
       </div>
-      <label>Notes (competition, transit, demographics, observations)</label>
+      <label>Description (centre / development notes, tenancy mix, timing)</label>
       <textarea id="f_notes" rows="3"></textarea>
       <div class="grid2">
         <div><label>Attach a link (Drive/Dropbox/report)</label><input id="f_link" placeholder="https://" /></div>
@@ -129,37 +219,57 @@ function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;
 function uid(){return 'site_'+Math.random().toString(36).slice(2,7);}
 function overall(sc){const v=FACTORS.map(f=>+sc[f[0]]||0);return Math.round(v.reduce((a,b)=>a+b,0)/v.length*10)/10;}
 function ovColor(o){if(o>=7.5)return '#2f6b46';if(o>=5)return '#b0862f';return '#B4472F';}
+function num(id){return parseFloat(document.getElementById(id).value)||0;}
+function money(n){return '$'+Math.round(n).toLocaleString();}
+function psm(total,area){return area>0?'$'+Math.round(total/area).toLocaleString()+'/m²':'—';}
+function grossOf(s){var base=+s.base||0,out=+s.outgoings||0;return base+out+base*((+s.promo||0)/100);}
+function recalc(){
+  var area=num('f_area'),base=num('f_base'),out=num('f_outgoings'),promoPct=num('f_promo');
+  var promo=base*promoPct/100, gross=base+out+promo;
+  document.getElementById('calcBox').innerHTML=
+     '<div class="calcrow"><span>Base rent</span><b>'+money(base)+'</b><i>'+psm(base,area)+'</i></div>'
+    +'<div class="calcrow"><span>Outgoings</span><b>'+money(out)+'</b><i>'+psm(out,area)+'</i></div>'
+    +'<div class="calcrow"><span>Promo ('+(promoPct||0)+'% of base)</span><b>'+money(promo)+'</b><i></i></div>'
+    +'<div class="calcrow tot"><span>Gross rent</span><b>'+money(gross)+'</b><i>'+psm(gross,area)+'</i></div>';
+}
 
 /* ---- table ---- */
 function render(){
   const wrap=document.getElementById('tableWrap');
   if(!DATA.length){wrap.innerHTML='<div class="empty">No sites yet. Click “＋ Add site” to score your first prospect.</div>';return;}
+  const sv=s=>sortKey==='overall'?s.overall:(sortKey==='gross'?grossOf(s):((s.scores&&sortKey in s.scores)?s.scores[sortKey]:s[sortKey]));
   const rows=[...DATA].sort((a,b)=>{
-    let x=sortKey==='overall'?a.overall:(sortKey in a.scores?a.scores[sortKey]:a[sortKey]);
-    let y=sortKey==='overall'?b.overall:(sortKey in b.scores?b.scores[sortKey]:b[sortKey]);
-    if(typeof x==='string'){x=(x||'').toLowerCase();y=(y||'').toLowerCase();}
+    let x=sv(a),y=sv(b);
+    if(typeof x==='string'||typeof y==='string'){x=(''+(x||'')).toLowerCase();y=(''+(y||'')).toLowerCase();}
     return (x>y?1:x<y?-1:0)*sortDir;
   });
   const arrow=k=>sortKey===k?(sortDir<0?' ▼':' ▲'):'';
   let h='<table><thead><tr>'
     +'<th data-k="name">Site'+arrow('name')+'</th>'
-    +'<th class="num" data-k="sqm">m²'+arrow('sqm')+'</th>'
-    +'<th class="num" data-k="rent">Rent/wk'+arrow('rent')+'</th>'
-    +FACTORS.map(f=>'<th class="num" data-k="'+f[0]+'">'+f[1]+arrow(f[0])+'</th>').join('')
-    +'<th class="num" data-k="overall">Overall'+arrow('overall')+'</th>'
+    +'<th data-k="premises">Premises'+arrow('premises')+'</th>'
+    +'<th class="num" data-k="area">m²'+arrow('area')+'</th>'
+    +'<th class="num" data-k="term">Term'+arrow('term')+'</th>'
+    +'<th data-k="handover">Handover'+arrow('handover')+'</th>'
+    +'<th class="num" data-k="base">Base rent'+arrow('base')+'</th>'
+    +'<th class="num" data-k="gross">Gross rent'+arrow('gross')+'</th>'
+    +'<th class="num" data-k="overall">Score'+arrow('overall')+'</th>'
     +'<th data-k="status">Status'+arrow('status')+'</th>'
     +'<th style="text-align:right">Actions</th></tr></thead><tbody>';
   rows.forEach(s=>{
+    const g=grossOf(s);
     h+='<tr class="main" data-open="'+s.id+'">'
-      +'<td><div class="sname">'+esc(s.name)+'</div><div class="saddr">'+esc(s.address||'')+'</div></td>'
-      +'<td class="num">'+(s.sqm||'—')+'</td>'
-      +'<td class="num">'+(s.rent?'$'+(+s.rent).toLocaleString():'—')+'</td>'
-      +FACTORS.map(f=>'<td class="num"><span class="score">'+(s.scores[f[0]]??'–')+'</span></td>').join('')
-      +'<td class="num"><span class="overall" style="background:'+ovColor(s.overall)+'">'+s.overall.toFixed(1)+'</span></td>'
+      +'<td><div class="sname">'+esc(s.name)+'</div><div class="saddr">'+esc(s.location||'')+'</div></td>'
+      +'<td>'+esc(s.premises||'—')+'</td>'
+      +'<td class="num">'+(s.area||'—')+'</td>'
+      +'<td class="num">'+(s.term?esc(s.term)+'y':'—')+'</td>'
+      +'<td>'+esc(s.handover||'—')+'</td>'
+      +'<td class="num">'+(s.base?money(+s.base):'—')+'</td>'
+      +'<td class="num">'+(g?money(g):'—')+'</td>'
+      +'<td class="num"><span class="overall" style="background:'+ovColor(s.overall)+'">'+(+s.overall||0).toFixed(1)+'</span></td>'
       +'<td>'+esc(s.status||'')+'</td>'
       +'<td><div class="rowbtns"><button class="btn btn-ghost" data-edit="'+s.id+'">Edit</button><button class="btn btn-danger" data-del="'+s.id+'">Delete</button></div></td>'
       +'</tr>';
-    h+='<tr class="detail" id="d_'+s.id+'" style="display:none"><td colspan="'+(6+FACTORS.length)+'">'+detailHTML(s)+'</td></tr>';
+    h+='<tr class="detail" id="d_'+s.id+'" style="display:none"><td colspan="10">'+detailHTML(s)+'</td></tr>';
   });
   h+='</tbody></table>';
   wrap.innerHTML=h;
@@ -172,13 +282,21 @@ function detailHTML(s){
   let att=(s.attachments||[]).map(a=>a.type==='link'
     ?'<a class="att" href="'+esc(a.url)+'" target="_blank" rel="noopener">🔗 '+esc(a.name)+'</a>'
     :'<a class="att" href="'+a.url+'" download="'+esc(a.name)+'">📄 '+esc(a.name)+'</a>').join('');
-  return '<div class="detailgrid"><div class="full kv">'
-    +'<b>Factor breakdown:</b> '+FACTORS.map(f=>f[1]+' '+(s.scores[f[0]]??'–')).join(' · ')+'</div>'
-    +'<div class="kv"><b>Suburb:</b> '+esc(s.suburb||'—')+'</div>'
-    +'<div class="kv"><b>Catchment pop:</b> '+(s.pop?(+s.pop).toLocaleString():'—')+'</div>'
-    +'<div class="kv"><b>Parking spaces:</b> '+(s.parking||'—')+'</div>'
-    +'<div class="kv"><b>Rent / week:</b> '+(s.rent?'$'+(+s.rent).toLocaleString():'—')+'</div>'
-    +'<div class="full kv"><b>Notes:</b> '+esc(s.notes||'—')+'</div>'
+  var area=+s.area||0, base=+s.base||0, out=+s.outgoings||0, promoPct=+s.promo||0, promo=base*promoPct/100, gross=base+out+promo;
+  return '<div class="detailgrid">'
+    +'<div class="kv"><b>Premises:</b> '+esc(s.premises||'—')+'</div>'
+    +'<div class="kv"><b>Area:</b> '+(area?area+' m²':'—')+'</div>'
+    +'<div class="kv"><b>Term:</b> '+(s.term?esc(s.term)+' years':'—')+'</div>'
+    +'<div class="kv"><b>Handover:</b> '+esc(s.handover||'—')+'</div>'
+    +'<div class="kv"><b>Base rent:</b> '+(base?money(base)+(area?' ('+psm(base,area)+')':''):'—')+'</div>'
+    +'<div class="kv"><b>Outgoings:</b> '+(out?money(out)+(area?' ('+psm(out,area)+')':''):'—')+'</div>'
+    +'<div class="kv"><b>Promo:</b> '+(promo?money(promo)+' ('+promoPct+'% of base p.a.)':'—')+'</div>'
+    +'<div class="kv"><b>Gross rent:</b> '+(gross?money(gross)+(area?' ('+psm(gross,area)+')':''):'—')+'</div>'
+    +'<div class="kv"><b>Rent reviews:</b> '+(s.reviews?esc(s.reviews)+'% p.a.':'—')+'</div>'
+    +'<div class="kv"><b>Lease security:</b> '+esc(s.security||'—')+'</div>'
+    +'<div class="full kv"><b>Incentive:</b> '+esc(s.incentive||'—')+'</div>'
+    +'<div class="full kv"><b>Factor scores:</b> '+FACTORS.map(f=>f[1]+' '+(s.scores&&s.scores[f[0]]!=null?s.scores[f[0]]:'–')).join(' · ')+'</div>'
+    +'<div class="full kv"><b>Description:</b> '+esc(s.notes||'—')+'</div>'
     +(att?'<div class="full">'+att+'</div>':'')+'</div>';
 }
 
@@ -196,15 +314,21 @@ function openEditor(id){
   editId=id;const s=id?DATA.find(x=>x.id===id):null;
   document.getElementById('etitle').textContent=id?'Edit site':'Add site';
   document.getElementById('f_name').value=s?s.name:'';
-  document.getElementById('f_address').value=s?s.address:'';
-  document.getElementById('f_suburb').value=s?s.suburb:'';
+  document.getElementById('f_premises').value=s?(s.premises||''):'';
+  document.getElementById('f_location').value=s?(s.location||''):'';
   document.getElementById('f_status').value=s?(s.status||'Prospect'):'Prospect';
-  document.getElementById('f_sqm').value=s?(s.sqm||''):'';
-  document.getElementById('f_rent').value=s?(s.rent||''):'';
-  document.getElementById('f_parking').value=s?(s.parking||''):'';
-  document.getElementById('f_pop').value=s?(s.pop||''):'';
+  document.getElementById('f_area').value=s?(s.area||''):'';
+  document.getElementById('f_term').value=s?(s.term||''):'';
+  document.getElementById('f_handover').value=s?(s.handover||''):'';
+  document.getElementById('f_base').value=s?(s.base||''):'';
+  document.getElementById('f_outgoings').value=s?(s.outgoings||''):'';
+  document.getElementById('f_promo').value=s?(s.promo!=null&&s.promo!==''?s.promo:''):'';
+  document.getElementById('f_reviews').value=s?(s.reviews||''):'';
+  document.getElementById('f_security').value=s?(s.security||''):'';
+  document.getElementById('f_incentive').value=s?(s.incentive||''):'';
   document.getElementById('f_notes').value=s?(s.notes||''):'';
   document.getElementById('f_link').value='';document.getElementById('f_file').value='';
+  recalc();
   document.getElementById('emsg').textContent='';
   FACTORS.forEach(f=>{const v=s?(s.scores[f[0]]??5):5;document.getElementById('s_'+f[0]).value=v;document.getElementById('v_'+f[0]).textContent=(+v).toFixed(1).replace(/\.0$/,'');});
   updateOv();
@@ -224,13 +348,18 @@ document.getElementById('esave').onclick=()=>{
   const finish=()=>{
     const scores={};FACTORS.forEach(f=>scores[f[0]]=+document.getElementById('s_'+f[0]).value);
     const rec={id:editId||uid(),name,
-      address:document.getElementById('f_address').value.trim(),
-      suburb:document.getElementById('f_suburb').value.trim(),
+      premises:document.getElementById('f_premises').value.trim(),
+      location:document.getElementById('f_location').value.trim(),
       status:document.getElementById('f_status').value,
-      sqm:+document.getElementById('f_sqm').value||0,
-      rent:+document.getElementById('f_rent').value||0,
-      parking:+document.getElementById('f_parking').value||0,
-      pop:+document.getElementById('f_pop').value||0,
+      area:+document.getElementById('f_area').value||0,
+      term:document.getElementById('f_term').value.trim(),
+      handover:document.getElementById('f_handover').value.trim(),
+      base:+document.getElementById('f_base').value||0,
+      outgoings:+document.getElementById('f_outgoings').value||0,
+      promo:+document.getElementById('f_promo').value||0,
+      reviews:document.getElementById('f_reviews').value.trim(),
+      security:document.getElementById('f_security').value.trim(),
+      incentive:document.getElementById('f_incentive').value.trim(),
       notes:document.getElementById('f_notes').value.trim(),
       scores,overall:overall(scores),attachments:pendingAtt,
       created:editId?(DATA.find(x=>x.id===editId).created):Date.now()};
@@ -249,6 +378,122 @@ document.getElementById('exportBtn').onclick=()=>{
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='laundre-site-scores.json';a.click();URL.revokeObjectURL(a.href);
 };
 DATA=load();render();
+</script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* ===== Acquisition pipeline: map + CRM board ===== */
+(function(){
+  var CSRF=window.LAUNDRE_CSRF||'';
+  function hdrs(j){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(j)h['Content-Type']='application/json';return h;}
+  function apiGet(u){return fetch(u,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+  function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:b?JSON.stringify(b):null}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();});}
+  function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  var STAGES=[], PROS=[], map=null, markers=[], curId=null;
+  // Vivid, high-contrast palette so each pipeline stage is easy to tell apart on the map + board.
+  var STAGE_PALETTE=['#2f6b46','#C4703F','#2f6fb0','#8a3fb0','#d1a01f','#c0392b','#159a8a','#5a6b7a'];
+  function stageOf(id){for(var i=0;i<STAGES.length;i++)if(STAGES[i].id===id)return STAGES[i];return {name:id,color:'#8a9790'};}
+  function set(id,v){var e=document.getElementById(id);if(e)e.value=(v==null?'':v);}
+  function gv(id){var e=document.getElementById(id);return e?e.value.trim():'';}
+  var FACT=[['population','Pop'],['parking','Park'],['size','Size'],['footfall','Foot']];
+  function ovOf(sc){sc=sc||{};var v=FACT.map(function(f){return +sc[f[0]]||0;});return Math.round(v.reduce(function(a,b){return a+b;},0)/v.length*10)/10;}
+  function readScores(){var sc={};FACT.forEach(function(f){sc[f[0]]=+document.getElementById('ps_'+f[0]).value;});return sc;}
+  function updateOv(){document.getElementById('pv_overall').textContent=ovOf(readScores()).toFixed(1);}
+  function wireScoreSliders(){FACT.forEach(function(f){var r=document.getElementById('ps_'+f[0]);r.oninput=function(){document.getElementById('pv_'+f[0]).textContent=(+r.value).toFixed(1).replace(/\.0$/,'');updateOv();};});}
+
+  function load(){apiGet('/site-prospects-api').then(function(d){STAGES=(d.stages||[]).map(function(s,i){return Object.assign({},s,{color:STAGE_PALETTE[i%STAGE_PALETTE.length]});});PROS=d.prospects||[];renderBoard();renderMap();migrateScored();}).catch(function(e){document.getElementById('pboard').innerHTML='<div class="empty" style="grid-column:1/-1">Could not load pipeline: '+esc(e.message)+'</div>';});}
+
+  // One-time: move any locally-scored analyzer sites into the Prospect column (dedupe by name).
+  function migrateScored(){
+    try{
+      if(localStorage.getItem('laundre_sites_migrated')==='1')return;
+      var raw=localStorage.getItem('laundre_sites_score_v1');
+      var arr=raw?JSON.parse(raw):[];
+      if(!Array.isArray(arr)||!arr.length){localStorage.setItem('laundre_sites_migrated','1');return;}
+      var have={};PROS.forEach(function(p){have[(p.name||'').toLowerCase().trim()]=true;});
+      var add=arr.filter(function(s){return s.name && !have[(s.name||'').toLowerCase().trim()];});
+      if(!add.length){localStorage.setItem('laundre_sites_migrated','1');return;}
+      var i=0;(function next(){
+        if(i>=add.length){localStorage.setItem('laundre_sites_migrated','1');load();return;}
+        var s=add[i++];var sc=s.scores||{};
+        apiSend('/site-prospects-api','POST',{name:s.name,stage:'prospect',notes:s.notes||'',scores:sc,score_overall:(s.overall!=null?s.overall:ovOf(sc))}).then(next).catch(next);
+      })();
+    }catch(e){}
+  }
+
+  function renderMap(){
+    if(!window.L){return;}
+    if(!map){map=L.map('pmap',{scrollWheelZoom:false}).setView([-27.5,146],4);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(map);
+      setTimeout(function(){map.invalidateSize();},250);}
+    markers.forEach(function(m){map.removeLayer(m);});markers=[];
+    var pts=[];
+    PROS.forEach(function(p){if(p.lat==null||p.lng==null)return;var col=stageOf(p.stage).color;
+      var mk=L.circleMarker([p.lat,p.lng],{radius:11,color:'#fff',weight:3,fillColor:col,fillOpacity:1}).addTo(map);
+      mk.bindPopup('<div class="mappop"><b>'+esc(p.name)+'</b><br><span class="st" style="background:'+col+'">'+esc(stageOf(p.stage).name)+'</span><br><a onclick="window.openProspect('+p.id+')">Open &rarr;</a></div>');
+      markers.push(mk);pts.push([p.lat,p.lng]);
+    });
+    if(pts.length){try{map.fitBounds(pts,{padding:[40,40],maxZoom:7});}catch(e){}}
+  }
+
+  function renderBoard(){
+    var b=document.getElementById('pboard');
+    b.innerHTML=STAGES.map(function(s){
+      var cards=PROS.filter(function(p){return p.stage===s.id;});
+      return '<div class="col" data-stage="'+s.id+'"><div class="colhead"><span class="dot" style="background:'+s.color+'"></span>'+esc(s.name)+'<span class="ct">'+cards.length+'</span></div>'
+        +cards.map(function(p){
+          var meta=[];if(p.score_overall!=null)meta.push('<span class="sc">★ '+(+p.score_overall).toFixed(1)+'</span>');if(p.target)meta.push('<span>'+esc(p.target)+'</span>');if(p.amount)meta.push('<span class="amt">'+esc(p.amount)+'</span>');if(p.lat==null)meta.push('<span class="nopin">no pin</span>');
+          return '<div class="pcard" draggable="true" data-id="'+p.id+'"><div class="pn">'+esc(p.name)+'</div>'+(meta.length?'<div class="pmeta">'+meta.join('')+'</div>':'')+'</div>';
+        }).join('')
+        +'</div>';
+    }).join('');
+    b.querySelectorAll('.pcard').forEach(function(c){
+      c.onclick=function(){window.openProspect(+c.dataset.id);};
+      c.ondragstart=function(e){e.dataTransfer.setData('text/plain',c.dataset.id);c.classList.add('dragging');};
+      c.ondragend=function(){c.classList.remove('dragging');};
+    });
+    b.querySelectorAll('.col').forEach(function(col){
+      col.ondragover=function(e){e.preventDefault();col.classList.add('drag');};
+      col.ondragleave=function(){col.classList.remove('drag');};
+      col.ondrop=function(e){e.preventDefault();col.classList.remove('drag');var id=+e.dataTransfer.getData('text/plain');var st=col.dataset.stage;
+        var p=null;PROS.forEach(function(x){if(x.id===id)p=x;});if(!p||p.stage===st)return;p.stage=st;renderBoard();renderMap();
+        apiSend('/site-prospects-api/'+id+'/move','PATCH',{stage:st}).catch(function(err){alert('Could not move: '+err.message);load();});
+      };
+    });
+  }
+
+  window.openProspect=function(id){
+    curId=id||null;var p=null;PROS.forEach(function(x){if(x.id===id)p=x;});p=p||{stage:'prospect'};
+    document.getElementById('ptitle').textContent=curId?(p.name||'Prospect'):'Add prospect';
+    var sel=document.getElementById('p_stage');sel.innerHTML=STAGES.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>';}).join('');sel.value=p.stage||'prospect';
+    set('p_name',p.name);set('p_target',p.target);set('p_amount',p.amount);set('p_notes',p.notes);
+    set('p_agent_name',p.agent_name);set('p_agent_email',p.agent_email);set('p_agent_phone',p.agent_phone);
+    set('p_centre_name',p.centre_name);set('p_centre_email',p.centre_email);set('p_centre_phone',p.centre_phone);
+    set('p_lat',p.lat);set('p_lng',p.lng);
+    var sc=p.scores||{};FACT.forEach(function(f){var v=(sc[f[0]]!=null?sc[f[0]]:5);document.getElementById('ps_'+f[0]).value=v;document.getElementById('pv_'+f[0]).textContent=(+v).toFixed(1).replace(/\.0$/,'');});updateOv();wireScoreSliders();
+    document.getElementById('pdel').style.display=curId?'':'none';
+    document.getElementById('pmsg').textContent='';
+    document.getElementById('povl').style.display='flex';
+  };
+  function closeP(){document.getElementById('povl').style.display='none';curId=null;}
+  document.getElementById('pclose').onclick=closeP;
+  document.getElementById('pcancel').onclick=closeP;
+  document.getElementById('addProspect').onclick=function(){window.openProspect(null);};
+  document.getElementById('psave').onclick=function(){
+    var msg=document.getElementById('pmsg');
+    var body={name:gv('p_name'),stage:gv('p_stage'),target:gv('p_target'),amount:gv('p_amount'),notes:gv('p_notes'),
+      agent_name:gv('p_agent_name'),agent_email:gv('p_agent_email'),agent_phone:gv('p_agent_phone'),
+      centre_name:gv('p_centre_name'),centre_email:gv('p_centre_email'),centre_phone:gv('p_centre_phone'),
+      lat:gv('p_lat')||null,lng:gv('p_lng')||null,scores:readScores(),score_overall:ovOf(readScores())};
+    if(!body.name){msg.style.color='#B4472F';msg.textContent='Enter a site name.';return;}
+    msg.style.color='#6b7d73';msg.textContent='Saving…';
+    var req=curId?apiSend('/site-prospects-api/'+curId,'PUT',body):apiSend('/site-prospects-api','POST',body);
+    req.then(function(){closeP();load();}).catch(function(e){msg.style.color='#B4472F';msg.textContent='Could not save: '+e.message;});
+  };
+  document.getElementById('pdel').onclick=function(){if(!curId)return;if(!confirm('Delete this prospect?'))return;apiSend('/site-prospects-api/'+curId,'DELETE').then(function(){closeP();load();}).catch(function(e){alert(e.message);});};
+  load();
+})();
 </script>
 </body>
 </html>

@@ -13,6 +13,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
         $middleware->statefulApi();
+        // The WordPress lead webhook is an external machine-to-machine POST (no CSRF token).
+        $middleware->validateCsrfTokens(except: [
+            'wp-lead',
+        ]);
+        // Admin read-only "view as user" preview (runs after session/auth are available).
+        $middleware->appendToGroup('web', \App\Http\Middleware\Impersonate::class);
+        // R&D audit log — records all authenticated activity.
+        $middleware->appendToGroup('web', \App\Http\Middleware\LogActivity::class);
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);

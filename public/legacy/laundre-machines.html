@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Machines</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);window.__FIXED_LOC=q.get('loc')||'';window.__EMBED=q.get('embed')==='1';var s0=null;try{s0=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}window.__ADMIN=!!(s0&&s0.role==='admin');if(window.__EMBED){document.addEventListener('DOMContentLoaded',function(){var s=document.createElement('style');s.textContent='header{display:none!important}main{padding-top:10px!important}';document.head.appendChild(s);});}}catch(e){}})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  input,select{font-family:inherit;font-size:13.5px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:8px 10px;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:1000px;margin:0 auto;padding:16px 22px 60px;}
+  .note{background:#EDF4EE;border:1px solid #bcd8c4;color:#2f6b46;border-radius:12px;padding:11px 15px;font-size:12.5px;font-weight:600;margin-bottom:16px;}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:16px 18px;margin-bottom:18px;}
+  .card h3{margin:0 0 12px;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);}
+  table{width:100%;border-collapse:collapse;} th,td{padding:8px 10px;font-size:13px;border-bottom:1px solid #f0ece2;text-align:left;} th{background:var(--green-d);color:#EAF0EC;font-size:10.5px;text-transform:uppercase;}
+  .pill{display:inline-block;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;} .pill.on{background:#E1EDE4;color:#2f6b46;} .pill.off{background:#F1ECE1;color:#a7a297;} .pill.mnt{background:#F5E3DB;color:#B4472F;}
+  .addrow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px;} .addrow label{font-size:11px;color:#5f7469;font-weight:600;display:block;margin-bottom:3px;}
+  .xdel{background:transparent;border:none;color:#B4472F;font-size:15px;cursor:pointer;} .empty{padding:26px;text-align:center;color:#8a9790;}
+</style>
+</head>
+<body>
+<header><span class="ttl">Machines</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-portal.html">← Portal</a></header>
+<main>
+  <div class="note">🔌 Machines will sync automatically from the Fagor systems backend once connected. You can add them manually in the meantime.</div>
+  <div class="card"><h3>Machines</h3><div id="list"><div class="empty">Loading…</div></div></div>
+  <div class="card" id="addCard" style="display:none">
+    <h3>Add a machine</h3>
+    <div class="addrow">
+      <div><label>Name</label><input id="m_name" placeholder="Washer 8" style="width:130px"></div>
+      <div><label>Type</label><select id="m_type"><option value="washer">Washer</option><option value="dryer">Dryer</option><option value="dispenser">Dispenser</option><option value="other">Other</option></select></div>
+      <div><label>Model</label><input id="m_model" placeholder="Fagor model" style="width:150px"></div>
+      <div><label>Serial</label><input id="m_serial" style="width:130px"></div>
+      <div><label>Status</label><select id="m_status"><option value="online">Online</option><option value="offline">Offline</option><option value="maintenance">Maintenance</option></select></div>
+      <button class="btn btn-green" id="m_add">Add</button>
+    </div>
+    <div id="mmsg" style="font-size:12.5px;color:#B4472F;margin-top:8px;min-height:14px"></div>
+  </div>
+</main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(){return {'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};}
+function apiGet(u){return fetch(u,{headers:hdrs(),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function apiSend(u,m,b){return fetch(u,{method:m,headers:Object.assign({'Content-Type':'application/json'},hdrs()),credentials:'same-origin',body:b?JSON.stringify(b):null}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();});}
+var LOC=window.__FIXED_LOC||new URLSearchParams(location.search).get('loc')||'';
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function pill(st){var c=st==='online'?'on':st==='maintenance'?'mnt':'off';return '<span class="pill '+c+'">'+esc(st||'—')+'</span>';}
+function load(){
+  if(window.__ADMIN) document.getElementById('addCard').style.display='';
+  apiGet('/machines-api'+(LOC?('?loc='+encodeURIComponent(LOC)):'')).then(function(rows){
+    var el=document.getElementById('list');
+    if(!rows||!rows.length){el.innerHTML='<div class="empty">No machines yet'+(window.__ADMIN?' — add one below.':'.')+'</div>';return;}
+    el.innerHTML='<table><thead><tr><th>Name</th><th>Type</th><th>Model</th><th>Serial</th><th>Status</th><th>Source</th>'+(window.__ADMIN?'<th></th>':'')+'</tr></thead><tbody>'
+      +rows.map(function(m){return '<tr><td><b>'+esc(m.name||'—')+'</b></td><td>'+esc(m.type||'—')+'</td><td>'+esc(m.model||'—')+'</td><td>'+esc(m.serial||'—')+'</td><td>'+pill(m.status)+'</td><td style="color:#8a9790;font-size:12px">'+esc(m.source||'manual')+'</td>'+(window.__ADMIN?'<td><button class="xdel" data-del="'+m.id+'">×</button></td>':'')+'</tr>';}).join('')
+      +'</tbody></table>';
+    el.querySelectorAll('[data-del]').forEach(function(b){b.onclick=function(){if(confirm('Remove this machine?'))apiSend('/machines-api/'+b.dataset.del,'DELETE').then(load).catch(function(e){alert(e.message);});};});
+  }).catch(function(e){document.getElementById('list').innerHTML='<div class="empty">Could not load: '+e.message+'</div>';});
+}
+document.getElementById('m_add').onclick=function(){
+  var msg=document.getElementById('mmsg'); msg.textContent='';
+  var name=document.getElementById('m_name').value.trim();
+  if(!name){msg.textContent='Enter a name.';return;}
+  apiSend('/machines-api','POST',{location_id:Number(LOC),name:name,type:document.getElementById('m_type').value,model:document.getElementById('m_model').value.trim(),serial:document.getElementById('m_serial').value.trim(),status:document.getElementById('m_status').value}).then(function(){document.getElementById('m_name').value='';document.getElementById('m_model').value='';document.getElementById('m_serial').value='';load();}).catch(function(e){msg.textContent='Could not add: '+e.message;});
+};
+load();
+</script>
+</body>
+</html>

@@ -7,7 +7,7 @@ class GuideController extends Controller {
     public function index(Request $r) {
         $u = $r->user();
         $q = Guide::query()->orderByDesc('created_at');
-        if (!$u->isAdmin()) { $q->where(fn($w)=>$w->where('visibility','all')->orWhere('visibility',(string)$u->location_id)); }
+        if (!$u->isAdmin()) { $vis=array_map('strval',$u->locationIds()); $q->where(fn($w)=>$w->where('visibility','all')->orWhereIn('visibility',$vis)); }
         return $q->get();
     }
     public function store(Request $r) { return Guide::create($this->rules($r)); }

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Quotes</title>
+<script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}if(!a||(s&&s.role&&s.role!=='admin'))location.replace('laundre-portal.html');})();</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);window.__FIXED_LOC=q.get('loc')||'';window.__EMBED=q.get('embed')==='1';if(window.__EMBED){document.addEventListener('DOMContentLoaded',function(){var s=document.createElement('style');s.textContent='header{display:none!important}main{padding-top:10px!important}';document.head.appendChild(s);});}}catch(e){}})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);text-decoration:none;}
+  input,textarea{font-family:inherit;font-size:13.5px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:8px 10px;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:940px;margin:0 auto;padding:16px 22px 60px;}
+  .toolbar{display:flex;align-items:center;margin-bottom:16px;} .toolbar h2{font-size:19px;margin:0;color:var(--green-d);} .toolbar .spacer{flex:1;}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:13px;padding:15px 17px;margin-bottom:12px;}
+  .qh{display:flex;align-items:center;gap:10px;} .qh b{color:var(--green-d);font-size:15px;} .qh .spacer{flex:1;}
+  .st{display:inline-block;border-radius:20px;padding:2px 9px;font-size:10.5px;font-weight:800;} .st.draft{background:#EFEADD;color:#7a6f52;} .st.sent{background:#E7EDF6;color:#3a5a8c;} .st.signed{background:#E1EDE4;color:#2f6b46;} .st.invoiced{background:#F5E8D8;color:#9a6b32;}
+  .qmeta{font-size:12.5px;color:#8a9790;margin-top:5px;} .qtot{font-weight:800;color:var(--green-d);}
+  .qbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;} .qbtns .btn{padding:7px 12px;font-size:12px;}
+  .sched{margin-top:10px;border-top:1px solid #f0ece2;padding-top:10px;} .sched .r{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;} .sched .r span:last-child{font-weight:700;}
+  .empty{padding:34px;text-align:center;color:#8a9790;}
+  #ov{position:fixed;inset:0;background:rgba(30,42,36,.55);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow-y:auto;padding:36px 16px;} #ov.show{display:flex;}
+  .modal{background:var(--cream);border-radius:14px;width:620px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .mhead{display:flex;align-items:center;padding:15px 20px;border-bottom:1px solid var(--cream-line);} .mhead h3{margin:0;font-size:16px;color:var(--green-d);} .mhead .spacer{flex:1;} .close{background:transparent;border:none;font-size:22px;color:#8a9790;}
+  .mbody{padding:16px 20px;} .mbody label{font-size:11px;color:#5f7469;font-weight:600;display:block;margin:10px 0 4px;} .mbody input,.mbody textarea{width:100%;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .item{display:flex;gap:8px;margin-bottom:7px;} .item input.d{flex:1;} .item input.a{width:120px;} .item button{background:transparent;border:none;color:#B4472F;font-size:16px;cursor:pointer;}
+  .itot{text-align:right;font-weight:800;color:var(--green-d);margin-top:6px;}
+  .mfoot{display:flex;gap:10px;justify-content:flex-end;padding:0 20px 18px;} .msg{font-size:12.5px;color:#B4472F;min-height:14px;padding:0 20px;}
+</style>
+</head>
+<body>
+<header><span class="ttl">Quotes</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-portal.html">⌂ Portal</a></header>
+<main>
+  <div class="toolbar"><h2>Quotes</h2><span class="spacer"></span><button class="btn btn-green" id="add">＋ New quote</button></div>
+  <div id="list"><div class="empty">Loading…</div></div>
+</main>
+<div id="ov"><div class="modal">
+  <div class="mhead"><h3 id="mtitle">New quote</h3><span class="spacer"></span><button class="close" id="mclose">×</button></div>
+  <div class="mbody">
+    <label>Reference / title</label><input id="q_ref" placeholder="e.g. Fit-out quote — Nerang">
+    <div class="grid2"><div><label>Client name (who signs)</label><input id="q_cname"></div><div><label>Client email</label><input id="q_cemail"></div></div>
+    <label>Notes (shown on the quote)</label><textarea id="q_notes" rows="2"></textarea>
+    <label>Line items</label><div id="items"></div>
+    <button class="btn btn-ghost" id="addItem" style="padding:6px 12px;font-size:12px">＋ Add line</button>
+    <div class="itot" id="itot">Total $0.00</div>
+  </div>
+  <div class="msg" id="msg"></div>
+  <div class="mfoot"><button class="btn btn-ghost" id="cancel">Cancel</button><button class="btn btn-green" id="save">Save quote</button></div>
+</div></div>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(j){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(j)h['Content-Type']='application/json';return h;}
+function apiGet(u){return fetch(u,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:b?JSON.stringify(b):null}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();});}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function money(n){return '$'+(Math.round((+n||0)*100)/100).toLocaleString('en-AU',{minimumFractionDigits:2,maximumFractionDigits:2});}
+var LOC=window.__FIXED_LOC||new URLSearchParams(location.search).get('loc')||'';
+var QUOTES=[], curId=null, ITEMS=[];
+function load(){apiGet('/quotes-api?loc='+encodeURIComponent(LOC)).then(function(rows){QUOTES=rows||[];render();}).catch(function(e){document.getElementById('list').innerHTML='<div class="empty">Could not load: '+esc(e.message)+'</div>';});}
+function shareUrl(t){return location.origin+'/quote/'+t;}
+function render(){
+  var el=document.getElementById('list');
+  if(!QUOTES.length){el.innerHTML='<div class="empty">No quotes yet — build one with ＋ New quote.</div>';return;}
+  el.innerHTML=QUOTES.map(function(q){
+    var sched='';
+    if(q.invoice_schedule&&q.invoice_schedule.length){
+      sched='<div class="sched"><div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#C4703F;margin-bottom:5px">Xero invoice schedule (pending)</div>'
+        +q.invoice_schedule.map(function(s){return '<div class="r"><span>Invoice '+s.n+' · '+s.pct+'%'+(s.adjustable?' (adjustable)':'')+' · due '+esc(s.due)+'</span><span>'+money(s.amount)+'</span></div>';}).join('')+'</div>';
+    }
+    return '<div class="card"><div class="qh"><b>'+esc(q.reference||'Quote')+'</b><span class="st '+esc(q.status)+'">'+esc(q.status)+'</span><span class="spacer"></span><span class="qtot">'+money(q.total)+'</span></div>'
+      +'<div class="qmeta">'+(q.client_name?esc(q.client_name)+' · ':'')+(q.signed_at?('Signed '+esc((''+q.signed_at).slice(0,10))+' by '+esc(q.signer_name||'')):'Not signed yet')+'</div>'
+      +'<div class="qbtns"><button class="btn btn-ghost" data-copy="'+q.id+'">🔗 Copy signing link</button>'
+      +'<button class="btn btn-ghost" data-edit="'+q.id+'">Edit</button>'
+      +(q.status==='signed'?'<a class="btn btn-ghost" href="/quotes-api/'+q.id+'/download">⬇ Download signed</a>':'')
+      +(q.status==='signed'&&!(q.invoice_schedule&&q.invoice_schedule.length)?'<button class="btn btn-green" data-sched="'+q.id+'">Create Xero invoices</button>':'')
+      +'<button class="btn btn-ghost" data-del="'+q.id+'" style="color:#B4472F;border-color:#e6cfc7">Delete</button></div>'
+      +sched+'</div>';
+  }).join('');
+  el.querySelectorAll('[data-copy]').forEach(function(b){b.onclick=function(){var q=QUOTES.find(function(x){return x.id==b.dataset.copy;});var url=shareUrl(q.token);navigator.clipboard&&navigator.clipboard.writeText(url);prompt('Share this signing link with the franchisee:',url);};});
+  el.querySelectorAll('[data-edit]').forEach(function(b){b.onclick=function(){openEdit(+b.dataset.edit);};});
+  el.querySelectorAll('[data-del]').forEach(function(b){b.onclick=function(){if(confirm('Delete this quote?'))apiSend('/quotes-api/'+b.dataset.del,'DELETE').then(load).catch(function(e){alert(e.message);});};});
+  el.querySelectorAll('[data-sched]').forEach(function(b){b.onclick=function(){apiSend('/quotes-api/'+b.dataset.sched+'/schedule','POST',{}).then(load).catch(function(e){alert(e.message);});};});
+}
+function renderItems(){
+  var box=document.getElementById('items');
+  box.innerHTML=ITEMS.map(function(it,i){return '<div class="item"><input class="d" data-i="'+i+'" data-k="description" placeholder="Description" value="'+esc(it.description||'')+'"><input class="a" type="number" step="0.01" data-i="'+i+'" data-k="amount" placeholder="0.00" value="'+(it.amount!=null?it.amount:'')+'"><button data-rm="'+i+'">×</button></div>';}).join('');
+  box.querySelectorAll('input').forEach(function(inp){inp.oninput=function(){ITEMS[+inp.dataset.i][inp.dataset.k]=inp.dataset.k==='amount'?(+inp.value||0):inp.value;itot();};});
+  box.querySelectorAll('[data-rm]').forEach(function(b){b.onclick=function(){ITEMS.splice(+b.dataset.rm,1);renderItems();itot();};});
+}
+function itot(){var t=ITEMS.reduce(function(s,x){return s+(+x.amount||0);},0);document.getElementById('itot').textContent='Total '+money(t);}
+function set(id,v){document.getElementById(id).value=(v==null?'':v);}
+function gv(id){return document.getElementById(id).value.trim();}
+function openEdit(id){
+  curId=id||null; var q=id?QUOTES.find(function(x){return x.id===id;}):{};
+  document.getElementById('mtitle').textContent=id?'Edit quote':'New quote';
+  set('q_ref',q.reference);set('q_cname',q.client_name);set('q_cemail',q.client_email);set('q_notes',q.notes);
+  ITEMS=(q.items&&q.items.length)?q.items.map(function(x){return {description:x.description,amount:x.amount};}):[{description:'',amount:''}];
+  renderItems();itot();document.getElementById('msg').textContent='';document.getElementById('ov').classList.add('show');
+}
+document.getElementById('add').onclick=function(){openEdit(null);};
+document.getElementById('addItem').onclick=function(){ITEMS.push({description:'',amount:''});renderItems();};
+document.getElementById('mclose').onclick=document.getElementById('cancel').onclick=function(){document.getElementById('ov').classList.remove('show');};
+document.getElementById('save').onclick=function(){
+  var msg=document.getElementById('msg');msg.textContent='';
+  var items=ITEMS.filter(function(x){return (x.description||'')!==''||(+x.amount||0)>0;});
+  if(!gv('q_ref')){msg.textContent='Enter a reference/title.';return;}
+  var body={location_id:Number(LOC),reference:gv('q_ref'),client_name:gv('q_cname'),client_email:gv('q_cemail'),notes:gv('q_notes'),items:items};
+  var req=curId?apiSend('/quotes-api/'+curId,'PUT',body):apiSend('/quotes-api','POST',body);
+  msg.style.color='#6b7d73';msg.textContent='Saving…';
+  req.then(function(){document.getElementById('ov').classList.remove('show');load();}).catch(function(e){msg.style.color='#B4472F';msg.textContent='Could not save: '+e.message;});
+};
+load();
+</script>
+</body>
+</html>

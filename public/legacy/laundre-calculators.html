@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Cost Calculator</title>
+<script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}if(!a||(s&&s.role&&s.role!=='admin'))location.replace('laundre-portal.html');})();</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;--muted:#8a9790;--gold:#D9A73E;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);padding:11px 20px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(52,73,61,.08);position:sticky;top:0;z-index:30;}
+  header .ttl{font-size:15px;font-weight:700;color:var(--green-d);} header .spacer{flex:1;}
+  a.chip,button.chip{font-size:12.5px;font-weight:700;color:var(--green);text-decoration:none;border:1px solid var(--cream-line);border-radius:7px;padding:8px 12px;background:transparent;cursor:pointer;font-family:inherit;}
+  main{max-width:1080px;margin:0 auto;padding:18px 16px 70px;}
+  /* stepper */
+  .stepper{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+  .stepper .st{flex:1;min-width:150px;display:flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--cream-line);border-radius:11px;padding:10px 12px;font-size:13px;color:var(--muted);font-weight:700;}
+  .stepper .st .n{width:24px;height:24px;border-radius:50%;background:#EFE7D6;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex:0 0 auto;}
+  .stepper .st.on{border-color:var(--green);color:var(--green-d);} .stepper .st.on .n{background:var(--green);color:#fff;}
+  .stepper .st.done .n{background:var(--gold);color:#33473d;}
+  .panel{display:none;} .panel.on{display:block;animation:fade .3s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:20px 22px;margin-bottom:16px;box-shadow:0 2px 14px rgba(52,73,61,.06);}
+  .card h2{margin:0 0 4px;font-size:18px;color:var(--green-d);} .card .sub{color:var(--muted);font-size:13px;margin:0 0 16px;}
+  label{font-size:12px;color:#5f7469;font-weight:700;display:block;margin:0 0 5px;}
+  input,select{font-family:inherit;font-size:14px;color:var(--ink);background:#FBF9F4;border:1px solid var(--cream-line);border-radius:8px;padding:10px 12px;width:100%;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;} .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .btn{border:none;border-radius:8px;padding:11px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;}
+  .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  .btn-green:disabled{opacity:.5;cursor:not-allowed;}
+  .nav{display:flex;justify-content:space-between;gap:10px;margin-top:4px;}
+  .sitelist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:8px;}
+  .sitecard{border:1px solid var(--cream-line);border-radius:12px;padding:14px 15px;background:#FBF9F4;cursor:pointer;transition:.15s;}
+  .sitecard:hover{border-color:var(--green);box-shadow:0 4px 12px rgba(52,73,61,.1);}
+  .sitecard.sel{border-color:var(--green);background:#EAF0EC;}
+  .sitecard .nm{font-weight:800;color:var(--green-d);font-size:15px;} .sitecard .mt{font-size:12px;color:var(--muted);margin-top:3px;}
+  .sitecard{position:relative;}
+  .sitecard .delx{position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:50%;border:none;background:#F1ECE1;color:#9a7b48;font-size:14px;line-height:1;cursor:pointer;font-family:inherit;opacity:0;transition:.15s;}
+  .sitecard:hover .delx{opacity:1;} .sitecard .delx:hover{background:#e6cfc7;color:#B4472F;}
+  .sitecard .apprbadge{margin-top:10px;width:100%;background:#2f6b46;color:#fff;border:none;border-radius:8px;padding:9px;font-size:13px;font-weight:800;letter-spacing:.03em;cursor:pointer;font-family:inherit;}
+  .sitecard .apprbadge:hover{background:#28603e;}
+  .sitecard .awaitbadge{margin-top:10px;background:#F5EEDA;color:#8a6d2b;border:1px solid #e4d3a5;border-radius:8px;padding:7px 9px;font-size:12px;font-weight:700;text-align:center;}
+  .sitecard.new{border-style:dashed;text-align:center;color:var(--green);font-weight:800;display:flex;align-items:center;justify-content:center;min-height:74px;}
+  .tbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;}
+  .tbl th{background:var(--green-d);color:#EAF0EC;font-size:10.5px;letter-spacing:.03em;text-transform:uppercase;text-align:right;padding:8px 9px;}
+  .tbl th:first-child,.tbl td:first-child{text-align:left;}
+  .tbl td{padding:7px 9px;text-align:right;border-bottom:1px solid #F1ECE1;}
+  .tbl tr.hit td{background:#EAF0EC;font-weight:800;color:var(--green-d);}
+  .lines{margin-top:10px;} .lines .ln{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F1ECE1;font-size:14px;}
+  .lines .ln.big{font-weight:900;font-size:17px;color:var(--green-d);border-bottom:none;padding-top:12px;}
+  .lines .ln .mut{color:var(--muted);font-weight:400;font-size:12px;}
+  .pill{display:inline-block;background:#EAF0EC;color:var(--green-d);border-radius:20px;padding:4px 12px;font-weight:800;font-size:13px;}
+  .budget{background:#FBF9F4;border:1px solid var(--cream-line);border-radius:12px;padding:14px 16px;margin-bottom:14px;}
+  .budget .track{height:16px;border-radius:20px;background:#EFE7D6;position:relative;overflow:hidden;margin-top:8px;box-shadow:inset 0 1px 3px rgba(0,0,0,.06);}
+  .budget .fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#5C7A6B,#435E53);width:0;transition:width .5s;}
+  .budget .fill.over{background:linear-gradient(90deg,#d08a5a,#c0392b);}
+  .budget .row{display:flex;justify-content:space-between;font-size:13px;font-weight:700;} .budget .row .mut{color:var(--muted);font-weight:400;}
+  .calcframe{width:100%;border:1px solid var(--cream-line);border-radius:12px;background:#fff;height:360px;overflow:hidden;display:block;}
+  /* sticky selected-machines panel (step 3) */
+  .sticky3{position:sticky;top:54px;z-index:20;background:#33473D;color:#EAF0EC;border-radius:14px;padding:14px 18px;margin-bottom:14px;box-shadow:0 8px 24px rgba(51,71,61,.28);}
+  .sticky3 .s3top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;}
+  .sticky3 .s3lab{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#b9c8bf;font-weight:800;} .sticky3 .mut{color:#93a89b;font-weight:400;text-transform:none;letter-spacing:0;}
+  .sticky3 .s3sel{font-size:26px;font-weight:900;line-height:1.1;} .sticky3 .s3tgt{font-size:18px;font-weight:800;color:#cdd9d1;}
+  .sticky3 .track{height:12px;border-radius:20px;background:rgba(255,255,255,.16);position:relative;overflow:hidden;margin:10px 0 6px;}
+  .sticky3 .fill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#8fb89e,#C4703F 140%);width:0;transition:width .4s;}
+  .sticky3 .fill.over{background:linear-gradient(90deg,#e0a06f,#c0392b);}
+  .sticky3 .s3diff{font-size:12.5px;font-weight:700;color:#cdd9d1;}
+  .sticky3 .s3items{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;max-height:64px;overflow:auto;}
+  .sticky3 .s3items .it{background:rgba(255,255,255,.12);border-radius:16px;padding:3px 10px;font-size:11.5px;white-space:nowrap;}
+  .sticky3 .s3items .none{color:#93a89b;font-size:12px;}
+  /* print (step 5 quote) */
+  @media print{
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+    header,.stepper,.nav,.no-print,.panel:not(.on){display:none!important;}
+    body{background:#fff;} main{padding:0;max-width:none;}
+    #quoteDoc{box-shadow:none!important;border:none!important;margin:0 auto!important;max-width:100%;}
+  }
+  .finance{background:#FBF9F4;border:1px solid var(--cream-line);border-radius:12px;padding:16px 18px;margin-top:14px;}
+  .fin-out{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px;}
+  .fin-out .b{background:#fff;border:1px solid var(--cream-line);border-radius:10px;padding:10px 12px;}
+  .fin-out .b .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:800;} .fin-out .b .v{font-size:18px;font-weight:800;color:var(--green-d);margin-top:2px;}
+  .note{font-size:11.5px;color:var(--muted);margin-top:8px;}
+  /* client quote document */
+  .qdoc,.qdoc *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .qdoc{background:#fff;border:1px solid var(--cream-line);border-radius:14px;box-shadow:0 2px 14px rgba(52,73,61,.08);max-width:800px;margin:0 auto 16px;padding:0;overflow:hidden;color:#2E3D36;}
+  .qdoc .qhd{background:#33473D;color:#EAF0EC;padding:26px 34px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;border-top:5px solid #C4703F;}
+  .qdoc .qhd .wmlogo{display:inline-block;} .qdoc .qhd .wmlogo svg{height:30px;width:auto;display:block;} .qdoc .qhd .tag{font-size:12px;color:#b9c8bf;margin-top:8px;letter-spacing:.02em;}
+  .qdoc .qhd .qmeta{text-align:right;font-size:12px;color:#cdd9d1;line-height:1.6;}
+  .qdoc .qbody{padding:26px 34px 30px;}
+  .qdoc h3{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#C4703F;margin:0 0 4px;font-weight:800;}
+  .qdoc .prop{font-size:22px;font-weight:800;color:#33473D;margin:0 0 18px;}
+  .qdoc table{width:100%;border-collapse:collapse;margin:6px 0 4px;}
+  .qdoc td{padding:12px 4px;border-bottom:1px solid #F1ECE1;font-size:14.5px;} .qdoc td.r{text-align:right;font-weight:700;}
+  .qdoc tr.sub td{border-bottom:none;color:#7a8b84;padding-top:6px;padding-bottom:6px;} .qdoc tr.tot td{border-top:2px solid #33473D;border-bottom:none;font-size:19px;font-weight:900;color:#33473D;padding-top:14px;}
+  .qdoc .pay{background:#FBF9F4;border:1px solid #EEE7D9;border-radius:12px;padding:16px 20px;margin-top:22px;}
+  .qdoc .pay .r{display:flex;justify-content:space-between;padding:8px 0;font-size:14px;border-bottom:1px solid #F1ECE1;} .qdoc .pay .r:last-child{border-bottom:none;} .qdoc .pay .r b{color:#33473D;}
+  .qdoc .disc{font-size:11px;color:#8a9790;line-height:1.6;margin-top:22px;border-top:1px solid #F1ECE1;padding-top:14px;}
+  .qdoc .qfoot{background:#33473D;color:#cdd9d1;text-align:center;font-size:11px;padding:12px;letter-spacing:.03em;}
+  /* ---- mobile ---- */
+  @media (max-width:640px){
+    main{padding:12px 12px 70px;}
+    header{padding:10px 12px;} header .ttl{font-size:13px;}
+    .stepper{gap:6px;} .stepper .st{min-width:0;flex:1 1 30%;font-size:10.5px;padding:8px 9px;gap:6px;} .stepper .st .n{width:20px;height:20px;font-size:11px;}
+    .grid2,.grid3{grid-template-columns:1fr;}
+    .card{padding:15px 15px;} .card h2{font-size:16px;}
+    .sitelist{grid-template-columns:1fr;}
+    .sitebar{gap:8px;} .sitebar select{min-width:0;width:100%;flex:1 1 100%;} .sitebar .spacer{display:none;} .sitebar .meta{flex:1 1 100%;}
+    .nav{flex-direction:column-reverse;align-items:stretch;gap:8px;} .nav .btn{width:100%;} .nav>div{display:flex;flex-direction:column;gap:8px;} .nav>div .btn{width:100%;}
+    .sticky3{top:48px;padding:12px 14px;} .sticky3 .s3top{flex-direction:column;align-items:stretch;gap:4px;} .sticky3 .s3tgt{text-align:left;} .sticky3 .s3sel{font-size:22px;}
+    .lines .ln{font-size:13px;flex-wrap:wrap;} .lines .ln.big{font-size:15px;}
+    .finance .grid3{grid-template-columns:1fr 1fr;}
+    .qdoc .qhd{padding:18px 18px;flex-direction:column;gap:10px;} .qdoc .qhd .qmeta{text-align:left;}
+    .qdoc .qbody{padding:18px 18px 22px;} .qdoc td{font-size:13px;padding:10px 2px;} .qdoc tr.tot td{font-size:16px;}
+    .qdoc .pay{padding:14px 15px;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <span class="ttl">· Cost Calculator</span>
+  <span class="spacer"></span>
+  <button class="chip" id="saveBtn">Save site</button>
+  <a class="chip" href="laundre-portal.html">⌂ Portal</a>
+</header>
+<main>
+  <div class="stepper">
+    <div class="st on" data-step="1"><span class="n">1</span> Site &amp; size</div>
+    <div class="st" data-step="2"><span class="n">2</span> Fit-out guide</div>
+    <div class="st" data-step="3"><span class="n">3</span> Machines</div>
+    <div class="st" data-step="4"><span class="n">4</span> Summary</div>
+    <div class="st" data-step="5"><span class="n">5</span> Client quote</div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="panel on" id="p1">
+    <div class="card">
+      <h2>Pick a site to quote</h2>
+      <p class="sub">Open a saved or draft site, or start a new one. Saved sites are shared across all admins.</p>
+      <div class="sitelist" id="siteList"></div>
+    </div>
+    <div class="card" id="newSiteCard" style="display:none">
+      <h2>New site</h2>
+      <p class="sub">The only thing we need to price a fit-out is the tenancy size. Everything else follows from the sizing table.</p>
+      <div class="grid2">
+        <div><label>Site name</label><input id="ns_name" placeholder="e.g. Nerang"></div>
+        <div><label>Tenancy size (m²)</label><input id="ns_sqm" type="number" min="20" max="200" step="1" placeholder="e.g. 65"></div>
+      </div>
+    </div>
+    <div class="nav">
+      <span></span>
+      <button class="btn btn-green" id="next1" disabled>Next: Fit-out guide →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="panel" id="p2">
+    <div class="card">
+      <h2>Fit-out price guide <span class="pill" id="p2sqm">— m²</span></h2>
+      <p class="sub">Estimated builder fit-out for this size (includes the builder’s margin). Adjust the total if you have a firmer number.</p>
+      <div class="grid2">
+        <div><label>Fit-out total — ex GST (incl. builder margin)</label><input id="f_fitout" type="number" min="0" step="100"></div>
+        <div><label>Rate check</label><input id="f_fitrate" readonly style="background:#F1ECE1"></div>
+      </div>
+      <div class="lines">
+        <div class="ln"><span>Machines package for this size <span class="mut">(supply, delivery &amp; install, ex GST)</span></span><b id="l2_mach">$0</b></div>
+        <div class="ln"><span>Fit-out <span class="mut">(incl. builder margin)</span></span><b id="l2_fit">$0</b></div>
+        <div class="ln"><span>Project subtotal <span class="mut">ex GST</span></span><b id="l2_sub">$0</b></div>
+        <div class="ln"><span>Laundré margin <span class="mut">20%</span></span><b id="l2_marg">$0</b></div>
+        <div class="ln big"><span>Indicative total</span><b id="l2_tot">$0</b></div>
+      </div>
+      <p class="note">Machines figure is the recommended package from the sizing table for this size; you’ll choose the actual machines in the next step.</p>
+    </div>
+    <div class="nav">
+      <button class="btn btn-ghost" data-back>← Back</button>
+      <button class="btn btn-green" id="next2">Next: Machines &amp; budget →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="panel" id="p3">
+    <div class="sticky3" id="sticky3">
+      <div class="s3top">
+        <div><div class="s3lab">Selected machines <span class="mut">ex GST · supply + delivery + install</span></div><div class="s3sel" id="b_sel">$0</div></div>
+        <div style="text-align:right"><div class="s3lab">Budget target <span class="mut">(<span id="p3sqm">—</span> m²)</span></div><div class="s3tgt" id="b_target">$0</div></div>
+      </div>
+      <div class="track"><div class="fill" id="b_fill"></div></div>
+      <div class="s3diff" id="b_diff">—</div>
+      <div class="s3items" id="b_items"></div>
+    </div>
+    <div class="card" style="padding:14px 16px">
+      <p class="sub" style="margin:0 0 10px">Add machines below — the panel above stays pinned so you can watch the budget as you go. Discounts start at 0; enter negotiated discounts per line if needed.</p>
+      <div style="font-weight:700;color:var(--green);font-size:13px;margin-bottom:6px">Sizing-table guide for this size</div>
+      <table class="tbl" id="sizeTbl" style="margin-bottom:12px"></table>
+      <iframe id="equipFrame" class="calcframe" src="/laundre-equipment?embed=1" title="Machine selector"></iframe>
+    </div>
+    <div class="nav">
+      <button class="btn btn-ghost" data-back>← Back</button>
+      <button class="btn btn-green" id="next3">Next: Summary →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="panel" id="p4">
+    <div class="card">
+      <h2>Project summary <span class="pill" id="p4name">—</span></h2>
+      <p class="sub">Everything on one page. Figures are ex GST unless noted.</p>
+      <div class="lines">
+        <div class="ln"><span>Machines <span class="mut">(supply, delivery &amp; install)</span></span><b id="s_mach">$0</b></div>
+        <div class="ln"><span>Fit-out <span class="mut">(incl. builder margin)</span></span><b id="s_fit">$0</b></div>
+        <div class="ln"><span>Project subtotal <span class="mut">ex GST</span></span><b id="s_sub">$0</b></div>
+        <div class="ln"><span>Laundré margin <span class="mut">20%</span></span><b id="s_marg">$0</b></div>
+        <div class="ln big"><span>Total incl. Laundré margin <span class="mut">ex GST</span></span><b id="s_tot">$0</b></div>
+        <div class="ln"><span class="mut">Total incl. GST</span><b id="s_gst" style="color:var(--muted)">$0</b></div>
+      </div>
+    </div>
+    <div class="card finance">
+      <h2 style="font-size:16px;margin:0 0 2px">If financed</h2>
+      <p class="sub">Amortising loan on the project total. Deposit is paid upfront and not financed.</p>
+      <div class="grid3">
+        <div><label>Amount financed (incl GST)</label><input id="fin_amt" type="number" step="1000"></div>
+        <div><label>Deposit %</label><input id="fin_dep" type="number" step="1" value="15"></div>
+        <div><label>Term (years)</label><input id="fin_term" type="number" step="1" value="5"></div>
+        <div><label>Interest rate % p.a.</label><input id="fin_rate" type="number" step="0.1" value="9"></div>
+        <div><label>Frequency</label><select id="fin_freq"><option value="12">Monthly</option><option value="26">Fortnightly</option><option value="52">Weekly</option></select></div>
+      </div>
+      <div class="fin-out">
+        <div class="b"><div class="l" id="fin_freqlbl">Monthly repayment</div><div class="v" id="fin_pay">$0</div></div>
+        <div class="b"><div class="l">Deposit</div><div class="v" id="fin_depv">$0</div></div>
+        <div class="b"><div class="l">Total repaid</div><div class="v" id="fin_repaid">$0</div></div>
+        <div class="b"><div class="l">All-in cost</div><div class="v" id="fin_allin">$0</div></div>
+      </div>
+    </div>
+    <div class="nav">
+      <button class="btn btn-ghost" data-back>← Back</button>
+      <div style="display:flex;gap:10px"><button class="btn btn-ghost" id="saveBtn2">Save site</button><button class="btn btn-green" id="next4">Next: Client quote →</button></div>
+    </div>
+  </div>
+
+  <!-- STEP 5: client PDF quote -->
+  <div class="panel" id="p5">
+    <div class="card no-print">
+      <h2>Client quote</h2>
+      <p class="sub">A clean, client-facing quote. Margins are baked into each line — they’re never shown to the client. Add the two extra amounts, then print or save as PDF.</p>
+      <div class="grid2">
+        <div><label>1 month rent (ex GST)</label><input id="q_rent" type="number" step="50" placeholder="0"></div>
+        <div><label>Bank guarantee</label><input id="q_bank" type="number" step="50" placeholder="0"></div>
+      </div>
+      <div class="grid2" style="margin-top:12px">
+        <div><label>Quote reference</label><input id="q_ref" placeholder="auto"></div>
+        <div><label>Prepared for (client / entity)</label><input id="q_client" placeholder="e.g. franchise partner name"></div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn btn-ghost" id="printBtn">⬇ Download PDF</button><button class="btn btn-green" id="signLinkBtn">🔗 Create signing link</button></div>
+      <div id="signStatus" style="margin-top:12px"></div>
+    </div>
+
+    <div id="quoteDoc" class="qdoc"></div>
+
+    <div class="nav no-print">
+      <button class="btn btn-ghost" data-back>← Back</button>
+      <button class="btn btn-ghost" id="saveBtn3">Save site</button>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ============ Sizing table (from Spencer Systems / Fagor package guide) ============ */
+var TABLE=[
+  {sqm:50,units:10,washers:6,dryers:4,drums:8, equip:129394,delivery:16821,totalEx:146215,totalInc:160836,perSqm:3217},
+  {sqm:55,units:11,washers:6,dryers:5,drums:9, equip:138190,delivery:17965,totalEx:156154,totalInc:171770,perSqm:3123},
+  {sqm:60,units:12,washers:7,dryers:5,drums:9, equip:151142,delivery:19648,totalEx:170790,totalInc:187869,perSqm:3131},
+  {sqm:65,units:13,washers:7,dryers:6,drums:10,equip:158338,delivery:20584,totalEx:178921,totalInc:196814,perSqm:3028},
+  {sqm:70,units:14,washers:7,dryers:7,drums:11,equip:168734,delivery:21935,totalEx:190669,totalInc:209736,perSqm:2996},
+  {sqm:75,units:15,washers:8,dryers:7,drums:11,equip:180006,delivery:23401,totalEx:203406,totalInc:223747,perSqm:2983},
+  {sqm:80,units:16,washers:8,dryers:8,drums:12,equip:188802,delivery:24544,totalEx:213346,totalInc:234680,perSqm:2934}
+];
+var MARGIN=0.20; // Laundré margin — flat, fixed
+var LOGO_SVG_WHITE="<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"145\" height=\"28.506\" viewBox=\"0 0 145 28.506\"> <g id=\"Group_669\" data-name=\"Group 669\" transform=\"translate(-1862.4 -927.506)\"> <path id=\"Path_843\" data-name=\"Path 843\" d=\"M552.01,324.131a12.885,12.885,0,0,1-.315-2.94,8.664,8.664,0,0,1,.145-1.512,6.607,6.607,0,0,1,.484-1.561,3.343,3.343,0,0,1,.907-1.222,2.106,2.106,0,0,1,1.392-.472,1.843,1.843,0,0,1,1.222.435,3.381,3.381,0,0,1,.859,1.126,5.977,5.977,0,0,1,.5,1.5,8.317,8.317,0,0,1,.157,1.585,8.712,8.712,0,0,1-.218,1.911,5.654,5.654,0,0,1-.726,1.778,3.856,3.856,0,0,1-1.331,1.295,3.951,3.951,0,0,1-2.033.484h-.145A9.542,9.542,0,0,1,552.01,324.131Zm6.449,11.447a8.445,8.445,0,0,0,2.492-1.27,6.5,6.5,0,0,0,1.742-1.911,4.547,4.547,0,0,0,.641-2.348,8.254,8.254,0,0,1-1.5.472,7.648,7.648,0,0,1-1.572.157,8.856,8.856,0,0,1-4.126-.944A7.593,7.593,0,0,1,553.172,327h2.178q4.38,0,6.341-1.234a4.02,4.02,0,0,0,1.96-3.63,5.294,5.294,0,0,0-1-3.133,6.884,6.884,0,0,0-2.916-2.263,11.513,11.513,0,0,0-4.671-.847,9.232,9.232,0,0,0-6.9,2.953,9.832,9.832,0,0,0-1.984,3.206,10.8,10.8,0,0,0-.7,3.908,9.773,9.773,0,0,0,.787,3.908,10.177,10.177,0,0,0,5.372,5.372,9.838,9.838,0,0,0,3.933.787,9.389,9.389,0,0,0,2.892-.448Zm-32.426-17.061a2.632,2.632,0,0,1,.654,1.029,5.07,5.07,0,0,1,.279,1.84v10.793a5.21,5.21,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242H535.8v-.242a1.744,1.744,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V321.143a3.057,3.057,0,0,1,.4-1.621,3.023,3.023,0,0,1,.956-1,1.9,1.9,0,0,1,.968-.351q.581,0,.581.532a1.468,1.468,0,0,1-.182.75,7.6,7.6,0,0,0-.363.726,2.879,2.879,0,0,0-.182,1.137,3.9,3.9,0,0,0,4.113,4.113,3.949,3.949,0,0,0,3-1.21,4.575,4.575,0,0,0,1.137-3.266,5.442,5.442,0,0,0-.568-2.419,4.76,4.76,0,0,0-1.718-1.911,5.236,5.236,0,0,0-2.916-.75,5.3,5.3,0,0,0-2.552.581,5.68,5.68,0,0,0-1.73,1.379,6.655,6.655,0,0,0-.944,1.452v-3.412h-.242a11.652,11.652,0,0,1-1.6.641q-1.04.351-2.3.678t-2.5.545a13.194,13.194,0,0,1-2.239.217v.242a1.1,1.1,0,0,1,.69.326Zm-11.083-1.04a3.658,3.658,0,0,1,.907.678,2.732,2.732,0,0,1,.557.787v11.737a4.991,4.991,0,0,1-.242.859,2.354,2.354,0,0,1-.665.968,1.905,1.905,0,0,1-1.319.423,2.137,2.137,0,0,1-1.5-.532,3.538,3.538,0,0,1-.907-1.415,9.215,9.215,0,0,1-.472-1.948,20.955,20.955,0,0,1-.182-2.129q-.037-1.065-.036-1.96v-1.936q0-1.04.1-2.069a8.567,8.567,0,0,1,.375-1.876,3.161,3.161,0,0,1,.823-1.355,2.059,2.059,0,0,1,1.464-.508,2.3,2.3,0,0,1,1.1.279Zm-10.733,11.846a10.853,10.853,0,0,0,1.306,3.243,6.54,6.54,0,0,0,2.2,2.2,6.516,6.516,0,0,0,6.4-.085,7.039,7.039,0,0,0,2.286-2.5v3.388h8.833v-.242a1.743,1.743,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V307.52h-.242a1.173,1.173,0,0,1-.29.145q-.653.242-1.682.581t-2.215.641q-1.186.3-2.359.508a12.3,12.3,0,0,1-2.093.206v.242a1.1,1.1,0,0,1,.69.326,2.632,2.632,0,0,1,.654,1.029,5.072,5.072,0,0,1,.279,1.84v4.791a8.59,8.59,0,0,0-2.069-1.392,6.061,6.061,0,0,0-2.674-.568,7.344,7.344,0,0,0-3.521.8,7.1,7.1,0,0,0-2.456,2.153,9.605,9.605,0,0,0-1.439,3.061,13.273,13.273,0,0,0-.472,3.545,16.856,16.856,0,0,0,.435,3.9Zm-23.231-11.132a1.1,1.1,0,0,1,.69.326,2.632,2.632,0,0,1,.654,1.029,5.074,5.074,0,0,1,.279,1.84v10.793a5.211,5.211,0,0,1-.363,2.129,1.746,1.746,0,0,1-1.21,1.016v.242H491.44v-.242a1.744,1.744,0,0,1-1.21-1.016,5.215,5.215,0,0,1-.363-2.129V321.507a4,4,0,0,1,.3-1.549,2.9,2.9,0,0,1,.859-1.173,2.023,2.023,0,0,1,1.306-.448,1.382,1.382,0,0,1,1.149.484,2.732,2.732,0,0,1,.508,1.186,7.424,7.424,0,0,1,.133,1.379v10.793a5.212,5.212,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242h10.405v-.242a1.744,1.744,0,0,1-1.21-1.016,5.217,5.217,0,0,1-.363-2.129V322.3a12.14,12.14,0,0,0-.193-2.057,6.589,6.589,0,0,0-.75-2.106,4.344,4.344,0,0,0-1.67-1.634,5.951,5.951,0,0,0-2.976-.641,6.348,6.348,0,0,0-2.553.508,6.868,6.868,0,0,0-2.045,1.343,6.162,6.162,0,0,0-1.331,1.8v-3.654h-.242a1.177,1.177,0,0,1-.29.145q-.653.242-1.682.581t-2.215.641q-1.186.3-2.359.508a12.291,12.291,0,0,1-2.093.206v.242Zm-21.428.351a2.631,2.631,0,0,1,.654,1.029,5.073,5.073,0,0,1,.279,1.84v8.179a12.05,12.05,0,0,0,.193,2.057,6.584,6.584,0,0,0,.75,2.106,4.316,4.316,0,0,0,1.682,1.634,5.964,5.964,0,0,0,2.964.641,6.347,6.347,0,0,0,2.552-.508,6.879,6.879,0,0,0,2.045-1.343,6.161,6.161,0,0,0,1.331-1.8v3.654h.242a2.288,2.288,0,0,1,.29-.145q.653-.267,1.682-.593t2.214-.629q1.186-.3,2.359-.508a12.286,12.286,0,0,1,2.093-.206V333.7a1.131,1.131,0,0,1-.678-.326,2.546,2.546,0,0,1-.665-1.029,5.073,5.073,0,0,1-.279-1.84V315.893h-.242c-.032.017-.077.036-.133.06a1.02,1.02,0,0,0-.157.084,12.744,12.744,0,0,1-1.658.654q-1.029.339-2.226.629t-2.372.472a13.8,13.8,0,0,1-2.093.182v.242a1.1,1.1,0,0,1,.69.326,2.631,2.631,0,0,1,.654,1.029,5.074,5.074,0,0,1,.279,1.84v8.978a4,4,0,0,1-.3,1.549,2.959,2.959,0,0,1-.847,1.173,2.005,2.005,0,0,1-1.319.448,1.349,1.349,0,0,1-1.137-.484,2.654,2.654,0,0,1-.521-1.2,7.5,7.5,0,0,1-.133-1.368V315.894h-.242c-.032.017-.077.036-.133.06a1.016,1.016,0,0,0-.157.084,12.742,12.742,0,0,1-1.658.654q-1.029.34-2.226.629t-2.372.472a13.807,13.807,0,0,1-2.093.182v.242a1.1,1.1,0,0,1,.69.326Zm-12.922,7.671a4.9,4.9,0,0,1,.8-1.609,5.013,5.013,0,0,1,.944-.92,6.394,6.394,0,0,0,.8-.665,1.227,1.227,0,0,0,.326-.907.906.906,0,0,0-.412-.835,9.783,9.783,0,0,0-.92-.5,3.8,3.8,0,0,1-1.1-.787,2.157,2.157,0,0,1-.521-1.585,4.667,4.667,0,0,1,.1-.787,2.785,2.785,0,0,1,.363-.956.854.854,0,0,1,.774-.435,1.213,1.213,0,0,1,1.089.557,3.521,3.521,0,0,1,.5,1.355,9.808,9.808,0,0,1,.133,1.609v11.168c0,.129-.142.3-.423.508a1.493,1.493,0,0,1-.907.315,1.42,1.42,0,0,1-1.029-.412,2.489,2.489,0,0,1-.629-1.053,4.217,4.217,0,0,1-.206-1.295,9.463,9.463,0,0,1,.326-2.771Zm-6.86,7.454a4.892,4.892,0,0,0,1.84,1.743,5.041,5.041,0,0,0,2.444.617,5.451,5.451,0,0,0,3.339-1.04,6.386,6.386,0,0,0,2.129-3.315,5.856,5.856,0,0,0,.532,2.045,4.249,4.249,0,0,0,1.331,1.658,3.523,3.523,0,0,0,2.178.654,7.312,7.312,0,0,0,2.976-.557,23.862,23.862,0,0,0,2.226-1.113v-.242a1.441,1.441,0,0,1-1.439-.944,5.9,5.9,0,0,1-.4-2.3v-6.8a8.971,8.971,0,0,0-.23-1.863,8.676,8.676,0,0,0-.811-2.178,7.526,7.526,0,0,0-1.609-2.057,7.749,7.749,0,0,0-2.625-1.525,13.209,13.209,0,0,0-7.284-.133,7.13,7.13,0,0,0-2.335,1.173,4.885,4.885,0,0,0-1.343,1.585,3.746,3.746,0,0,0-.435,1.706,2.67,2.67,0,0,0,.787,1.924,2.781,2.781,0,0,0,2.093.811,3.022,3.022,0,0,0,1.452-.326,6.245,6.245,0,0,0,1.089-.738,9.376,9.376,0,0,1,.992-.738,2.145,2.145,0,0,1,1.186-.326,2.273,2.273,0,0,1,.787.157.621.621,0,0,1,.424.641.914.914,0,0,1-.545.787,6.738,6.738,0,0,1-1.428.605q-.884.278-1.96.629a17.892,17.892,0,0,0-2.142.859,8.52,8.52,0,0,0-1.948,1.282,5.889,5.889,0,0,0-1.428,1.912,6.282,6.282,0,0,0-.545,2.734,4.87,4.87,0,0,0,.7,2.674ZM418.65,308.22a1.748,1.748,0,0,1,1.21,1,5.2,5.2,0,0,1,.363,2.142v20.812a5.212,5.212,0,0,1-.363,2.129,1.745,1.745,0,0,1-1.21,1.016v.242h19.238V327.24h-.242a5.049,5.049,0,0,1-.4,1.815,10,10,0,0,1-1.149,2.081,10.884,10.884,0,0,1-1.767,1.948,8.958,8.958,0,0,1-2.275,1.439,6.569,6.569,0,0,1-2.687.557h-1.4V311.366a5.2,5.2,0,0,1,.363-2.142,1.748,1.748,0,0,1,1.21-1v-.242H418.65Z\" transform=\"translate(1443.75 619.986)\" fill=\"#ffffff\"/> <path id=\"Path_844\" data-name=\"Path 844\" d=\"M1793.59,316.94a5.4,5.4,0,0,1-4.65,3.522c1.429,1.571,5.14,1.036,6.593-1.471l-1.943-2.051\" transform=\"translate(206.554 611.481)\" fill=\"#ffffff\"/> </g> </svg>";  /* white Laundré logo */
+function pickRow(sqm){ var best=TABLE[0],bd=1e9; TABLE.forEach(function(r){var d=Math.abs(r.sqm-sqm);if(d<bd){bd=d;best=r;}}); return best; }
+function fitoutDefault(sqm){ return Math.round((2208*sqm+15360)/100)*100; } // matches Miami 55→136,800 & Hervey Bay 80→192,000
+function AUD(n){ return '$'+(Math.round(n||0)).toLocaleString('en-AU'); }
+
+/* ============ State ============ */
+var CURRENT={id:'',name:'',sqm:0,fitout:0,equip:null,machEx:0,machInc:0,equipLoaded:false};
+var SCENARIOS=[], step=1;
+var KEY='calc_scenarios_v1', CSRF=window.LAUNDRE_CSRF||'';
+var who=(function(){try{var s=JSON.parse(localStorage.getItem('laundre_session')||'null');return (s&&s.name)||'an admin';}catch(e){return 'an admin';}})();
+function hdrs(j){var h={'Accept':'application/json','X-Requested-With':'XMLHttpRequest'};if(j){h['Content-Type']='application/json';h['X-CSRF-TOKEN']=CSRF;}return h;}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function uid(){return 's'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+var eqFrame=document.getElementById('equipFrame');
+
+/* ---- server-backed scenario store (shared across admins) ---- */
+function loadServer(){ return fetch('/settings-api/'+KEY,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){return r.ok?r.json():null;}).then(function(v){SCENARIOS=Array.isArray(v)?v:[];}).catch(function(){SCENARIOS=[];}); }
+function saveServer(){ return fetch('/settings-api/'+KEY,{method:'PUT',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({value:SCENARIOS})}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}); }
+function deleteScenario(s){
+  if(!confirm('Delete saved site “'+s.name+'”? This removes it for everyone.')) return;
+  SCENARIOS=SCENARIOS.filter(function(x){return x.id!==s.id;});
+  if(CURRENT.id===s.id){ CURRENT={id:'',name:'',sqm:0,fitout:0,equip:null,machEx:0,machInc:0,equipLoaded:false}; document.getElementById('newSiteCard').style.display='none'; checkNext1(); }
+  saveServer().then(renderSites).catch(function(e){alert('Could not delete: '+e.message);});
+}
+
+/* ---- Step 1: site list ---- */
+function renderSites(){
+  var host=document.getElementById('siteList'); host.innerHTML='';
+  SCENARIOS.forEach(function(s){
+    var d=document.createElement('div'); d.className='sitecard'+(s.id===CURRENT.id?' sel':'');
+    var badge='';
+    if(s.calcQuote){ var latest=CALC_QUOTES[s.calcQuote.id]; var st=(latest&&latest.status)||s.calcQuote.status;
+      if(st==='approved'){ badge='<button class="apprbadge">✓ APPROVED</button>'; }
+      else { badge='<div class="awaitbadge">🕓 Awaiting signature</div>'; }
+    }
+    d.innerHTML='<button class="delx" title="Delete site">×</button><div class="nm">'+esc(s.name)+'</div><div class="mt">'+(s.sqm?s.sqm+' m² · ':'')+'saved by '+esc(s.updatedBy||'—')+'</div>'+badge;
+    d.onclick=function(){ openScenario(s); };
+    d.querySelector('.delx').onclick=function(ev){ ev.stopPropagation(); deleteScenario(s); };
+    var ab=d.querySelector('.apprbadge'); if(ab) ab.onclick=function(ev){ ev.stopPropagation(); openApprovedOverview(s); };
+    host.appendChild(d);
+  });
+  var add=document.createElement('div'); add.className='sitecard new'; add.textContent='+ New site';
+  add.onclick=function(){ CURRENT={id:'',name:'',sqm:0,fitout:0,equip:null,machEx:0,machInc:0,equipLoaded:false}; document.getElementById('newSiteCard').style.display='block'; document.getElementById('ns_name').value=''; document.getElementById('ns_sqm').value=''; renderSites(); checkNext1(); document.getElementById('ns_name').focus(); };
+  host.appendChild(add);
+}
+// Recover the machine list from a stored quote for sites saved before machines were persisted on the site.
+var NAME_TO_CODE={
+  '10kg washer':'LN-11 TP2 E','14kg washer':'LN-14 TP2 E','13kg washer':'LA-14 TP2 E','18kg washer':'LN-18 TP2 E','22kg washer':'LN-22 TP2 E','28kg washer':'LN-28 TP2 E',
+  '2×18kg ADVANCE stack dryer':'SR-2-18 TP2 G','2×22kg ADVANCE stack dryer':'SR-2-22 TP2 G XP','18kg ADVANCE single dryer':'SR-16 TP2 G',
+  '18kg single dryer':'SR-18 TP2 G','22kg single dryer':'SR-22 TP2 G','35kg single dryer':'SR-35 TP2 G',
+  '18kg stack washer/dryer':'SLN-18','10kg stack washer/dryer':'LAP-SRP-10 TP2 E G'
+};
+function recoverFromQuote(){
+  if(!CURRENT.calcQuote || (CURRENT.items && CURRENT.items.length)) return;
+  var id=CURRENT.calcQuote.id;
+  fetch('/calc-quotes-api/'+id,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){return r.ok?r.json():null;}).then(function(q){
+    if(!q||!q.payload) return; var pl=q.payload;
+    if(pl.equip){ CURRENT.equip=pl.equip; }
+    var ms=pl.machines||[];
+    if(ms.length){ CURRENT.items=ms.map(function(m){return {code:m.code||NAME_TO_CODE[m.name]||null,name:m.name,qty:+m.qty||0,net:m.net}; }); CURRENT.machEx=+pl.machEx||CURRENT.machEx; CURRENT.equipLoaded=true; finishSave(true); }
+  }).catch(function(){});
+}
+function openScenario(s){
+  CURRENT={id:s.id,name:s.name,sqm:+s.sqm||0,fitout:+s.fitout||fitoutDefault(+s.sqm||0),equip:s.equip||null,items:s.items||[],machEx:+s.machEx||0,machInc:0,equipLoaded:!!(s.items&&s.items.length),calcQuote:s.calcQuote||null};
+  recoverFromQuote();
+  document.getElementById('q_rent').value=(s.rent||''); document.getElementById('q_bank').value=(s.bank||'');
+  document.getElementById('q_ref').value=(s.ref||''); document.getElementById('q_client').value=(s.client||'');
+  document.getElementById('newSiteCard').style.display='none';
+  renderSites(); checkNext1();
+}
+function checkNext1(){
+  var ok=false;
+  if(CURRENT.id){ ok=CURRENT.sqm>0; }
+  else { var nm=document.getElementById('ns_name').value.trim(), sq=+document.getElementById('ns_sqm').value; ok=!!nm && sq>0; }
+  document.getElementById('next1').disabled=!ok;
+}
+document.getElementById('ns_name').oninput=checkNext1;
+document.getElementById('ns_sqm').oninput=checkNext1;
+
+/* ---- step navigation ---- */
+function goStep(n){
+  step=n;
+  [1,2,3,4,5].forEach(function(i){
+    document.getElementById('p'+i).classList.toggle('on',i===n);
+    var st=document.querySelector('.stepper .st[data-step="'+i+'"]');
+    st.classList.toggle('on',i===n); st.classList.toggle('done',i<n);
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('[data-back]').forEach(function(b){ b.onclick=function(){ goStep(step-1); }; });
+
+document.getElementById('next1').onclick=function(){
+  if(!CURRENT.id){
+    CURRENT.name=document.getElementById('ns_name').value.trim();
+    CURRENT.sqm=+document.getElementById('ns_sqm').value;
+    CURRENT.fitout=fitoutDefault(CURRENT.sqm);
+  }
+  if(!CURRENT.fitout) CURRENT.fitout=fitoutDefault(CURRENT.sqm);
+  prepStep2(); goStep(2);
+};
+
+/* ---- Step 2: fit-out guide ---- */
+function machBudget(){ return pickRow(CURRENT.sqm).totalEx; }  // ex-GST machine package target for this size
+function prepStep2(){
+  document.getElementById('p2sqm').textContent=CURRENT.sqm+' m²';
+  var fi=document.getElementById('f_fitout'); fi.value=CURRENT.fitout;
+  updateStep2();
+}
+function updateStep2(){
+  CURRENT.fitout=+document.getElementById('f_fitout').value||0;
+  document.getElementById('f_fitrate').value=CURRENT.sqm?('$'+Math.round(CURRENT.fitout/CURRENT.sqm).toLocaleString('en-AU')+' / m²'):'—';
+  var mach=machBudget();  // step 2 guide uses the sizing-table package for this size
+  var sub=mach+CURRENT.fitout, marg=sub*MARGIN;
+  document.getElementById('l2_mach').textContent=AUD(mach);
+  document.getElementById('l2_fit').textContent=AUD(CURRENT.fitout);
+  document.getElementById('l2_sub').textContent=AUD(sub);
+  document.getElementById('l2_marg').textContent=AUD(marg);
+  document.getElementById('l2_tot').textContent=AUD(sub+marg);
+}
+document.getElementById('f_fitout').oninput=updateStep2;
+document.getElementById('next2').onclick=function(){ prepStep3(); goStep(3); };
+
+/* ---- Step 3: machines & budget ---- */
+function renderSizeTable(){
+  var row=pickRow(CURRENT.sqm);
+  var h='<tr><th>Size</th><th>Units</th><th>Washers</th><th>Dryers</th><th>Equip ex GST</th><th>Deliver+install</th><th>Total ex GST</th><th>$/m² inc</th></tr>';
+  TABLE.forEach(function(r){
+    h+='<tr class="'+(r.sqm===row.sqm?'hit':'')+'"><td>'+r.sqm+' m²</td><td>'+r.units+'</td><td>'+r.washers+'</td><td>'+r.dryers+'</td><td>'+AUD(r.equip)+'</td><td>'+AUD(r.delivery)+'</td><td>'+AUD(r.totalEx)+'</td><td>$'+r.perSqm.toLocaleString('en-AU')+'</td></tr>';
+  });
+  document.getElementById('sizeTbl').innerHTML=h;
+}
+function prepStep3(){
+  document.getElementById('p3sqm').textContent=CURRENT.sqm+' m²';
+  var row=pickRow(CURRENT.sqm);
+  document.getElementById('b_target').textContent=AUD(row.totalEx);
+  renderSizeTable();
+  // apply saved equip snapshot; else rebuild from saved machine items; else start empty
+  var apply=function(){
+    if(CURRENT.equip){ eqFrame.contentWindow.postMessage({t:'calc-cmd',cmd:'set',state:CURRENT.equip},'*'); }
+    else if(CURRENT.items && CURRENT.items.length){
+      var pkg={}; CURRENT.items.forEach(function(it){ if(it.code && it.code!=='Delivery' && it.code!=='Installation') pkg[it.code]=(pkg[it.code]||0)+(+it.qty||0); });
+      eqFrame.contentWindow.postMessage({t:'calc-cmd',cmd:'package',pkg:pkg,delivery:true,install:true,plinth:true,disc0:true},'*');
+    }
+    else { eqFrame.contentWindow.postMessage({t:'calc-cmd',cmd:'package',pkg:{},delivery:true,install:true,plinth:true,disc0:true},'*'); }
+  };
+  // give the iframe a beat if it just mounted
+  try{ apply(); }catch(e){}
+  setTimeout(apply,400);
+}
+function updateBudgetBar(){
+  var target=machBudget(); var sel=CURRENT.machEx||0;
+  var pct=target>0?Math.min(140,(sel/target)*100):0;
+  var fill=document.getElementById('b_fill'); fill.style.width=Math.min(100,pct)+'%'; fill.classList.toggle('over',sel>target);
+  document.getElementById('b_sel').textContent=AUD(sel);
+  document.getElementById('b_target').textContent=AUD(target);
+  var diff=sel-target;
+  var el=document.getElementById('b_diff');
+  el.textContent=(sel<=0?'No machines selected yet':(Math.abs(diff)<1?'On budget ✓':(diff>0?(AUD(diff)+' over target'):(AUD(-diff)+' under target'))));
+  var host=document.getElementById('b_items');
+  var machines=(CURRENT.items||[]).filter(function(it){return it.code!=='Delivery'&&it.code!=='Installation';});
+  if(!machines.length){ host.innerHTML='<span class="none">Add machines below to build the quote.</span>'; }
+  else { host.innerHTML=machines.map(function(it){return '<span class="it">'+it.qty+'× '+esc(it.name)+'</span>';}).join(''); }
+}
+document.getElementById('next3').onclick=function(){ prepStep4(); goStep(4); };
+document.getElementById('next4').onclick=function(){ prepStep5(); goStep(5); };
+
+/* ---- Step 5: client-facing quote (margins baked into each line) ---- */
+function prepStep5(){
+  if(document.getElementById('q_ref').value==='') document.getElementById('q_ref').value='LQ-'+(CURRENT.sqm||'')+'-'+new Date().toISOString().slice(2,10).replace(/-/g,'');
+  ['q_rent','q_bank','q_ref','q_client'].forEach(function(id){ var e=document.getElementById(id); e.oninput=generateQuote; });
+  generateQuote();
+  renderSignStatus();
+}
+function generateQuote(){
+  var machEx=CURRENT.equipLoaded?CURRENT.machEx:machBudget();
+  // margins baked into each client line (never shown separately)
+  var fitClient=Math.round(CURRENT.fitout*(1+MARGIN));
+  var machClient=Math.round(machEx*(1+MARGIN));
+  var worksEx=fitClient+machClient;
+  var gst=Math.round(worksEx*0.1);
+  var worksInc=worksEx+gst;
+  var rent=+document.getElementById('q_rent').value||0;
+  var bank=+document.getElementById('q_bank').value||0;
+  var totalPayable=worksInc+rent+bank;
+  var pay1=Math.round(worksInc*0.5), pay2=Math.round(worksInc*0.30), pay3=worksInc-pay1-pay2;
+  var ref=esc(document.getElementById('q_ref').value||'');
+  var client=esc(document.getElementById('q_client').value||'');
+  var prop=esc(CURRENT.name||(CURRENT.sqm+' m² site'));
+  var machines=(CURRENT.items||[]).filter(function(it){return it.code!=='Delivery'&&it.code!=='Installation';});
+  var machList=machines.length?machines.map(function(it){return it.qty+'× '+esc(it.name);}).join(' · '):'';
+  var today=new Date().toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'});
+  var additional = (rent>0||bank>0);
+  var addTotal = rent+bank;
+  document.getElementById('quoteDoc').innerHTML=
+    '<div class="qhd"><div><span class="wmlogo">'+LOGO_SVG_WHITE+'</span><div class="tag">Franchise fit-out &amp; equipment quote</div></div>'
+    +'<div class="qmeta">Quote '+ref+'<br>'+today+(client?('<br>Prepared for '+client):'')+'</div></div>'
+    +'<div class="qbody">'
+    +'<h3>Site</h3><div class="prop">'+prop+'</div>'
+    +'<table>'
+    +'<tr><td>Fit-out — design, construction &amp; project management</td><td class="r">'+AUD(fitClient)+'</td></tr>'
+    +'<tr><td>Laundry equipment — supply, delivery &amp; installation'+(machList?'<div style="font-size:11.5px;color:#8a9790;margin-top:4px;font-weight:400;line-height:1.5">Includes: '+machList+'</div>':'')+'</td><td class="r">'+AUD(machClient)+'</td></tr>'
+    +'<tr class="sub"><td>Subtotal (ex GST)</td><td class="r">'+AUD(worksEx)+'</td></tr>'
+    +'<tr class="sub"><td>GST (10%)</td><td class="r">'+AUD(gst)+'</td></tr>'
+    +'<tr class="tot"><td>Fit-out &amp; equipment total (incl GST)</td><td class="r">'+AUD(worksInc)+'</td></tr>'
+    +'</table>'
+    +'<div class="pay"><h3 style="margin-bottom:8px">Payment terms — fit-out &amp; equipment</h3>'
+    +'<div class="r"><span>50% — on acceptance / deposit</span><b>'+AUD(pay1)+'</b></div>'
+    +'<div class="r"><span>30% — during construction</span><b>'+AUD(pay2)+'</b></div>'
+    +'<div class="r"><span>20% — on completion</span><b>'+AUD(pay3)+'</b></div>'
+    +'<div style="font-size:11px;color:#8a9790;margin-top:12px;line-height:1.5">* This assumes you are paying cash for everything. If you are financing your machines separately, the invoices that will be sent will reflect this.</div>'
+    +'</div>'
+    +(additional
+      ? '<div class="pay" style="margin-top:14px"><h3 style="margin-bottom:8px">Additional payments — due on signing</h3>'
+        +(rent>0?'<div class="r"><span>One month rent</span><b>'+AUD(rent)+'</b></div>':'')
+        +(bank>0?'<div class="r"><span>Bank guarantee</span><b>'+AUD(bank)+'</b></div>':'')
+        +'<div class="r" style="font-weight:800;color:#33473D"><span>Total additional</span><b>'+AUD(addTotal)+'</b></div>'
+        +'</div>'
+      : '')
+    +'<div class="disc"><b>Disclaimer.</b> This quote is indicative and prepared for budgeting purposes. Prices are in AUD and valid for 30 days from the date above. '
+    +'Figures are based on the nominated tenancy size and current supplier pricing, and may change subject to final site measure, landlord and building conditions, engineering, and equipment availability (typical 12–16 week lead time on non-stock items). '
+    +'Fit-out and equipment figures are inclusive of all margins. Rent and bank guarantee are pass-through amounts and are not subject to GST. A formal contract and final specification will govern the works. E&amp;OE.</div>'
+    +'</div>'
+    +'<div class="qfoot">Laundré Franchising · Commercial-in-confidence</div>';
+}
+function downloadQuotePdf(){
+  var el=document.getElementById('quoteDoc');
+  if(!el||!el.innerHTML){ generateQuote(); }
+  var name=((CURRENT.name||'laundre-quote')+'-quote').replace(/[^a-z0-9\-]+/gi,'-').toLowerCase();
+  if(typeof html2pdf==='undefined'){ window.print(); return; }
+  html2pdf().set({margin:0,filename:name+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'pt',format:'a4',orientation:'portrait'}}).from(el).save();
+}
+document.getElementById('printBtn').onclick=downloadQuotePdf;
+function downloadStoredPdf(id,name){
+  fetch('/calc-quotes-api/'+id,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){return r.ok?r.json():null;}).then(function(q){
+    if(!q||!q.html){ alert('Quote not found.'); return; }
+    var stage=document.getElementById('pdfStage');
+    if(!stage){ stage=document.createElement('div'); stage.id='pdfStage'; stage.style.cssText='position:fixed;left:-9999px;top:0;width:800px'; document.body.appendChild(stage); }
+    var doc=q.html;
+    if(q.status==='approved' && q.signature){
+      var sigImg=(String(q.signature).indexOf('data:image/')===0)?'<img src="'+q.signature+'" style="max-height:74px;display:block;margin-top:8px;border:1px solid #cfe0d4;border-radius:8px;padding:6px;background:#fff">':('<div style="font-family:cursive;font-size:22px;color:#33473D;margin-top:6px">'+esc(q.signature)+'</div>');
+      var when=q.signed_at?new Date(q.signed_at).toLocaleString('en-AU',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+      var signedBlock='<div style="margin:6px 34px 20px;background:#E1EDE4;border:1px solid #bcd8c4;color:#2f6b46;border-radius:12px;padding:14px 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact"><div style="font-weight:800">✓ Approved &amp; signed by '+esc(q.signer_name||'client')+'</div><div style="font-size:12.5px;margin-top:3px">'+when+(q.signed_ip?(' · IP '+esc(q.signed_ip)):'')+'</div>'+sigImg+'</div>';
+      doc = (doc.indexOf('class="qfoot"')>=0) ? doc.replace('<div class="qfoot"', signedBlock+'<div class="qfoot"') : (doc+signedBlock);
+    }
+    stage.innerHTML='<div class="qdoc">'+doc+'</div>';
+    var fn=((name||q.name||'laundre-quote')+'-quote').replace(/[^a-z0-9\-]+/gi,'-').toLowerCase();
+    if(typeof html2pdf==='undefined'){ window.open('/calc-quote/'+q.token,'_blank'); return; }
+    html2pdf().set({margin:0,filename:fn+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff'},jsPDF:{unit:'pt',format:'a4',orientation:'portrait'}}).from(stage.firstChild).save().then(function(){setTimeout(function(){stage.innerHTML='';},500);});
+  }).catch(function(e){alert('Could not download: '+e.message);});
+}
+document.getElementById('saveBtn3').onclick=function(){ requestSave(); };
+
+/* ---- Digital signing: create a unique link, track approval, show overview ---- */
+var CALC_QUOTES={};
+var equipGetCb=null;
+function captureEquip(cb){
+  equipGetCb=cb;
+  try{ eqFrame.contentWindow.postMessage({t:'calc-cmd',cmd:'get',reqId:'cap'},'*'); }catch(e){ equipGetCb=null; cb(CURRENT.equip); return; }
+  setTimeout(function(){ if(equipGetCb){ equipGetCb=null; cb(CURRENT.equip); } },1500);
+}
+function fetchCalcQuotes(){ return fetch('/calc-quotes-api',{headers:hdrs(false),credentials:'same-origin'}).then(function(r){return r.ok?r.json():[];}).then(function(rows){CALC_QUOTES={};(rows||[]).forEach(function(q){CALC_QUOTES[q.id]=q;});}).catch(function(){}); }
+function createSignLink(){
+  var btn=document.getElementById('signLinkBtn'); btn.disabled=true; btn.textContent='Creating…';
+  // capture the live machine selection first so it persists on the saved site
+  captureEquip(function(){
+    generateQuote();
+    var html=document.getElementById('quoteDoc').innerHTML;
+    if(!html){ btn.disabled=false; btn.textContent='🔗 Create signing link'; alert('Open the quote first.'); return; }
+    var machEx=CURRENT.equipLoaded?CURRENT.machEx:machBudget();
+    var machines=(CURRENT.items||[]).filter(function(it){return it.code!=='Delivery'&&it.code!=='Installation';}).map(function(it){return {code:it.code,name:it.name,qty:it.qty,net:it.net};});
+    var fitClient=Math.round(CURRENT.fitout*(1+MARGIN)), machClient=Math.round(machEx*(1+MARGIN));
+    var rent=+document.getElementById('q_rent').value||0, bank=+document.getElementById('q_bank').value||0;
+    var total=Math.round((fitClient+machClient)*1.1)+rent+bank;
+    var payload={sqm:CURRENT.sqm,fitout:CURRENT.fitout,machEx:machEx,fitClient:fitClient,machClient:machClient,rent:rent,bank:bank,ref:document.getElementById('q_ref').value||'',machines:machines,equip:CURRENT.equip||null};
+    fetch('/calc-quotes-api',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({name:CURRENT.name||('Quote '+(CURRENT.sqm||'')),sqm:CURRENT.sqm||null,reference:payload.ref||null,client_name:document.getElementById('q_client').value||null,payload:payload,html:html,total:total})})
+      .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+      .then(function(q){ btn.disabled=false; btn.textContent='🔗 Create signing link'; CURRENT.calcQuote={id:q.id,token:q.token,status:q.status}; CALC_QUOTES[q.id]=q; finishSave(true); renderSignStatus(); })
+      .catch(function(e){ btn.disabled=false; btn.textContent='🔗 Create signing link'; alert('Could not create link: '+e.message); });
+  });
+}
+function renderSignStatus(){
+  var el=document.getElementById('signStatus'); if(!el) return;
+  var cq=CURRENT.calcQuote; if(!cq){ el.innerHTML=''; return; }
+  var latest=CALC_QUOTES[cq.id]||cq; var url=location.origin+'/calc-quote/'+cq.token;
+  if(latest.status==='approved'){
+    el.innerHTML='<div style="background:#E1EDE4;border:1px solid #bcd8c4;color:#2f6b46;border-radius:10px;padding:12px 14px;font-weight:700">✓ Approved by '+esc(latest.signer_name||'client')+(latest.signed_at?(' · '+new Date(latest.signed_at).toLocaleString('en-AU',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})):'')+' <a href="#" id="statusDlBtn" style="color:#2f6b46;font-weight:800;margin-left:8px">⬇ Download PDF</a> <a href="'+url+'" target="_blank" style="color:#2f6b46;font-weight:800;margin-left:8px">↗ Preview</a></div>';
+    var sdl=document.getElementById('statusDlBtn'); if(sdl) sdl.onclick=function(ev){ev.preventDefault();downloadStoredPdf(cq.id,CURRENT.name);};
+  } else {
+    el.innerHTML='<div style="background:#FBF9F4;border:1px solid #EEE7D9;border-radius:10px;padding:12px 14px"><div style="font-weight:700;color:#33473D;margin-bottom:6px">Signing link ready — send to the client to approve &amp; sign</div><div style="display:flex;gap:8px;flex-wrap:wrap"><input readonly value="'+esc(url)+'" style="flex:1;min-width:220px;font-size:13px;border:1px solid #E4DBCB;border-radius:8px;padding:9px 11px;background:#fff"><button class="btn btn-ghost" id="copyLinkBtn">Copy</button><a class="btn btn-ghost" href="'+url+'" target="_blank" style="text-decoration:none">Open</a></div></div>';
+    var c=document.getElementById('copyLinkBtn'); if(c) c.onclick=function(){try{navigator.clipboard.writeText(url);c.textContent='Copied ✓';setTimeout(function(){c.textContent='Copy';},1500);}catch(e){}};
+  }
+}
+function openApprovedOverview(s){
+  var cq=s.calcQuote; if(!cq) return; var latest=CALC_QUOTES[cq.id]||{}; var url=location.origin+'/calc-quote/'+cq.token;
+  var ov=document.getElementById('apprOv');
+  if(!ov){ ov=document.createElement('div'); ov.id='apprOv'; ov.style.cssText='position:fixed;inset:0;background:rgba(30,42,36,.55);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px'; document.body.appendChild(ov); ov.onclick=function(e){if(e.target===ov)ov.style.display='none';}; }
+  ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:520px;width:100%;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.35)"><div style="background:#2f6b46;color:#fff;padding:18px 22px;font-weight:800;font-size:17px">✓ Quote approved</div><div style="padding:20px 22px"><div style="font-size:18px;font-weight:800;color:#33473D">'+esc(s.name)+'</div><div style="color:#7a8b84;font-size:13px;margin:4px 0 14px">'+(s.sqm?s.sqm+' m² · ':'')+AUD(latest.total||0)+' total incl GST</div><div style="background:#E1EDE4;border:1px solid #bcd8c4;color:#2f6b46;border-radius:10px;padding:12px 14px;font-size:13.5px"><b>Signed by '+esc(latest.signer_name||'client')+'</b><br>'+(latest.signed_at?new Date(latest.signed_at).toLocaleString('en-AU',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}):'')+'</div><div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap"><button class="btn btn-green" id="ovDlBtn">⬇ Download PDF</button><a class="btn btn-ghost" href="'+url+'" target="_blank" style="text-decoration:none">↗ Preview</a><button class="btn btn-ghost" id="apprClose">Close</button></div></div></div>';
+  ov.style.display='flex';
+  document.getElementById('ovDlBtn').onclick=function(){downloadStoredPdf(cq.id,s.name);};
+  document.getElementById('apprClose').onclick=function(){ov.style.display='none';};
+}
+document.getElementById('signLinkBtn').onclick=createSignLink;
+
+/* listen to the equipment iframe's live total + height */
+window.addEventListener('message',function(e){
+  var d=e&&e.data; if(!d) return;
+  if(d.t==='equip-total'){ CURRENT.machEx=+d.net||0; CURRENT.machInc=+d.tot||0; CURRENT.items=d.items||[]; CURRENT.equipLoaded=true; updateBudgetBar(); }
+  else if(d.t==='calc-h' && d.h){ eqFrame.style.height=(d.h+6)+'px'; }
+  else if(d.t==='calc-state'){ if(d.which==='equip'){ CURRENT.equip=d.state; if(equipGetCb){ var cb=equipGetCb; equipGetCb=null; cb(d.state); } else { finishSave(); } } }
+});
+
+/* ---- Step 4: summary + finance ---- */
+function prepStep4(){
+  document.getElementById('p4name').textContent=CURRENT.name||(CURRENT.sqm+' m²');
+  var mach=CURRENT.equipLoaded?CURRENT.machEx:machBudget();
+  var machInc=CURRENT.equipLoaded?CURRENT.machInc:pickRow(CURRENT.sqm).totalInc;
+  var sub=mach+CURRENT.fitout, marg=sub*MARGIN, tot=sub+marg;
+  document.getElementById('s_mach').textContent=AUD(mach);
+  document.getElementById('s_fit').textContent=AUD(CURRENT.fitout);
+  document.getElementById('s_sub').textContent=AUD(sub);
+  document.getElementById('s_marg').textContent=AUD(marg);
+  document.getElementById('s_tot').textContent=AUD(tot);
+  document.getElementById('s_gst').textContent=AUD(tot*1.1);
+  document.getElementById('fin_amt').value=Math.round(tot*1.1); // finance the GST-inclusive total by default
+  finance();
+}
+function finance(){
+  var amt=+document.getElementById('fin_amt').value||0;
+  var depPct=Math.min(100,Math.max(0,+document.getElementById('fin_dep').value||0));
+  var term=Math.max(0,+document.getElementById('fin_term').value||0);
+  var rate=Math.max(0,+document.getElementById('fin_rate').value||0);
+  var freq=+document.getElementById('fin_freq').value||12;
+  var deposit=amt*depPct/100, principal=amt-deposit, n=term*freq, i=(rate/100)/freq, pay=0;
+  if(n>0){ pay = i>0 ? principal*i/(1-Math.pow(1+i,-n)) : principal/n; }
+  var repaid=pay*n, allIn=deposit+repaid;
+  document.getElementById('fin_freqlbl').textContent={12:'Monthly repayment',26:'Fortnightly repayment',52:'Weekly repayment'}[freq];
+  document.getElementById('fin_pay').textContent=AUD(pay);
+  document.getElementById('fin_depv').textContent=AUD(deposit);
+  document.getElementById('fin_repaid').textContent=AUD(repaid);
+  document.getElementById('fin_allin').textContent=AUD(allIn);
+}
+['fin_amt','fin_dep','fin_term','fin_rate','fin_freq'].forEach(function(id){ document.getElementById(id).addEventListener('input',finance); });
+
+/* ---- Save (asks the equipment iframe for its current state, then writes) ---- */
+function requestSave(){
+  // pull latest machine selection from the iframe, then finishSave() runs from the message handler
+  try{ eqFrame.contentWindow.postMessage({t:'calc-cmd',cmd:'get',reqId:'save'},'*'); }catch(e){ finishSave(); }
+  setTimeout(function(){ if(!CURRENT._saving){ finishSave(); } }, 800);
+}
+function finishSave(silent){
+  if(CURRENT._saving) return; CURRENT._saving=true;
+  if(!CURRENT.name){ CURRENT.name=prompt('Name this site:','')||''; CURRENT.name=CURRENT.name.trim(); if(!CURRENT.name){CURRENT._saving=false;return;} }
+  var rec={id:CURRENT.id||uid(),name:CURRENT.name,sqm:CURRENT.sqm,fitout:CURRENT.fitout,equip:CURRENT.equip,
+    items:CURRENT.items||[], machEx:CURRENT.machEx||0,
+    rent:+(document.getElementById('q_rent').value||0),bank:+(document.getElementById('q_bank').value||0),
+    ref:document.getElementById('q_ref').value||'',client:document.getElementById('q_client').value||'',
+    calcQuote:CURRENT.calcQuote||null,
+    updatedBy:who,updatedAt:new Date().toISOString()};
+  var idx=-1; SCENARIOS.forEach(function(s,i){ if(s.id===rec.id) idx=i; });
+  if(idx>=0) SCENARIOS[idx]=rec; else SCENARIOS.push(rec);
+  CURRENT.id=rec.id;
+  saveServer().then(function(){ CURRENT._saving=false; renderSites(); if(!silent) flash('Saved “'+rec.name+'”'); }).catch(function(e){ CURRENT._saving=false; if(!silent) alert('Could not save: '+e.message); });
+}
+function flash(msg){ var b=document.getElementById('saveBtn'); var o=b.textContent; b.textContent='✓ '+msg; setTimeout(function(){b.textContent=o;},1800); }
+document.getElementById('saveBtn').onclick=requestSave;
+document.getElementById('saveBtn2').onclick=requestSave;
+
+/* ---- boot ---- */
+loadServer().then(fetchCalcQuotes).then(renderSites);
+</script>
+</body>
+</html>

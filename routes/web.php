@@ -2,10 +2,14 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PortalController;
 use App\Http\Controllers\InviteController;
+use App\Http\Controllers\ImpersonateController;
 use App\Http\Controllers\Api\{UserController, LocationController, SettingController, TicketController,
     CleaningController, MaintenanceController, DocumentController, GuideController, BookkeepingController,
     SupplierController, SaleController, FranchiseController, UploadController, MaintenanceDocController,
-    OnboardingController};
+    OnboardingController, TaskController, CrmController, MembershipController, NdaController, InvestorController,
+    ActivityController, ExpenseController, MachineController, LocationFileController, ConnectionController,
+    SiteProspectController, NotificationController, ContactController, MilestoneController,
+    WeatherController, AiSearchController, QuoteController, CalcQuoteController, SiteProposalController, EnquiryController};
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -16,11 +20,44 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/welcome/{token}', [InviteController::class, 'show'])->where('token','[A-Za-z0-9]+');
 Route::post('/welcome/{token}', [InviteController::class, 'store'])->where('token','[A-Za-z0-9]+')->middleware('throttle:20,1');
 
+// ---- Public quote signing (token link; no auth) ----
+Route::get('/quote/{token}', [QuoteController::class, 'publicShow'])->where('token', '[A-Za-z0-9]+');
+Route::post('/quote/{token}/sign', [QuoteController::class, 'publicSign'])->where('token', '[A-Za-z0-9]+')->middleware('throttle:20,1');
+Route::get('/calc-quote/{token}', [CalcQuoteController::class, 'publicShow'])->where('token', '[A-Za-z0-9]+');
+Route::post('/calc-quote/{token}/sign', [CalcQuoteController::class, 'publicSign'])->where('token', '[A-Za-z0-9]+')->middleware('throttle:20,1');
+
+// ---- Public WordPress lead intake webhook (website enquiry → Franchise CRM "Leads") ----
+// Optionally protected by Setting('wp_lead_secret'); leave unset until WordPress is connected.
+Route::post('/wp-lead', [CrmController::class, 'wpLead'])->middleware('throttle:60,1');
+
+// ---- Public site proposal (share link) → view + accept/sign ----
+Route::get('/site-proposal/{token}', [SiteProposalController::class, 'publicShow'])->where('token', '[A-Za-z0-9]+');
+Route::post('/site-proposal/{token}/sign', [SiteProposalController::class, 'publicSign'])->where('token', '[A-Za-z0-9]+')->middleware('throttle:20,1');
+
+// Serve favicons directly (public assets; no auth required).
+Route::get('/favicon.ico', fn () => response()->file(public_path('favicon.ico')));
+Route::get('/favicon.gif', fn () => response()->file(public_path('favicon.gif')));
+Route::get('/favicon-32.png', fn () => response()->file(public_path('favicon-32.png')));
+Route::get('/laundre-logo.svg', fn () => response()->file(public_path('laundre-logo.svg'), ['Content-Type' => 'image/svg+xml']));
+
 Route::middleware('auth')->group(function () {
     Route::get('/', [PortalController::class, 'index'])->name('portal');
 
+    // ---- Admin "view as user" preview ----
+    Route::get('/stop-impersonate', [ImpersonateController::class, 'stop']);
+
     // ---- Shared read + scoped-write APIs (any authenticated user; controllers enforce store scoping) ----
     Route::get('/locations-api', [LocationController::class, 'index']);
+    // Postcode dataset served as JSON (large; kept out of the tool HTML to stay under the server response limit)
+    Route::get('/postcode-data', [PortalController::class, 'postcodeData']);
+
+    // ---- Investor data dashboard (assigned laundromats) ----
+    Route::get('/investor-data-api', [InvestorController::class, 'data']);
+
+    // ---- Digital membership card ----
+    Route::get('/membership-card', [MembershipController::class, 'show']);
+    Route::get('/membership-card/apple', [MembershipController::class, 'applePass']);
+    Route::get('/membership-card/google', [MembershipController::class, 'googleSave']);
     Route::get('/settings-api/{key}', [SettingController::class, 'show'])->where('key', '[A-Za-z0-9_\-]+');
     Route::put('/settings-api/{key}', [SettingController::class, 'put'])->where('key', '[A-Za-z0-9_\-]+');
 
@@ -37,12 +74,33 @@ Route::middleware('auth')->group(function () {
     Route::post('/maintenance-api', [MaintenanceController::class, 'submit']);
 
     Route::get('/documents-api', [DocumentController::class, 'index']);
+    Route::get('/documents-doc/{document}', [DocumentController::class, 'open']);
     Route::get('/guides-api', [GuideController::class, 'index']);
     Route::get('/maintenance-docs-api', [MaintenanceDocController::class, 'index']);
     Route::get('/bookkeeping-api', [BookkeepingController::class, 'index']);
     Route::post('/bookkeeping-api', [BookkeepingController::class, 'upsert']);
     Route::get('/suppliers-api', [SupplierController::class, 'index']);
     Route::get('/sales-api', [SaleController::class, 'index']);
+    Route::get('/sales-group-series', [SaleController::class, 'groupSeries']);
+    // Profit module (expenses) + machine list — scoped to the user's laundromats.
+    Route::get('/expenses-api', [ExpenseController::class, 'index']);
+    Route::post('/expenses-api', [ExpenseController::class, 'upsert']);
+    Route::delete('/expenses-api/{expense}', [ExpenseController::class, 'destroy']);
+    Route::get('/machines-api', [MachineController::class, 'index']);
+    // Contacts CRM (customers per laundromat + global admin contacts). Controllers enforce scope.
+    Route::get('/contacts-api', [ContactController::class, 'index']);
+    Route::post('/contacts-api', [ContactController::class, 'store']);
+    Route::match(['put','patch'], '/contacts-api/{contact}', [ContactController::class, 'update']);
+    Route::delete('/contacts-api/{contact}', [ContactController::class, 'destroy']);
+    // Build roll-out milestones (read scoped; writes admin-only below).
+    Route::get('/milestones-api', [MilestoneController::class, 'index']);
+    // Weather overlay + AI search (scoped in controllers).
+    Route::get('/weather-api', [WeatherController::class, 'index']);
+    Route::post('/ai-search-api', [AiSearchController::class, 'ask']);
+    // Per-laundromat files (admin uploads); non-admins may read insurance certs for their stores.
+    Route::get('/location-files-api', [LocationFileController::class, 'index']);
+    // Connected Systems status (Bubble Pay / Xero).
+    Route::get('/connections-api', [ConnectionController::class, 'status']);
     Route::get('/franchises-api', [FranchiseController::class, 'index']);
     Route::match(['put','patch'], '/franchises-api/{franchise}', [FranchiseController::class, 'update']);
 
@@ -52,17 +110,72 @@ Route::middleware('auth')->group(function () {
     Route::post('/onboarding-api/track', [OnboardingController::class, 'track']);
     Route::post('/onboarding-api/interest', [OnboardingController::class, 'interest']);
 
+    // Onboarding portal content (current user) + document viewer/tracking
+    Route::get('/onboarding-content', [OnboardingController::class, 'content']);
+    Route::get('/onboarding-docs', [OnboardingController::class, 'myDocuments']);
+    Route::get('/onboarding-doc/{doc}', [OnboardingController::class, 'openDocument']);
+
+    // Admin-or-granted-section reads (controllers self-gate via canSection)
+    Route::get('/onboarding-admin-api', [OnboardingController::class, 'adminIndex']);
+    Route::get('/investors-api', [OnboardingController::class, 'investors']);
+
+    // Admin content manager: videos + documents + view analytics (self-gated via canSection laundre-onboarding-content)
+    Route::get('/onboarding-content-admin', [OnboardingController::class, 'adminContent']);
+    Route::put('/onboarding-content-admin/video', [OnboardingController::class, 'setVideos']);
+    Route::post('/onboarding-content-admin/doc', [OnboardingController::class, 'storeDoc']);
+    Route::delete('/onboarding-content-admin/doc/{doc}', [OnboardingController::class, 'destroyDoc']);
+    Route::get('/onboarding-content-admin/doc/{doc}/views', [OnboardingController::class, 'docViews']);
+
+    // ---- Tasks (admin CRUD; assignees see + update status of their own) ----
+    Route::get('/tasks-api', [TaskController::class, 'index']);
+    Route::patch('/tasks-api/{task}/status', [TaskController::class, 'setStatus']);
+
     // ---- Admin-only writes ----
     Route::middleware('role:admin')->group(function () {
+        Route::post('/impersonate/{user}', [ImpersonateController::class, 'start']);
+
+        // Site Locations (DB-backed): create/edit/delete approved laundromats.
+        Route::post('/locations-api', [LocationController::class, 'store']);
+        Route::match(['put','patch'], '/locations-api/{location}', [LocationController::class, 'update']);
+        Route::delete('/locations-api/{location}', [LocationController::class, 'destroy']);
+
         Route::get('/users-api', [UserController::class, 'index']);
         Route::post('/users-api', [UserController::class, 'store']);
         Route::match(['put','patch'], '/users-api/{user}', [UserController::class, 'update']);
         Route::post('/users-api/{user}/reinvite', [UserController::class, 'reinvite']);
         Route::delete('/users-api/{user}', [UserController::class, 'destroy']);
 
-        Route::get('/onboarding-admin-api', [OnboardingController::class, 'adminIndex']);
         Route::match(['put','patch'], '/onboarding-admin-api/{onboarding}/stage', [OnboardingController::class, 'moveStage']);
-        Route::get('/investors-api', [OnboardingController::class, 'investors']);
+
+        // ---- NDA register: signers list + downloadable executed PDF ----
+        Route::get('/nda-admin-api', [NdaController::class, 'list']);
+        Route::get('/nda-admin/{user}/pdf', [NdaController::class, 'pdf']);
+
+        Route::post('/tasks-api', [TaskController::class, 'store']);
+        Route::match(['put','patch'], '/tasks-api/{task}', [TaskController::class, 'update']);
+        Route::delete('/tasks-api/{task}', [TaskController::class, 'destroy']);
+
+        // Franchise enquiries inbox (Contacts) → approve into CRM Leads
+        Route::get('/enquiries-api', [EnquiryController::class, 'index']);
+        Route::post('/enquiries-api', [EnquiryController::class, 'store']);
+        Route::get('/enquiries-api/{enquiry}', [EnquiryController::class, 'show']);
+        Route::post('/enquiries-api/{enquiry}/approve', [EnquiryController::class, 'approve']);
+        Route::match(['put','patch'], '/enquiries-api/{enquiry}', [EnquiryController::class, 'update']);
+        Route::delete('/enquiries-api/{enquiry}', [EnquiryController::class, 'destroy']);
+
+        Route::get('/pipeline-api', [CrmController::class, 'index']);
+        Route::post('/pipeline-api', [CrmController::class, 'storeCard']);
+        Route::match(['put','patch'], '/pipeline-api/{card}', [CrmController::class, 'updateCard']);
+        Route::patch('/pipeline-api/{card}/move', [CrmController::class, 'moveCard']);
+        Route::delete('/pipeline-api/{card}', [CrmController::class, 'destroyCard']);
+        Route::put('/pipeline-columns-api', [CrmController::class, 'saveColumns']);
+
+        // Site acquisition pipeline (prospective centres) for the Site Analyzer.
+        Route::get('/site-prospects-api', [SiteProspectController::class, 'index']);
+        Route::post('/site-prospects-api', [SiteProspectController::class, 'store']);
+        Route::match(['put','patch'], '/site-prospects-api/{site_prospect}', [SiteProspectController::class, 'update']);
+        Route::patch('/site-prospects-api/{site_prospect}/move', [SiteProspectController::class, 'move']);
+        Route::delete('/site-prospects-api/{site_prospect}', [SiteProspectController::class, 'destroy']);
 
         Route::post('/documents-api', [DocumentController::class, 'store']);
         Route::match(['put','patch'], '/documents-api/{document}', [DocumentController::class, 'update']);
@@ -83,6 +196,33 @@ Route::middleware('auth')->group(function () {
         Route::delete('/sales-api/month', [SaleController::class, 'destroyMonth']);
 
         Route::post('/cleaning-items-api', [CleaningController::class, 'saveItems']);
+
+        Route::get('/activity-api', [ActivityController::class, 'index']);
+        Route::get('/notifications-api', [NotificationController::class, 'index']);
+        Route::post('/notify-api/send', [NotificationController::class, 'send']);
+        Route::post('/milestones-api', [MilestoneController::class, 'store']);
+        Route::match(['put','patch'], '/milestones-api/{milestone}', [MilestoneController::class, 'update']);
+        Route::delete('/milestones-api/{milestone}', [MilestoneController::class, 'destroy']);
+        Route::post('/location-files-api', [LocationFileController::class, 'store']);
+        Route::delete('/location-files-api/{location_file}', [LocationFileController::class, 'destroy']);
+        Route::post('/connections-api/xero-demo', [ConnectionController::class, 'xeroDemo']);
+        Route::post('/connections-api/xero-disconnect', [ConnectionController::class, 'xeroDisconnect']);
+        Route::post('/connections-api/xero-setup', [ConnectionController::class, 'xeroSetup']);
+        // Quotes (build → share → sign → Xero invoice schedule).
+        Route::get('/quotes-api', [QuoteController::class, 'index']);
+        Route::post('/quotes-api', [QuoteController::class, 'store']);
+        Route::match(['put','patch'], '/quotes-api/{quote}', [QuoteController::class, 'update']);
+        Route::post('/quotes-api/{quote}/schedule', [QuoteController::class, 'schedule']);
+        Route::get('/quotes-api/{quote}/download', [QuoteController::class, 'downloadSigned']);
+        Route::delete('/quotes-api/{quote}', [QuoteController::class, 'destroy']);
+        // Calculator client quotes (sqm wizard) — digital signing + stored PDF
+        Route::get('/calc-quotes-api', [CalcQuoteController::class, 'index']);
+        Route::post('/calc-quotes-api', [CalcQuoteController::class, 'store']);
+        Route::get('/calc-quotes-api/{calcQuote}', [CalcQuoteController::class, 'show']);
+        Route::get('/calc-quotes-api/{calcQuote}/download', [CalcQuoteController::class, 'download']);
+        Route::post('/machines-api', [MachineController::class, 'store']);
+        Route::match(['put','patch'], '/machines-api/{machine}', [MachineController::class, 'update']);
+        Route::delete('/machines-api/{machine}', [MachineController::class, 'destroy']);
 
         Route::post('/franchises-api', [FranchiseController::class, 'store']);
         Route::delete('/franchises-api/{franchise}', [FranchiseController::class, 'destroy']);

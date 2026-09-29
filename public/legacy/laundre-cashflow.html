@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Cashflow Projections</title>
+<script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}if(!a||(s&&s.role&&s.role!=='admin'))location.replace('laundre-portal.html');})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;--muted:#8a9790;--in:#2f6b46;--out:#B4472F;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:8px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:800;font-size:15px;color:var(--green-d);} header .spacer{flex:1;}
+  main{max-width:1000px;margin:0 auto;padding:20px 22px 80px;}
+  .lead{color:var(--muted);font-size:13.5px;margin:0 0 16px;}
+  .bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--cream-line);border-radius:12px;padding:12px 16px;margin-bottom:16px;}
+  .bar label{font-size:12px;color:#5f7469;font-weight:700;} input{font-family:inherit;font-size:14px;color:var(--ink);background:#FBF9F4;border:1px solid var(--cream-line);border-radius:8px;padding:8px 10px;}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi{background:#fff;border:1px solid var(--cream-line);border-radius:12px;padding:14px 16px;} .kpi .n{font-size:22px;font-weight:900;} .kpi .l{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--cream-line);border-radius:12px;overflow:hidden;}
+  th{background:var(--green-d);color:#EAF0EC;font-size:11px;letter-spacing:.03em;text-transform:uppercase;text-align:right;padding:9px 10px;} th:nth-child(1),th:nth-child(2){text-align:left;}
+  td{padding:6px 8px;border-bottom:1px solid #F1ECE1;font-size:13.5px;text-align:right;} td:nth-child(1),td:nth-child(2){text-align:left;}
+  td input{width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:6px 7px;text-align:right;} td input:focus{border-color:var(--cream-line);background:#FBF9F4;} td input.l{text-align:left;}
+  td .bal{font-weight:800;} .neg{color:var(--out);} .pos{color:var(--in);}
+  .rm{background:transparent;border:none;color:#c7a3a3;font-size:16px;cursor:pointer;} .rm:hover{color:var(--out);}
+  .add{margin-top:10px;display:flex;gap:8px;} .foot{display:flex;justify-content:space-between;align-items:center;margin-top:16px;gap:10px;flex-wrap:wrap;}
+  .save{font-size:12px;color:var(--muted);}
+</style>
+</head>
+<body>
+<header><span class="ttl">💰 Cashflow Projections</span><span class="spacer"></span><button class="btn btn-green" id="saveBtn">Save</button><a class="btn btn-ghost" href="laundre-portal.html">← Portal</a></header>
+<main>
+  <p class="lead">Model money in and money out over time and watch the running balance. Add rows for fees, franchise payments, build costs, rent — anything. Everything saves to the database and is shared across admins.</p>
+  <div class="bar">
+    <label>Opening balance $</label><input id="opening" type="number" step="100" style="width:140px">
+    <span class="spacer"></span>
+    <span class="save" id="saveNote"></span>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <table>
+    <thead><tr><th style="width:120px">Date</th><th>Description</th><th style="width:130px">Money in</th><th style="width:130px">Money out</th><th style="width:140px">Balance</th><th style="width:34px"></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+  <div class="add"><button class="btn btn-ghost" id="addRow">+ Add line</button></div>
+</main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(j){var h={'Accept':'application/json','X-Requested-With':'XMLHttpRequest'};if(j){h['Content-Type']='application/json';h['X-CSRF-TOKEN']=CSRF;}return h;}
+var KEY='cashflow_v1';
+var DATA={opening:0, rows:[]};
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function AUD(n){var v=Math.round(n||0); return (v<0?'-$':'$')+Math.abs(v).toLocaleString('en-AU');}
+function render(){
+  document.getElementById('opening').value=DATA.opening||0;
+  var bal=+DATA.opening||0, tin=0, tout=0, minBal=bal;
+  var body=document.getElementById('rows');
+  body.innerHTML=DATA.rows.map(function(r,i){
+    var money_in=+r['in']||0, money_out=+r.out||0; bal+=money_in-money_out; tin+=money_in; tout+=money_out; if(bal<minBal)minBal=bal;
+    return '<tr>'
+      +'<td><input class="l" type="date" data-i="'+i+'" data-k="date" value="'+esc(r.date||'')+'"></td>'
+      +'<td><input class="l" data-i="'+i+'" data-k="desc" placeholder="Description" value="'+esc(r.desc||'')+'"></td>'
+      +'<td><input type="number" step="1" data-i="'+i+'" data-k="in" value="'+(r['in']!=null&&r['in']!==''?r['in']:'')+'" placeholder="0"></td>'
+      +'<td><input type="number" step="1" data-i="'+i+'" data-k="out" value="'+(r.out!=null&&r.out!==''?r.out:'')+'" placeholder="0"></td>'
+      +'<td class="bal '+(bal<0?'neg':'')+'">'+AUD(bal)+'</td>'
+      +'<td><button class="rm" data-rm="'+i+'" title="Remove">×</button></td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('kpis').innerHTML=
+     '<div class="kpi"><div class="n pos">'+AUD(tin)+'</div><div class="l">Total money in</div></div>'
+    +'<div class="kpi"><div class="n neg">'+AUD(tout)+'</div><div class="l">Total money out</div></div>'
+    +'<div class="kpi"><div class="n '+(bal<0?'neg':'pos')+'">'+AUD(bal)+'</div><div class="l">Closing balance</div></div>'
+    +'<div class="kpi"><div class="n '+(minBal<0?'neg':'')+'">'+AUD(minBal)+'</div><div class="l">Lowest point</div></div>';
+  body.querySelectorAll('input').forEach(function(inp){ inp.addEventListener('input',function(){ var i=+inp.dataset.i,k=inp.dataset.k; DATA.rows[i][k]=inp.value; if(k==='in'||k==='out') render(); markDirty(); }); });
+  body.querySelectorAll('[data-rm]').forEach(function(b){ b.onclick=function(){ DATA.rows.splice(+b.dataset.rm,1); render(); markDirty(); }; });
+}
+var dirty=false; function markDirty(){ dirty=true; document.getElementById('saveNote').textContent='Unsaved changes'; }
+document.getElementById('opening').addEventListener('input',function(e){ DATA.opening=+e.target.value||0; render(); markDirty(); });
+document.getElementById('addRow').onclick=function(){ DATA.rows.push({date:new Date().toISOString().slice(0,10),desc:'',in:'',out:''}); render(); markDirty(); };
+document.getElementById('saveBtn').onclick=function(){
+  var b=document.getElementById('saveBtn'); b.disabled=true; b.textContent='Saving…';
+  fetch('/settings-api/'+KEY,{method:'PUT',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({value:DATA})})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+    .then(function(){ b.disabled=false; b.textContent='Save'; dirty=false; document.getElementById('saveNote').textContent='Saved ✓'; })
+    .catch(function(e){ b.disabled=false; b.textContent='Save'; alert('Could not save: '+e.message); });
+};
+window.addEventListener('beforeunload',function(e){ if(dirty){ e.preventDefault(); e.returnValue=''; } });
+fetch('/settings-api/'+KEY,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){return r.ok?r.json():null;}).then(function(v){
+  if(v&&typeof v==='object'){ DATA={opening:+v.opening||0, rows:Array.isArray(v.rows)?v.rows:[]}; }
+  if(!DATA.rows.length){ DATA.rows=[{date:new Date().toISOString().slice(0,10),desc:'Opening franchise fee',in:'',out:''}]; }
+  render();
+}).catch(function(){ render(); });
+</script>
+</body>
+</html>

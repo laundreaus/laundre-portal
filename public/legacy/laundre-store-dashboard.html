@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Store Dashboard</title>
+<script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}if(!a||(s&&s.role&&s.role!=='admin'))location.replace('laundre-portal.html');})();</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);window.__FIXED_LOC=q.get('loc')||'';window.__EMBED=q.get('embed')==='1';if(window.__EMBED){document.addEventListener('DOMContentLoaded',function(){var st=document.createElement('style');st.textContent='html,body{background:transparent!important}header{display:none!important}main{padding-top:6px!important;max-width:none!important}';document.head.appendChild(st);var last=0;function postH(){try{var h=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight);if(h&&Math.abs(h-last)>4){last=h;parent.postMessage({t:'lembedH',h:h},'*');}}catch(e){}}postH();setInterval(postH,900);window.addEventListener('load',postH);});}}catch(e){}})();</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
+  *{box-sizing:border-box;}
+  html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;}
+  .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;}
+  .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);} .btn-ghost:hover{background:#EFEADD;}
+  input[type=date]{font-family:inherit;font-size:13px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:8px 10px;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;}
+  header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:1100px;margin:0 auto;padding:14px 20px 50px;}
+  .dhead{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+  .dhead h3{margin:0;font-size:15px;color:var(--green-d);} .dhead .spacer{flex:1;}
+  .seg{display:inline-flex;background:#EFEADD;border:1px solid var(--cream-line);border-radius:9px;overflow:hidden;}
+  .seg button{background:transparent;border:none;padding:8px 14px;font-size:12.5px;font-weight:700;color:#6b8073;cursor:pointer;font-family:inherit;}
+  .seg button.on{background:var(--green);color:#fff;}
+  .ctl{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;} .ctl .lbl{font-size:12px;color:#5f7469;font-weight:600;}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi{background:#fff;border:1px solid var(--cream-line);border-radius:12px;padding:14px 16px;}
+  .kpi .n{font-size:22px;font-weight:800;color:var(--green-d);} .kpi .l{font-size:11.5px;color:#7a8b84;margin-top:2px;}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:16px 18px;margin-bottom:16px;}
+  .card h3{margin:0 0 10px;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);display:flex;align-items:center;gap:8px;}
+  .card h3 .spacer{flex:1;} .card h3 .wxnote{font-size:11px;color:#8a9790;font-weight:600;text-transform:none;letter-spacing:0;}
+  .bp-badge{display:inline-flex;align-items:center;gap:5px;background:#E1EDE4;color:#2f6b46;border-radius:20px;padding:2px 10px;font-size:10.5px;font-weight:800;letter-spacing:.02em;}
+  .chartbox{position:relative;height:320px;}
+  .chartempty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8a9790;font-size:13.5px;text-align:center;padding:20px;}
+  .wxstrip{display:flex;gap:0;margin-top:6px;padding:0 6px;}
+  .wxstrip .wxc{flex:1;min-width:0;text-align:center;font-size:10.5px;color:#7a8b84;white-space:nowrap;overflow:hidden;}
+  .empty{padding:36px;text-align:center;color:#8a9790;background:#fff;border:1px solid var(--cream-line);border-radius:12px;}
+</style>
+</head>
+<body>
+<header>
+  <span class="ttl">Store Dashboard</span>
+  <span class="spacer"></span>
+  <a class="btn btn-ghost" href="laundre-portal.html">← Portal</a>
+</header>
+<main>
+  <div class="dhead">
+    <h3 id="storeTitle">Store sales</h3>
+    <span class="spacer"></span>
+    <div class="seg" id="granSeg"><button data-g="daily" class="on">Daily</button><button data-g="weekly">Weekly</button><button data-g="monthly">Monthly</button></div>
+  </div>
+  <div class="ctl">
+    <span class="lbl">From</span><input type="date" id="from">
+    <span class="lbl">to</span><input type="date" id="to">
+    <button class="btn btn-ghost" id="r7" style="padding:7px 12px">7 days</button>
+    <button class="btn btn-ghost" id="r30" style="padding:7px 12px">30 days</button>
+    <button class="btn btn-ghost" id="rAll" style="padding:7px 12px">All dates</button>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="card">
+    <h3><span class="bp-badge">● Bubble Pay</span> Daily revenue <span class="spacer"></span><span class="wxnote">— vs group average · ☀ weather overlay</span></h3>
+    <div class="chartbox"><canvas id="salesChart"></canvas><div class="chartempty" id="chartEmpty" style="display:none"></div></div>
+    <div class="wxstrip" id="wxStrip" style="display:none"></div>
+  </div>
+</main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(){return {'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};}
+function apiGet(u){return fetch(u,{headers:hdrs(),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+var LOC=window.__FIXED_LOC||new URLSearchParams(location.search).get('loc')||'';
+var PALETTE=['#435E53','#C4703F','#3a6ea5'];
+var ALL=[], GROUP=[], WX={}, gran='daily', fromD='', toD='', chart=null;
+function d10(s){return (''+s).slice(0,10);}
+function AUD(n){return '$'+(Math.round(n||0)).toLocaleString('en-AU');}
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function isoWeekStart(ds){var d=new Date(ds+'T00:00');var day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return ymd(d);}
+function maxDate(){return ALL.length?d10(ALL[ALL.length-1].date):ymd(new Date());}
+function minDate(){return ALL.length?d10(ALL[0].date):ymd(new Date());}
+
+function loadAll(){
+  if(!LOC) return Promise.resolve();
+  return apiGet('/sales-api').then(function(rows){
+    ALL=(Array.isArray(rows)?rows:[]).filter(function(x){return String(x.location_id)===String(LOC);})
+      .map(function(x){return {date:d10(x.date),revenue:+x.revenue||0,txns:+x.txns||0};})
+      .sort(function(a,b){return a.date<b.date?-1:1;});
+  }).catch(function(){ALL=[];});
+}
+function loadGroup(){ return apiGet('/sales-group-series').then(function(rows){GROUP=Array.isArray(rows)?rows.map(function(x){return {date:d10(x.date),total:+x.total||0,n:+x.n||0};}):[];}).catch(function(){GROUP=[];}); }
+function loadWx(){ if(!LOC) return Promise.resolve(); return apiGet('/weather-api?loc='+encodeURIComponent(LOC)).then(function(d){((d&&d.days)?d.days:[]).forEach(function(w){WX[d10(w.date)]=w;});}).catch(function(){}); }
+
+function setRange(days){var to=new Date(maxDate()+'T00:00');var from=new Date(to);from.setDate(from.getDate()-(days-1));toD=ymd(to);fromD=ymd(from);syncInputs();render();}
+function syncInputs(){document.getElementById('from').value=fromD;document.getElementById('to').value=toD;}
+
+function render(){
+  var rows=ALL.filter(function(x){return x.date>=fromD&&x.date<=toD;});
+  var keyFn=function(dt){return gran==='monthly'?dt.slice(0,7):gran==='weekly'?isoWeekStart(dt):dt;};
+  var keys=[]; var seen={}; rows.forEach(function(r){var k=keyFn(r.date);if(!seen[k]){seen[k]=1;keys.push(k);}}); keys.sort();
+  var labels=keys.map(function(k){if(gran==='monthly'){var p=k.split('-');return new Date(p[0],p[1]-1,1).toLocaleDateString('en-AU',{month:'short',year:'2-digit'});}var d=new Date(k+'T00:00');return d.toLocaleDateString('en-AU',{day:'numeric',month:'short'});});
+  // this store's revenue
+  var byKey={}; rows.forEach(function(r){var k=keyFn(r.date);byKey[k]=(byKey[k]||0)+r.revenue;});
+  var datasets=[{label:'This store',data:keys.map(function(k){return Math.round(byKey[k]||0);}),backgroundColor:gran==='daily'?PALETTE[0]+'33':PALETTE[0],borderColor:PALETTE[0],borderWidth:2,fill:gran==='daily',tension:.3,pointRadius:gran==='daily'?2:0,order:2}];
+  // group average line (avg revenue per store per period across all laundromats)
+  if(keys.length && GROUP.length){
+    var gt={},gn={},gd={};
+    GROUP.filter(function(r){return r.date>=fromD&&r.date<=toD;}).forEach(function(r){var k=keyFn(r.date);gt[k]=(gt[k]||0)+r.total;gn[k]=(gn[k]||0)+r.n;gd[k]=(gd[k]||0)+1;});
+    var avgData=keys.map(function(k){var t=gt[k]||0,sn=gn[k]||0,d=gd[k]||0;var stores=d?sn/d:0;return stores?Math.round(t/stores):0;});
+    var overall=avgData.length?Math.round(avgData.reduce(function(a,b){return a+b;},0)/avgData.length):0;
+    datasets.push({type:'line',label:'Group average ('+AUD(overall)+')',data:avgData,borderColor:'#C4703F',borderDash:[6,5],borderWidth:2,pointRadius:0,fill:false,tension:0,order:0});
+  }
+  // KPIs
+  var totRev=rows.reduce(function(s,r){return s+r.revenue;},0), totTx=rows.reduce(function(s,r){return s+r.txns;},0), dayCount=(function(){var s={};rows.forEach(function(r){s[r.date]=1;});return Object.keys(s).length;})();
+  document.getElementById('kpis').innerHTML=
+     '<div class="kpi"><div class="n">'+AUD(totRev)+'</div><div class="l">Total revenue</div></div>'
+    +'<div class="kpi"><div class="n">'+totTx.toLocaleString('en-AU')+'</div><div class="l">Transactions</div></div>'
+    +'<div class="kpi"><div class="n">'+AUD(dayCount?totRev/dayCount:0)+'</div><div class="l">Avg / day</div></div>'
+    +'<div class="kpi"><div class="n">'+AUD(totTx?totRev/totTx:0)+'</div><div class="l">Avg / transaction</div></div>';
+  var ctx=document.getElementById('salesChart'), emptyEl=document.getElementById('chartEmpty');
+  if(chart){chart.destroy();chart=null;}
+  var noData=(typeof Chart==='undefined')||!keys.length;
+  if(noData){ ctx.style.display='none'; emptyEl.style.display='flex'; emptyEl.textContent=(typeof Chart==='undefined')?'Chart library unavailable (offline).':'No sales in this period. Data syncs automatically from Bubble Pay.'; document.getElementById('wxStrip').style.display='none'; return; }
+  ctx.style.display=''; emptyEl.style.display='none';
+  chart=new Chart(ctx,{type:gran==='daily'?'line':'bar',data:{labels:labels,datasets:datasets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,font:{size:11}}},tooltip:{callbacks:{label:function(c){return c.dataset.label.replace(/ \(\$.*\)$/,'')+': $'+c.parsed.y.toLocaleString('en-AU');}}}},
+      scales:{y:{beginAtZero:true,ticks:{callback:function(v){return '$'+v.toLocaleString('en-AU');}}}}}});
+  renderWxStrip(keys);
+}
+function renderWxStrip(keys){
+  var strip=document.getElementById('wxStrip');
+  if(gran!=='daily'){ strip.style.display='none'; return; }
+  var any=keys.some(function(k){return WX[k]&&WX[k].tmax!=null;});
+  if(!any){ strip.style.display='none'; return; }
+  strip.style.display='flex';
+  strip.innerHTML=keys.map(function(k){var w=WX[k];var lab='';if(w&&w.tmax!=null){var rain=(+w.precip||0);lab=(rain>=1?'🌧':'☀️')+' '+Math.round(w.tmax)+'°';}return '<div class="wxc" title="'+k+(w&&w.tmax!=null?(' · '+Math.round(w.tmax)+'°'+((+w.precip||0)>0?(' · '+w.precip+'mm'):'')):'')+'">'+lab+'</div>';}).join('');
+}
+
+document.querySelectorAll('#granSeg button').forEach(function(b){b.onclick=function(){gran=b.dataset.g;document.querySelectorAll('#granSeg button').forEach(function(x){x.classList.toggle('on',x===b);});render();};});
+document.getElementById('from').addEventListener('change',function(e){fromD=e.target.value;if(toD<fromD){toD=fromD;syncInputs();}render();});
+document.getElementById('to').addEventListener('change',function(e){toD=e.target.value;if(toD<fromD){fromD=toD;syncInputs();}render();});
+document.getElementById('r7').addEventListener('click',function(){setRange(7);});
+document.getElementById('r30').addEventListener('click',function(){setRange(30);});
+document.getElementById('rAll').addEventListener('click',function(){fromD=minDate();toD=maxDate();syncInputs();render();});
+
+// init: load this store's sales + the group series + weather, then default to the last 7 days
+(function(){ Promise.all([loadAll(), loadGroup(), loadWx()]).then(function(){ setRange(7); }); })();
+</script>
+</body>
+</html>

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Laundré · Bookkeeping Checker</title>
 <script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);var LOC=q.get("loc")||"";window.__FIXED_LOC=LOC;window.__EMBED=q.get("embed")==="1";if(window.__EMBED){document.addEventListener("DOMContentLoaded",function(){var s=document.createElement("style");s.textContent="header{display:none!important}main{padding-top:12px!important}";document.head.appendChild(s);});}if(LOC){var of=window.fetch;window.fetch=function(u,o){var url=(typeof u==="string")?u:(u&&u.url)||"";var m=(o&&o.method)||"GET";return of.apply(this,arguments).then(function(r){if(url.indexOf("/locations-api")>=0&&m==="GET"){return r.clone().json().then(function(j){if(Array.isArray(j)){var f=j.filter(function(x){return String(x.id)===String(LOC);});return new Response(JSON.stringify(f),{status:200,headers:{"Content-Type":"application/json"}});}return r;}).catch(function(){return r;});}return r;});};}}catch(e){}})();</script>
 <style>
   :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
   *{box-sizing:border-box;}
@@ -104,9 +105,15 @@ function rows(){
 }
 function currentFYStart(){const d=new Date();return d.getMonth()>=6?d.getFullYear():d.getFullYear()-1;}
 function fyLabel(y){return y+'\u2013'+String(y+1).slice(2);}
+// The financial year a store was set up in (AU FY starts in July). Bookkeeping starts here \u2014 no older financials.
+function fyStartOf(dateStr){var d=new Date(dateStr||'');if(isNaN(d))return null;return d.getMonth()>=6?d.getFullYear():d.getFullYear()-1;}
+var SETUP_FY_MIN=null;
 let FY=currentFYStart();
 function buildFYSel(){
-  const cur=currentFYStart();const years=[];for(let y=cur;y>=cur-4;y--)years.push(y);
+  const cur=currentFYStart();
+  const floor=(SETUP_FY_MIN!=null)?Math.min(SETUP_FY_MIN,cur):cur-4; // don't offer years before the store was set up
+  const years=[];for(let y=cur;y>=floor;y--)years.push(y);
+  if(FY<floor)FY=floor; if(FY>cur)FY=cur;
   document.getElementById('fySel').innerHTML=years.map(y=>'<option value="'+y+'"'+(y===FY?' selected':'')+'>FY '+fyLabel(y)+'</option>').join('');
 }
 function rec(rowId){
@@ -172,10 +179,10 @@ fileInput.onchange=()=>{
   const f=fileInput.files[0];if(!f||!pendingTarget)return;
   if(f.size>8*1024*1024){alert('File too large (max 8MB).');fileInput.value='';return;}
   const tgt=pendingTarget; pendingTarget=null;
-  const rd=new FileReader();
-  rd.onload=async ()=>{
+  (async ()=>{
     try{
-      const up=await fetch('/upload-api',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({data:rd.result,name:f.name})});
+      const fd=new FormData();fd.append('file',f,f.name);
+      const up=await fetch('/upload-api',{method:'POST',headers:hdrs(false),credentials:'same-origin',body:fd});
       if(!up.ok)throw new Error('upload HTTP '+up.status);
       const info=await up.json();
       const r=rec(tgt.row);r.files=r.files||{};
@@ -183,8 +190,7 @@ fileInput.onchange=()=>{
       render(); await upsert(tgt.row);
     }catch(e){alert('Could not attach: '+e.message);}
     fileInput.value='';
-  };
-  rd.readAsDataURL(f);
+  })();
 };
 document.getElementById('fySel').onchange=async e=>{FY=+e.target.value;render();};
 var addB=document.getElementById('addBtn'); if(addB) addB.style.display='none';
@@ -199,6 +205,8 @@ async function loadAll(){
   try{
     const [locs,entries]=await Promise.all([apiGet('/locations-api'),apiGet('/bookkeeping-api')]);
     LOCS=Array.isArray(locs)?locs:[];
+    var _fys=LOCS.map(function(l){return fyStartOf(l.created_at);}).filter(function(y){return y!=null;});
+    SETUP_FY_MIN=_fys.length?Math.min.apply(null,_fys):null;
     STATUS={};
     (Array.isArray(entries)?entries:[]).forEach(e=>{
       const rid=String(e.location_id), fy=String(e.fy);

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Laundré · Cleaning</title>
 <script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);var LOC=q.get("loc")||"";window.__FIXED_LOC=LOC;window.__EMBED=q.get("embed")==="1";if(window.__EMBED){document.addEventListener("DOMContentLoaded",function(){var s=document.createElement("style");s.textContent="header{display:none!important}main{padding-top:12px!important}";document.head.appendChild(s);});}if(LOC){var of=window.fetch;window.fetch=function(u,o){var url=(typeof u==="string")?u:(u&&u.url)||"";var m=(o&&o.method)||"GET";return of.apply(this,arguments).then(function(r){if(url.indexOf("/locations-api")>=0&&m==="GET"){return r.clone().json().then(function(j){if(Array.isArray(j)){var f=j.filter(function(x){return String(x.id)===String(LOC);});return new Response(JSON.stringify(f),{status:200,headers:{"Content-Type":"application/json"}});}return r;}).catch(function(){return r;});}return r;});};}}catch(e){}})();</script>
 <style>
   :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
   *{box-sizing:border-box;}
@@ -66,6 +67,31 @@
   .mbody{padding:18px 20px;} .kv{font-size:13.5px;line-height:1.6;margin-bottom:6px;} .kv b{color:var(--green-d);}
   .chk{font-size:13.5px;padding:3px 0;} .chk .y{color:#2f6b46;font-weight:700;} .chk .n{color:#B4472F;font-weight:700;}
   .close{background:transparent;border:none;font-size:22px;color:#8a9790;}
+  .vidbox{position:relative;border-radius:12px;overflow:hidden;background:#22302a;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .vplay{width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;}
+  .vplay:after{content:'';border-style:solid;border-width:12px 0 12px 20px;border-color:transparent transparent transparent #33473D;margin-left:5px;}
+  .vcap{position:absolute;bottom:12px;left:14px;color:#eaf0ec;font-size:12.5px;background:rgba(30,42,36,.55);padding:4px 10px;border-radius:20px;}
+  .vph{font-size:11px;color:#B4472F;background:#F5E3DB;border-radius:20px;padding:2px 9px;font-weight:700;margin-left:8px;}
+  .vidbox iframe{width:100%;height:100%;border:0;position:absolute;inset:0;}
+  .replist .reprow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 6px;border-bottom:1px solid #f0ece2;cursor:pointer;}
+  .replist .reprow:last-child{border-bottom:none;}
+  .replist .reprow:hover{background:#F8F5EE;border-radius:8px;}
+  .replist .rl b{display:block;color:var(--green-d);font-size:14px;} .replist .rl span{color:#8a9790;font-size:12px;}
+  .replist .rr{display:flex;align-items:center;gap:8px;white-space:nowrap;} .replist .open{color:var(--accent);font-weight:700;font-size:13px;}
+  .replist .rpill{border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;} .replist .rpill.iss{background:#F5E3DB;color:#B4472F;} .replist .rpill.ph{background:#EDF1EC;color:#2f6b46;}
+  /* month calendar */
+  .calbar{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:12px;}
+  .calbar .calm{font-size:15px;font-weight:800;color:var(--green-d);min-width:170px;text-align:center;}
+  .calbar .btn{padding:7px 13px;}
+  .cal-dows{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px;}
+  .cal-dows div{text-align:center;font-size:10.5px;font-weight:700;color:#8a9790;text-transform:uppercase;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cal-cell{aspect-ratio:1/1;border:1px solid var(--cream-line);border-radius:9px;display:flex;align-items:flex-start;justify-content:flex-end;padding:5px 7px;font-size:12px;font-weight:600;color:#8a9790;background:#fff;position:relative;}
+  .cal-cell.empty{border:none;background:transparent;}
+  .cal-cell.done{background:#DDEEE1;border-color:#a9cdb4;color:#2f6b46;}
+  .cal-cell.iss{background:#F6E5DA;border-color:#e2bda9;color:#B4472F;}
+  .cal-cell.done.iss{background:linear-gradient(135deg,#DDEEE1 55%,#F6E5DA 55%);}
+  .cal-cell .mark{position:absolute;left:6px;bottom:5px;font-size:12px;}
 </style>
 </head>
 <body>
@@ -83,13 +109,21 @@
 </div></div>
 
 <script>
+/* ---- Intro video (placeholder — set INTRO_VIDEO to a YouTube/Vimeo embed URL) ---- */
+var INTRO_VIDEO='';
+function ytEmbed(u){if(!u)return '';u=(''+u).trim();if(/youtube\.com\/embed\//.test(u)||/player\.vimeo\.com/.test(u))return u;var m=u.match(/[?&]v=([A-Za-z0-9_\-]{6,})/)||u.match(/youtu\.be\/([A-Za-z0-9_\-]{6,})/)||u.match(/youtube\.com\/shorts\/([A-Za-z0-9_\-]{6,})/);if(m)return 'https://www.youtube.com/embed/'+m[1];if(/^[A-Za-z0-9_\-]{6,15}$/.test(u))return 'https://www.youtube.com/embed/'+u;return u;}
+(function(){try{fetch('/settings-api/intro_video_cleaner',{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'}).then(function(r){return r.ok?r.json():null;}).then(function(v){if(typeof v==='string'&&v)INTRO_VIDEO=v;}).catch(function(){});}catch(e){}})();
+function videoCard(cap){return '<div class="card"><h3>Intro video</h3><div class="vidbox" onclick="playIntro(this)"><div class="vplay"></div><div class="vcap">'+cap+'</div></div></div>';}
+function playIntro(el){var u=ytEmbed(INTRO_VIDEO);if(u){el.innerHTML='<iframe src="'+u+(u.indexOf('?')>=0?'&':'?')+'autoplay=1" allow="autoplay;fullscreen" allowfullscreen></iframe>';}else{el.innerHTML='<div class="vcap" style="position:static;background:none;color:#eaf0ec;text-align:center;padding:22px">\u25B6 Intro video would play here.<br><span style="opacity:.7">(Placeholder \u2014 add the video embed in the tool.)</span></div>';}}
+
 const CSRF=(window.LAUNDRE_CSRF||'');
 function hdrs(json){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(json)h['Content-Type']='application/json';return h;}
 async function apiGet(u){const r=await fetch(u,{headers:hdrs(false),credentials:'same-origin'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
 async function apiSend(u,method,body){const r=await fetch(u,{method:method,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(body)});if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();}
+function uploadFile(f){var fd=new FormData();fd.append('file',f,f.name);return fetch('/upload-api',{method:'POST',headers:hdrs(false),credentials:'same-origin',body:fd}).then(function(r){if(!r.ok)throw new Error('upload HTTP '+r.status);return r.json();});}
 const DEFAULT_ITEMS=['Bins emptied','Lint traps emptied','Floors mopped','Surfaces wiped','Machines & benches wiped'];
 let ITEMS=DEFAULT_ITEMS.slice();
-async function saveItemsRemote(){try{await apiSend('/cleaning-items-api','POST',{items:ITEMS});}catch(e){alert('Could not save checklist items: '+e.message);}}
+async function saveItemsRemote(){try{await apiSend('/cleaning-items-api','POST',{items:ITEMS,loc:(window.__FIXED_LOC||null)});}catch(e){alert('Could not save checklist items: '+e.message);}}
 function SESSION(){try{return JSON.parse(localStorage.getItem('laundre_session')||'null')||{role:'admin'};}catch(e){return {role:'admin'};}}
 const ME=SESSION(); const ADMIN=!(ME.role&&ME.role!=='admin');
 function ms(t){if(!t)return 0;var n=Date.parse(t);return isNaN(n)?0:n;}
@@ -100,7 +134,7 @@ function esc(s){return (''+(s??'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function laundromats(){return LOCS;}
 function locName(id){const l=LOCS.find(x=>x.id===id);return l?l.name:(id||'—');}
-function findSub(locId,date){return DATA.find(x=>x.locationId===locId && x.date===date);}
+function findSub(locId,date){return DATA.find(x=>String(x.locationId)===String(locId) && x.date===date);}
 function dayLabel(ds){const d=new Date(ds+'T00:00');return d.toLocaleDateString('en-AU',{weekday:'short'})+' '+d.getDate();}
 
 /* ============ CLEANER VIEW ============ */
@@ -111,6 +145,7 @@ function renderCleaner(){
   const done = existing ? existing.items : {};
   const main=document.getElementById('main');
   let h='<h2>Daily Cleaning</h2><div class="sub">'+esc(locName(loc))+' · '+new Date().toLocaleDateString('en-AU',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+'</div>';
+  h+=videoCard('Watch the daily cleaning intro video');
   h+='<div class="card">';
   if(existing) h+='<div class="submitted">✓ Submitted today at '+new Date(existing.submittedAt).toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})+' — you can update and resubmit.</div>';
   h+='<h3>Checklist</h3>';
@@ -134,11 +169,16 @@ function renderCleaner(){
   main.innerHTML=h;
   renderPhotos();
   main.querySelectorAll('.citem').forEach(el=>el.querySelector('input').addEventListener('change',e=>{el.classList.toggle('done',e.target.checked);}));
-  document.getElementById('photoInput').onchange=e=>{
-    const files=[...e.target.files]; let pending=files.length;
-    files.forEach(f=>{ if(f.size>2.5*1024*1024){pending--;document.getElementById('msg').textContent='Some photos were over 2.5MB and skipped.';return;}
-      const rd=new FileReader();rd.onload=()=>{pendingPhotos.push(rd.result);renderPhotos();};rd.readAsDataURL(f); });
-    e.target.value='';
+  document.getElementById('photoInput').onchange=async e=>{
+    const files=[...e.target.files]; e.target.value='';
+    const msg=document.getElementById('msg');
+    for(let i=0;i<files.length;i++){ const f=files[i];
+      if(f.size>12*1024*1024){ msg.style.color='#B4472F'; msg.textContent='Some photos over 12MB were skipped.'; continue; }
+      msg.style.color='#6b7d73'; msg.textContent='Uploading photo…';
+      try{ const up=await uploadFile(f); pendingPhotos.push(up.url); renderPhotos(); }
+      catch(err){ msg.style.color='#B4472F'; msg.textContent='A photo failed to upload — please try again.'; }
+    }
+    if(msg.textContent==='Uploading photo…') msg.textContent='';
   };
   document.getElementById('submitBtn').onclick=submitClean;
 }
@@ -170,29 +210,63 @@ function renderAdmin(){
   const days=[]; for(let i=0;i<10;i++){const d=new Date();d.setDate(d.getDate()-i);days.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));}
   const today=todayStr();
   const doneToday=locs.filter(l=>findSub(l.id,today)).length;
-  const gaps={}; locs.forEach(l=>gaps[l.id]=daysSince(lastSubDate(l.id)));
-  const overdue=locs.filter(l=>gaps[l.id]>=2);
   let h='<h2>Cleaning</h2><div class="sub">Daily cleaning submissions across all laundromats · '+doneToday+' of '+locs.length+' done today</div>';
-  if(overdue.length){ h+='<div class="alert">⚠ '+overdue.length+' store'+(overdue.length>1?'s':'')+' overdue — no clean submitted for 2+ days: '
-    +overdue.map(l=>esc(l.name)+' ('+(gaps[l.id]===Infinity?'never':gaps[l.id]+' days')+')').join(' · ')+'</div>'; }
   h+='<div class="card"><h3>Cleaning checklist items</h3><div id="itemsList"></div>'
     +'<div class="additem"><input id="newItem" placeholder="Add a checklist item…"><button class="btn btn-green" id="addItemBtn">Add</button></div>'
     +'<div class="sub" style="margin:10px 0 0">These appear on the cleaner’s daily checklist. Past submissions keep the items they were completed against.</div></div>';
-  if(!locs.length){main.innerHTML=h+'<div class="empty">No laundromats yet. Add them in Site Locations.</div>';wireItems();return;}
+  if(!locs.length){main.innerHTML=h+'<div class="empty">No laundromats yet. Add them in Site Locations.</div>'+monthCalHtml();wireItems();wireCal();return;}
   h+='<div class="matrix"><table><thead><tr><th class="l">Laundromat</th>'+days.map(d=>'<th>'+dayLabel(d)+'</th>').join('')+'</tr></thead><tbody>';
   locs.forEach(l=>{
-    const badge=gaps[l.id]>=2?' <span class="warn">⚠ '+(gaps[l.id]===Infinity?'never':gaps[l.id]+'d')+'</span>':'';
-    h+='<tr><td class="l">'+esc(l.name)+badge+'</td>'+days.map(d=>{
+    h+='<tr><td class="l">'+esc(l.name)+'</td>'+days.map(d=>{
       const s=findSub(l.id,d);
       if(s){const iss=s.issues?' iss':'';return '<td><span class="mk yes'+iss+'" data-loc="'+l.id+'" data-date="'+d+'">✓</span></td>';}
       return '<td><span class="mk no">✗</span></td>';
     }).join('')+'</tr>';
   });
   h+='</tbody></table></div>';
-  h+='<div class="sub" style="margin-top:12px">✓ submitted · ✗ not submitted · orange = issue · ⚠ = overdue 2+ days. Click a ✓ for detail.</div>';
+  h+='<div class="sub" style="margin-top:12px">✓ submitted · ✗ not submitted · orange = issue. Click a ✓ for detail.</div>';
+  // ---- Recent reports (clickable) ----
+  {
+    var subs=DATA.slice().sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:((b.submittedAt||0)-(a.submittedAt||0));});
+    h+='<div class="card"><h3>Recent reports</h3>';
+    if(!subs.length){ h+='<div class="sub" style="margin:0">No cleaning reports have been submitted yet. When a cleaner submits, it appears here \u2014 click any row to open the full report.</div>'; }
+    else{
+      h+='<div class="replist">'+subs.slice(0,80).map(function(s){
+        var iss=s.issues?'<span class="rpill iss">issue</span>':'';
+        var ph=(s.photos&&s.photos.length)?'<span class="rpill ph">'+s.photos.length+' \ud83d\udcf7</span>':'';
+        var when=new Date(s.date+'T00:00').toLocaleDateString('en-AU',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+        return '<div class="reprow" data-loc="'+s.locationId+'" data-date="'+s.date+'"><div class="rl"><b>'+esc(locName(s.locationId))+'</b><span>'+when+' \u00b7 by '+esc(s.by||'\u2014')+'</span></div><div class="rr">'+iss+ph+'<span class="open">Open \u2192</span></div></div>';
+      }).join('')+'</div>';
+    }
+    h+='</div>';
+  }
+  h+=monthCalHtml();
   main.innerHTML=h;
   wireItems();
+  wireCal();
   main.querySelectorAll('.mk.yes').forEach(b=>b.onclick=()=>openDetail(b.dataset.loc,b.dataset.date));
+  main.querySelectorAll('.reprow').forEach(b=>b.onclick=()=>openDetail(b.dataset.loc,b.dataset.date));
+}
+/* ---- Month calendar (green = a clean was logged that day) ---- */
+var calDate=(function(){var d=new Date();d.setDate(1);return d;})();
+function calScopeData(){var loc=window.__FIXED_LOC;return loc?DATA.filter(function(x){return String(x.locationId)===String(loc);}):DATA;}
+function monthCalHtml(){
+  var y=calDate.getFullYear(), m=calDate.getMonth();
+  var first=new Date(y,m,1), startDow=(first.getDay()+6)%7, dim=new Date(y,m+1,0).getDate();
+  var green={}; calScopeData().forEach(function(x){var d=new Date(x.date+'T00:00');if(d.getFullYear()===y&&d.getMonth()===m)green[d.getDate()]=true;});
+  var cells='';
+  for(var i=0;i<startDow;i++)cells+='<div class="cal-cell empty"></div>';
+  for(var day=1;day<=dim;day++){cells+='<div class="cal-cell'+(green[day]?' done':'')+'"><span>'+day+'</span></div>';}
+  return '<div class="card"><h3>Cleaning calendar</h3>'
+    +'<div class="calbar"><button class="btn btn-ghost" id="calPrev">←</button><div class="calm">'+first.toLocaleDateString('en-AU',{month:'long',year:'numeric'})+'</div><button class="btn btn-ghost" id="calNext">→</button></div>'
+    +'<div class="cal-dows"><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div></div>'
+    +'<div class="cal-grid">'+cells+'</div>'
+    +'<div class="sub" style="margin-top:10px">Green = a clean was logged that day. Use ← → to change month.</div></div>';
+}
+function wireCal(){
+  var p=document.getElementById('calPrev'), n=document.getElementById('calNext');
+  if(p)p.onclick=function(){calDate.setMonth(calDate.getMonth()-1);renderAdmin();};
+  if(n)n.onclick=function(){calDate.setMonth(calDate.getMonth()+1);renderAdmin();};
 }
 function wireItems(){
   const el=document.getElementById('itemsList'); if(!el) return;
@@ -221,7 +295,7 @@ document.getElementById('mClose').onclick=()=>document.getElementById('overlay')
 
 async function boot(){
   try{
-    const [locs,data,items]=await Promise.all([apiGet('/locations-api'),apiGet('/cleaning-api'),apiGet('/cleaning-items-api')]);
+    const [locs,data,items]=await Promise.all([apiGet('/locations-api'),apiGet('/cleaning-api'),apiGet('/cleaning-items-api'+(window.__FIXED_LOC?('?loc='+window.__FIXED_LOC):''))]);
     LOCS=(locs||[]).map(s=>({id:s.id,name:s.name}));
     DATA=(data||[]).map(normalize);
     if(Array.isArray(items)&&items.length)ITEMS=items;

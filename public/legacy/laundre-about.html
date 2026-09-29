@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · About</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);window.__FIXED_LOC=q.get('loc')||'';window.__EMBED=q.get('embed')==='1';var s0=null;try{s0=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}window.__ADMIN=!!(s0&&s0.role==='admin');if(window.__EMBED){document.addEventListener('DOMContentLoaded',function(){var s=document.createElement('style');s.textContent='header{display:none!important}main{padding-top:10px!important}';document.head.appendChild(s);});}}catch(e){}})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;--muted:#8a9790;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  input,textarea{font-family:inherit;font-size:13.5px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:8px 10px;width:100%;}
+  input:disabled,textarea:disabled{background:#F7F3EA;color:#4a5852;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:940px;margin:0 auto;padding:16px 22px 60px;}
+  .card{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:18px 20px;margin-bottom:16px;}
+  .card h3{margin:0 0 14px;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;} .grid .full{grid-column:1/-1;}
+  label{font-size:11px;color:#5f7469;font-weight:600;display:block;margin-bottom:4px;}
+  .contact{border:1px solid var(--cream-line);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#FBF9F4;}
+  .contact .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .contact .ct{font-size:11.5px;font-weight:800;color:var(--green-d);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;display:flex;align-items:center;}
+  .contact .ct .spacer{flex:1;} .kcdel{background:transparent;border:none;color:#B4472F;font-size:14px;cursor:pointer;}
+  .bar{display:flex;gap:10px;align-items:center;margin-top:6px;} .bar .spacer{flex:1;}
+  #msg{font-size:12.5px;min-height:15px;}
+  .viewonly{font-size:11.5px;color:#8a9790;}
+</style>
+</head>
+<body>
+<header><span class="ttl">About this laundromat</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-portal.html">← Portal</a></header>
+<main id="main"><div class="card">Loading…</div></main>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(j){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(j)h['Content-Type']='application/json';return h;}
+function apiGet(u){return fetch(u,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(b)}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+var LOC=window.__FIXED_LOC||new URLSearchParams(location.search).get('loc')||'';
+if(!LOC){try{var _s=JSON.parse(localStorage.getItem('laundre_session')||'null');if(_s&&_s.locationId)LOC=String(_s.locationId);}catch(e){}}
+var ADMIN=!!window.__ADMIN, LOCOBJ=null, A={}, KEYC=[];
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function val(id){var e=document.getElementById(id);return e?e.value.trim():'';}
+function fld(id,label,v,full,type){return '<div'+(full?' class="full"':'')+'><label>'+label+'</label><input id="'+id+'" type="'+(type||'text')+'" value="'+esc(v)+'" '+(ADMIN?'':'disabled')+'></div>';}
+function contactBlock(title,key,c,removable,idx){
+  c=c||{}; var p=key+(idx!=null?('_'+idx):'');
+  return '<div class="contact" data-kc="'+(idx!=null?idx:'')+'"><div class="ct">'+esc(title)
+    +'<span class="spacer"></span>'+(removable&&ADMIN?'<button class="kcdel" data-del="'+idx+'">✕ remove</button>':'')+'</div>'
+    +(idx!=null?'<div style="margin-bottom:8px"><label>Label / role</label><input id="c_'+p+'_label" value="'+esc(c.label||'')+'" '+(ADMIN?'':'disabled')+' placeholder="e.g. Electrician, Landlord"></div>':'')
+    +'<div class="row3">'
+    +'<div><label>Name</label><input id="c_'+p+'_name" value="'+esc(c.name||'')+'" '+(ADMIN?'':'disabled')+'></div>'
+    +'<div><label>Email</label><input id="c_'+p+'_email" value="'+esc(c.email||'')+'" '+(ADMIN?'':'disabled')+'></div>'
+    +'<div><label>Phone</label><input id="c_'+p+'_phone" value="'+esc(c.phone||'')+'" '+(ADMIN?'':'disabled')+'></div>'
+    +'</div></div>';
+}
+function readContact(key,idx){var p=key+(idx!=null?('_'+idx):'');var o={name:val('c_'+p+'_name'),email:val('c_'+p+'_email'),phone:val('c_'+p+'_phone')};if(idx!=null)o.label=val('c_'+p+'_label');return o;}
+function render(){
+  var m=document.getElementById('main');
+  A=LOCOBJ.about||{}; KEYC=Array.isArray(A.key_contacts)?A.key_contacts.slice():[];
+  var h='';
+  if(!ADMIN) h+='<div class="viewonly" style="margin-bottom:10px">Viewing your laundromat details. Contact the Laundré team to update anything here.</div>';
+  h+='<div class="card"><h3>Laundromat</h3><div class="grid">'
+    +fld('a_name','Laundromat name',LOCOBJ.name||'')
+    +fld('a_business','Business name',A.business_name||'')
+    +fld('a_abn','ABN',A.abn||'')
+    +fld('a_inc','Date of incorporation',A.incorporated_on||'','','date')
+    +'</div></div>';
+  h+='<div class="card"><h3>Lease &amp; occupancy</h3><div class="grid">'
+    +fld('a_lease_start','Lease start',A.lease_start||'','','date')
+    +fld('a_lease_len','Lease length',A.lease_length||'')
+    +fld('a_rent','Rent (annual)',A.rent||'')
+    +fld('a_outgoings','Outgoings',A.outgoings||'')
+    +fld('a_incentive','Incentive',A.incentive||'')
+    +'</div></div>';
+  h+='<div class="card"><h3>Notes · reasoning · car parking</h3>'
+    +'<textarea id="a_info" rows="5" '+(ADMIN?'':'disabled')+' placeholder="Our reasoning for this site, car park details, centre notes…">'+esc(A.info||'')+'</textarea></div>';
+  h+='<div class="card"><h3>Key contacts</h3>'
+    +contactBlock('Centre contact','centre',A.centre)
+    +contactBlock('Agent contact','agent',A.agent)
+    +contactBlock('Cleaner','cleaner',A.cleaner)
+    +'<div id="keyc">'+KEYC.map(function(c,i){return contactBlock(c.label?c.label:('Contact '+(i+1)),'kc',c,true,i);}).join('')+'</div>'
+    +(ADMIN?'<button class="btn btn-ghost" id="addKc">＋ Add another contact</button>':'')
+    +'</div>';
+  if(ADMIN) h+='<div class="bar"><span id="msg"></span><span class="spacer"></span><button class="btn btn-green" id="save">Save details</button></div>';
+  m.innerHTML=h;
+  if(ADMIN){
+    document.getElementById('addKc').onclick=function(){KEYC.push({});rerenderKc();};
+    document.getElementById('save').onclick=save;
+    wireKcDel();
+  }
+}
+function rerenderKc(){
+  // preserve current edits before re-render
+  captureKc();
+  document.getElementById('keyc').innerHTML=KEYC.map(function(c,i){return contactBlock(c.label?c.label:('Contact '+(i+1)),'kc',c,true,i);}).join('');
+  wireKcDel();
+}
+function captureKc(){KEYC=KEYC.map(function(_,i){return readContact('kc',i);});}
+function wireKcDel(){document.querySelectorAll('#keyc [data-del]').forEach(function(b){b.onclick=function(){captureKc();KEYC.splice(+b.dataset.del,1);document.getElementById('keyc').innerHTML=KEYC.map(function(c,i){return contactBlock(c.label?c.label:('Contact '+(i+1)),'kc',c,true,i);}).join('');wireKcDel();};});}
+function save(){
+  captureKc();
+  var about={
+    business_name:val('a_business'),abn:val('a_abn'),incorporated_on:val('a_inc'),
+    lease_start:val('a_lease_start'),lease_length:val('a_lease_len'),rent:val('a_rent'),
+    outgoings:val('a_outgoings'),incentive:val('a_incentive'),info:val('a_info'),
+    centre:readContact('centre'),agent:readContact('agent'),cleaner:readContact('cleaner'),
+    key_contacts:KEYC.filter(function(c){return c.name||c.email||c.phone||c.label;})
+  };
+  var name=val('a_name')||LOCOBJ.name;
+  var msg=document.getElementById('msg'); msg.style.color='#6b7d73'; msg.textContent='Saving…';
+  apiSend('/locations-api/'+LOC,'PUT',{name:name,about:about}).then(function(l){LOCOBJ=l;msg.style.color='#2f6b46';msg.textContent='Saved ✓';}).catch(function(e){msg.style.color='#B4472F';msg.textContent='Could not save: '+e.message;});
+}
+function boot(){
+  if(!LOC){document.getElementById('main').innerHTML='<div class="card">No laundromat selected.</div>';return;}
+  apiGet('/locations-api').then(function(list){
+    LOCOBJ=(list||[]).find(function(l){return String(l.id)===String(LOC);});
+    if(!LOCOBJ){document.getElementById('main').innerHTML='<div class="card">Laundromat not found.</div>';return;}
+    render();
+  }).catch(function(e){document.getElementById('main').innerHTML='<div class="card">Could not load: '+e.message+'</div>';});
+}
+boot();
+</script>
+</body>
+</html>

@@ -31,9 +31,21 @@ class InviteController extends Controller {
         $data = $r->validate(['password'=>'required|string|min:8|confirmed']);
         $u->password = Hash::make($data['password']);
         $u->invite_token = null; // one-time use
+        // Franchisee/investor prospects are on a 21-day access window from first access.
+        if (in_array($u->role, ['potential_franchisee','investor']) && !$u->access_expires_at) {
+            $u->access_expires_at = now()->addDays(21);
+        }
         $u->save();
-        $ob = Onboarding::firstOrCreate(['user_id'=>$u->id], ['type'=>$this->onboardType($u), 'crm_stage'=>'invited']);
-        if (!$ob->first_login_at) { $ob->first_login_at = now(); $ob->save(); }
+        if (in_array($u->role, ['potential_franchisee','investor'])) {
+            $ob = Onboarding::firstOrCreate(['user_id'=>$u->id], ['type'=>$this->onboardType($u), 'crm_stage'=>'invited']);
+            if (!$ob->first_login_at) { $ob->first_login_at = now(); $ob->save(); }
+        }
+        // Notify admins when an investor activates their account.
+        if (in_array($u->role, ['investor','potential_investor'])) {
+            \App\Services\AdminNotifier::adminAlert('investor_signup', 'Investor signed up: '.$u->name,
+                $u->name.' has set their password and activated their investor account.',
+                [['Name', $u->name], ['Email', $u->email]]);
+        }
         Auth::login($u);
         $r->session()->regenerate();
         return response()->json(['ok'=>true, 'redirect'=>'/']);

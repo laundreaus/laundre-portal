@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Road to 100</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;--gold:#D9A73E;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:30;} header .ttl{font-weight:800;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:1080px;margin:0 auto;padding:22px 22px 80px;}
+  .hero{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:8px;}
+  .hero h1{margin:0;font-size:30px;color:var(--green-d);letter-spacing:-.5px;} .hero h1 b{color:var(--accent);}
+  .hero p{margin:4px 0 0;color:#7a8b84;font-size:14px;}
+  .counter{background:#fff;border:1px solid var(--cream-line);border-radius:16px;padding:12px 20px;text-align:center;min-width:150px;}
+  .counter .n{font-size:38px;font-weight:900;color:var(--green-d);line-height:1;} .counter .n small{font-size:18px;color:#9aa6a0;font-weight:700;}
+  .counter .l{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#9aa6a0;font-weight:800;margin-top:4px;}
+
+  /* Progress bar */
+  .prog-wrap{background:#fff;border:1px solid var(--cream-line);border-radius:18px;padding:22px 26px 30px;margin:18px 0 26px;}
+  .prog-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:26px;}
+  .prog-head .cur{font-weight:800;color:var(--green-d);font-size:15px;} .prog-head .goal{color:#9aa6a0;font-size:13px;font-weight:700;}
+  .track{position:relative;height:16px;border-radius:20px;background:#EFE7D6;box-shadow:inset 0 1px 3px rgba(0,0,0,.06);}
+  .fill{position:absolute;left:0;top:0;bottom:0;border-radius:20px;background:linear-gradient(90deg,#5C7A6B,#435E53);width:0;transition:width 1.6s cubic-bezier(.22,1,.36,1);}
+  .fill::after{content:"";position:absolute;right:-2px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px #fff,0 4px 12px rgba(196,112,63,.5);}
+  .mstones{position:relative;height:0;}
+  .ms{position:absolute;top:-30px;transform:translateX(-50%);text-align:center;}
+  .ms .flag{width:30px;height:30px;border-radius:50%;background:#fff;border:2px solid var(--cream-line);display:flex;align-items:center;justify-content:center;font-size:14px;margin:0 auto;transition:.4s;}
+  .ms.hit .flag{border-color:var(--gold);background:var(--gold);box-shadow:0 4px 12px rgba(217,167,62,.5);transform:scale(1.12);}
+  .ms .v{font-size:12px;font-weight:800;color:#9aa6a0;margin-top:34px;}
+  .ms.hit .v{color:var(--green-d);}
+  .ms .cap{font-size:10px;color:#b3afa2;white-space:nowrap;}
+
+  /* Journey road */
+  .roadwrap{background:linear-gradient(180deg,#EAF0EC,#F4EFE6);border:1px solid var(--cream-line);border-radius:18px;padding:30px 20px 20px;overflow-x:auto;}
+  .road{position:relative;display:flex;gap:0;min-width:760px;padding:40px 10px 20px;}
+  .road::before{content:"";position:absolute;left:40px;right:40px;top:96px;height:8px;border-radius:8px;background:#C9BFA8;background-image:repeating-linear-gradient(90deg,transparent 0 22px,#F4EFE6 22px 40px);}
+  .stop{position:relative;flex:1;min-width:170px;text-align:center;}
+  .node{width:64px;height:64px;border-radius:50%;margin:60px auto 0;background:#fff;border:3px solid var(--green);display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;position:relative;z-index:2;transition:transform .3s, box-shadow .3s;box-shadow:0 6px 16px rgba(51,71,61,.18);}
+  .node:hover{transform:translateY(-4px) scale(1.05);box-shadow:0 12px 26px rgba(51,71,61,.28);}
+  .stop.opened .node{background:var(--green);color:#fff;}
+  .stop .num{position:absolute;top:44px;left:50%;transform:translateX(-50%);width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:3;border:2px solid #fff;}
+  .stop .yr{margin-top:12px;font-size:22px;font-weight:900;color:var(--green-d);}
+  .stop .nm{font-size:13px;font-weight:700;color:#5f7469;}
+  .stop .fut .node{border-style:dashed;border-color:#b9c6bd;color:#b9c6bd;background:#fbfaf6;}
+  .stop.future .node{border-style:dashed;border-color:#c3ccc5;color:#c3ccc5;background:#fbfaf6;box-shadow:none;}
+  .stop.future .yr{color:#b3bdb6;} .stop.future .nm{color:#b9c2bb;}
+  .stop.future .num{background:#c3ccc5;}
+
+  /* detail card */
+  .detail{background:#fff;border:1px solid var(--cream-line);border-radius:16px;padding:20px 22px;margin-top:22px;display:none;}
+  .detail.show{display:block;animation:pop .35s ease;}
+  @keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .detail h3{margin:0 0 2px;color:var(--green-d);font-size:19px;} .detail .sub{color:#9aa6a0;font-size:13px;margin-bottom:10px;}
+  .detail p{margin:0;font-size:14px;line-height:1.6;color:#4a5852;}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:#7a8b84;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .dot{width:12px;height:12px;border-radius:50%;display:inline-block;}
+  .confetti{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden;}
+</style>
+</head>
+<body>
+<header>
+  <span class="ttl">🏁 Road to 100</span>
+  <span class="spacer"></span>
+  <button class="btn btn-ghost" id="replayBtn">↻ Replay</button>
+  <a class="btn btn-ghost" href="laundre-portal.html">← Portal</a>
+</header>
+<main>
+  <div class="hero">
+    <div>
+      <h1>The Road to <b>100</b> Laundromats</h1>
+      <p>Every store we've opened on the journey to a hundred — and the milestones ahead.</p>
+    </div>
+    <div class="counter"><div class="n" id="openCount">0<small>/100</small></div><div class="l">Open today</div></div>
+  </div>
+
+  <div class="prog-wrap">
+    <div class="prog-head"><span class="cur" id="progLabel">4 open</span><span class="goal">Goal: 100 stores</span></div>
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <div class="mstones" id="mstones"></div>
+  </div>
+
+  <div class="roadwrap">
+    <div class="road" id="road"></div>
+  </div>
+
+  <div class="detail" id="detail"></div>
+
+  <div class="legend">
+    <span><i class="dot" style="background:#435E53"></i> Open</span>
+    <span><i class="dot" style="background:#fbfaf6;border:2px dashed #c3ccc5"></i> On the road</span>
+    <span><i class="dot" style="background:#D9A73E"></i> Milestone reached</span>
+  </div>
+</main>
+<div class="confetti" id="confetti"></div>
+
+<script>
+// The road is driven entirely by the live locations list, so it stays in sync as
+// stores are added/opened. ICONS just give each known town a nicer marker.
+var ICONS={tweed:'🌊',coomera:'🌴',commera:'🌴',southport:'⚓','sth port':'⚓',toowoomba:'🌾','hervey bay':'🐬'};
+function iconFor(name){var k=norm(name);return ICONS[k]||'🧺';}
+var GOAL=100;
+var MILESTONES=[15,30,50,75,100];
+var STORES=[], UPCOMING=[], OPEN=0;
+
+function norm(s){var t=(''+(s||'')).trim().toLowerCase();return t.replace(/^laundr[eé]\s+/,'').replace(/[\/,].*$/,'').trim();}
+
+// Build the road from the live locations. Opened stores (with an opening date) become
+// dated nodes; active stores without one show as "in build". Fully in sync with the portal.
+function buildStores(locs){
+  var opened=[], up=[];
+  (locs||[]).forEach(function(l){
+    if(!l) return;
+    if(l.opening_date){
+      var d=new Date(l.opening_date); if(isNaN(d)) return;
+      opened.push({name:l.name,icon:iconFor(l.name),year:d.getFullYear(),date:l.opening_date,note:'Opened '+d.getFullYear()+'.'});
+    } else if((l.status||'active')==='active'){
+      up.push({name:l.name,icon:'🚧',
+        note:'In build'+(l.keys_date?(' · keys '+new Date(l.keys_date).toLocaleDateString('en-AU',{day:'numeric',month:'long',year:'numeric'})):'')+'. Set an opening date in Site Locations to place it on the timeline.'});
+    }
+  });
+  opened.sort(function(a,b){ return +new Date(a.date) - +new Date(b.date); });
+  opened.forEach(function(s,i){ s.n=i+1; });
+  STORES=opened; OPEN=opened.length; UPCOMING=up;
+}
+
+// ---- Counter + progress ----
+document.getElementById('progLabel').textContent=OPEN+' open';
+
+function buildRoad(){
+  var road=document.getElementById('road'); road.innerHTML='';
+  // opened stores
+  STORES.forEach(function(s){
+    var d=document.createElement('div'); d.className='stop opened';
+    d.innerHTML='<div class="node" data-n="'+s.n+'">'+s.icon+'<span class="num">'+s.n+'</span></div>'+
+      '<div class="yr">'+s.year+'</div><div class="nm">'+s.name+'</div>';
+    d.querySelector('.node').onclick=function(){showDetail(s);};
+    road.appendChild(d);
+  });
+  // in-build stores (active, no opening date yet)
+  UPCOMING.forEach(function(s){
+    var d=document.createElement('div'); d.className='stop future';
+    d.innerHTML='<div class="node">'+s.icon+'<span class="num">•</span></div>'+
+      '<div class="yr">In build</div><div class="nm">'+s.name+'</div>';
+    d.querySelector('.node').onclick=function(){showDetail(s);};
+    road.appendChild(d);
+  });
+  // "next" ghost stop toward the goal
+  var g=document.createElement('div'); g.className='stop future';
+  g.innerHTML='<div class="node">🚀<span class="num">'+(OPEN+UPCOMING.length+1)+'+</span></div>'+
+    '<div class="yr">…</div><div class="nm">Next on the road</div>';
+  g.querySelector('.node').onclick=function(){showDetail({name:'The road ahead',year:'2026 →',icon:'🚀',note:(GOAL-OPEN)+' stores to go. Every new site added here moves the whole journey forward toward 100.'});};
+  road.appendChild(g);
+}
+
+function buildMilestones(){
+  var host=document.getElementById('mstones'); host.innerHTML='';
+  MILESTONES.forEach(function(m){
+    var pct=(m/GOAL)*100;
+    var el=document.createElement('div'); el.className='ms'+(OPEN>=m?' hit':'');
+    el.style.left=pct+'%';
+    var cap=m===100?'the goal':(m===15?'foundation':m===30?'scaling':m===50?'halfway':'home stretch');
+    el.innerHTML='<div class="flag">'+(m===100?'🏆':(OPEN>=m?'✓':'🚩'))+'</div><div class="v">'+m+'</div><div class="cap">'+cap+'</div>';
+    host.appendChild(el);
+  });
+}
+
+function showDetail(s){
+  var d=document.getElementById('detail');
+  d.className='detail show';
+  d.innerHTML='<h3>'+s.icon+' '+s.name+'</h3><div class="sub">'+(typeof s.n!=='undefined'?('Store #'+s.n+' · opened '+s.year):s.year)+'</div><p>'+s.note+'</p>';
+}
+
+function animate(){
+  document.getElementById('fill').style.width=((OPEN/GOAL)*100)+'%';
+  var target=OPEN, cur=0, cEl=document.getElementById('openCount');
+  var step=Math.max(1,Math.round(target/28));
+  var t=setInterval(function(){cur+=step; if(cur>=target){cur=target;clearInterval(t);} cEl.innerHTML=cur+'<small>/100</small>';},40);
+}
+
+function replay(){ document.getElementById('fill').style.width='0'; document.getElementById('openCount').innerHTML='0<small>/100</small>'; buildMilestones(); setTimeout(animate,120); }
+
+function renderAll(){
+  document.getElementById('progLabel').textContent=OPEN+' open';
+  buildRoad(); buildMilestones(); animate();
+  setTimeout(function(){ if(STORES.length) showDetail(STORES[STORES.length-1]); },1100);
+}
+
+// First paint from the seed (instant), then sync with the live locations list.
+buildStores([]); renderAll();
+document.getElementById('replayBtn').onclick=replay;
+
+fetch('/locations-api',{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'})
+  .then(function(r){return r.ok?r.json():[];})
+  .then(function(locs){ buildStores(locs); renderAll(); })
+  .catch(function(){ /* seed already shown */ });
+</script>
+</body>
+</html>

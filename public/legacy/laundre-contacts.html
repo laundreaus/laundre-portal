@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Laundré · Contacts</title>
+<script>if(localStorage.getItem('laundre_auth')!=='1'){location.replace('laundre-portal.html');}</script>
+<script>(function(){try{var q=new URLSearchParams(location.search);window.__FIXED_LOC=q.get('loc')||'';window.__EMBED=q.get('embed')==='1';var s0=null;try{s0=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}window.__ADMIN=!!(s0&&s0.role==='admin');if(window.__EMBED){document.addEventListener('DOMContentLoaded',function(){var s=document.createElement('style');s.textContent='header{display:none!important}main{padding-top:10px!important}';document.head.appendChild(s);});}}catch(e){}})();</script>
+<style>
+  :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--ink:#2E3D36;}
+  *{box-sizing:border-box;} html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  button{font-family:inherit;cursor:pointer;} .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);text-decoration:none;}
+  input,select,textarea{font-family:inherit;font-size:13.5px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:8px 10px;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:12px;padding:12px 22px;position:sticky;top:0;z-index:20;} header .ttl{font-weight:700;font-size:15px;} header .spacer{flex:1;}
+  main{max-width:1050px;margin:0 auto;padding:16px 22px 60px;}
+  .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+  .bar input.search{width:280px;} .bar .spacer{flex:1;}
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--cream-line);border-radius:12px;overflow:hidden;}
+  th,td{padding:9px 12px;font-size:13px;text-align:left;border-bottom:1px solid #f0ece2;} th{background:var(--green-d);color:#EAF0EC;font-size:10.5px;text-transform:uppercase;}
+  tr:hover td{background:#faf7f0;cursor:pointer;}
+  .cat{display:inline-block;border-radius:20px;padding:2px 8px;font-size:10.5px;font-weight:700;background:#EFEADD;color:#7a6f52;text-transform:capitalize;}
+  .empty{padding:34px;text-align:center;color:#8a9790;}
+  .note{background:#EDF4EE;border:1px solid #bcd8c4;color:#2f6b46;border-radius:12px;padding:10px 14px;font-size:12.5px;font-weight:600;margin-bottom:14px;}
+  #ov{position:fixed;inset:0;background:rgba(30,42,36,.55);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow-y:auto;padding:40px 16px;} #ov.show{display:flex;}
+  .modal{background:var(--cream);border-radius:14px;width:560px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);}
+  .mhead{display:flex;align-items:center;padding:15px 20px;border-bottom:1px solid var(--cream-line);} .mhead h3{margin:0;font-size:16px;color:var(--green-d);} .mhead .spacer{flex:1;} .close{background:transparent;border:none;font-size:22px;color:#8a9790;}
+  .mbody{padding:16px 20px;} .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;} .full{grid-column:1/-1;} label{font-size:11px;color:#5f7469;font-weight:600;display:block;margin:0 0 4px;} .mbody input,.mbody select,.mbody textarea{width:100%;}
+  .mfoot{display:flex;gap:10px;justify-content:flex-end;padding:0 20px 18px;} .msg{font-size:12.5px;color:#B4472F;min-height:14px;padding:0 20px;}
+</style>
+</head>
+<body>
+<header><span class="ttl" id="ttl">Contacts</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-portal.html">⌂ Portal</a></header>
+<main>
+  <div id="topnote"></div>
+  <div class="bar">
+    <input class="search" id="q" placeholder="Search name, company, email, phone…">
+    <select id="catf"><option value="">All categories</option><option>customer</option><option>agent</option><option>landlord</option><option>supplier</option><option>contractor</option><option>other</option></select>
+    <span class="spacer"></span>
+    <button class="btn btn-ghost" id="syncBp" style="display:none">⟳ Sync from Bubble Pay</button>
+    <button class="btn btn-green" id="add">＋ Add contact</button>
+  </div>
+  <div id="list"><div class="empty">Loading…</div></div>
+</main>
+<div id="ov"><div class="modal">
+  <div class="mhead"><h3 id="mtitle">Contact</h3><span class="spacer"></span><button class="close" id="mclose">×</button></div>
+  <div class="mbody"><div class="grid2">
+    <div class="full"><label>Name</label><input id="c_name"></div>
+    <div><label>Company</label><input id="c_company"></div>
+    <div><label>Role / title</label><input id="c_title"></div>
+    <div><label>Email</label><input id="c_email"></div>
+    <div><label>Phone</label><input id="c_phone"></div>
+    <div class="full"><label>Category</label><select id="c_category"><option value="">—</option><option>customer</option><option>agent</option><option>landlord</option><option>supplier</option><option>contractor</option><option>other</option></select></div>
+    <div class="full"><label>Notes</label><textarea id="c_notes" rows="3"></textarea></div>
+  </div></div>
+  <div class="msg" id="msg"></div>
+  <div class="mfoot"><button class="btn btn-ghost" id="del" style="margin-right:auto;display:none;color:#B4472F;border-color:#e6cfc7">Delete</button><button class="btn btn-ghost" id="cancel">Cancel</button><button class="btn btn-green" id="save">Save</button></div>
+</div></div>
+<script>
+var CSRF=window.LAUNDRE_CSRF||'';
+function hdrs(j){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(j)h['Content-Type']='application/json';return h;}
+function apiGet(u){return fetch(u,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:b?JSON.stringify(b):null}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();});}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+var LOC=window.__FIXED_LOC||new URLSearchParams(location.search).get('loc')||'';
+var ADMIN=!!window.__ADMIN, CUSTOMER=!!LOC, ROWS=[], curId=null;
+function baseUrl(){return '/contacts-api?'+(CUSTOMER?('loc='+encodeURIComponent(LOC)):'global=1');}
+function boot(){
+  document.getElementById('ttl').textContent=CUSTOMER?'Customers':'Contacts';
+  document.getElementById('mtitle').textContent=CUSTOMER?'Customer':'Contact';
+  if(CUSTOMER){document.getElementById('topnote').innerHTML='<div class="note">👥 Customer records will sync automatically from Bubble Pay. Add or search customers here in the meantime.</div>';document.getElementById('c_category').value='customer';if(ADMIN)document.getElementById('syncBp').style.display='';}
+  load();
+}
+function load(){
+  var q=document.getElementById('q').value.trim(), cat=document.getElementById('catf').value;
+  var u=baseUrl()+(q?('&q='+encodeURIComponent(q)):'')+(cat?('&category='+encodeURIComponent(cat)):'');
+  apiGet(u).then(function(rows){ROWS=rows||[];render();}).catch(function(e){document.getElementById('list').innerHTML='<div class="empty">Could not load: '+esc(e.message)+'</div>';});
+}
+function render(){
+  var el=document.getElementById('list');
+  if(!ROWS.length){el.innerHTML='<div class="empty">No '+(CUSTOMER?'customers':'contacts')+' yet.</div>';return;}
+  el.innerHTML='<table><thead><tr><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Category</th></tr></thead><tbody>'
+    +ROWS.map(function(c){return '<tr data-id="'+c.id+'"><td><b>'+esc(c.name)+'</b>'+(c.title?'<div style="color:#8a9790;font-size:11px">'+esc(c.title)+'</div>':'')+'</td><td>'+esc(c.company||'')+'</td><td>'+esc(c.email||'')+'</td><td>'+esc(c.phone||'')+'</td><td>'+(c.category?'<span class="cat">'+esc(c.category)+'</span>':'')+'</td></tr>';}).join('')
+    +'</tbody></table>';
+  el.querySelectorAll('tr[data-id]').forEach(function(tr){tr.onclick=function(){openEdit(+tr.dataset.id);};});
+}
+function set(id,v){document.getElementById(id).value=(v==null?'':v);}
+function gv(id){return document.getElementById(id).value.trim();}
+function openEdit(id){
+  curId=id||null; var c=id?ROWS.find(function(x){return x.id===id;}):{category:CUSTOMER?'customer':''};
+  set('c_name',c.name);set('c_company',c.company);set('c_title',c.title);set('c_email',c.email);set('c_phone',c.phone);set('c_category',c.category||(CUSTOMER?'customer':''));set('c_notes',c.notes);
+  document.getElementById('del').style.display=id?'':'none';
+  document.getElementById('msg').textContent='';
+  document.getElementById('ov').classList.add('show');
+}
+document.getElementById('add').onclick=function(){openEdit(null);};
+document.getElementById('mclose').onclick=document.getElementById('cancel').onclick=function(){document.getElementById('ov').classList.remove('show');};
+document.getElementById('q').addEventListener('input',function(){clearTimeout(window._t);window._t=setTimeout(load,250);});
+document.getElementById('catf').onchange=load;
+document.getElementById('save').onclick=function(){
+  var msg=document.getElementById('msg');msg.textContent='';
+  var name=gv('c_name'); if(!name){msg.textContent='Enter a name.';return;}
+  var body={name:name,company:gv('c_company'),title:gv('c_title'),email:gv('c_email'),phone:gv('c_phone'),category:gv('c_category')||null,notes:gv('c_notes')};
+  if(CUSTOMER) body.location_id=Number(LOC);
+  var req=curId?apiSend('/contacts-api/'+curId,'PUT',body):apiSend('/contacts-api','POST',body);
+  msg.style.color='#6b7d73';msg.textContent='Saving…';
+  req.then(function(){document.getElementById('ov').classList.remove('show');load();}).catch(function(e){msg.style.color='#B4472F';msg.textContent='Could not save: '+e.message;});
+};
+document.getElementById('del').onclick=function(){if(!curId)return;if(confirm('Delete this contact?'))apiSend('/contacts-api/'+curId,'DELETE').then(function(){document.getElementById('ov').classList.remove('show');load();}).catch(function(e){alert(e.message);});};
+document.getElementById('syncBp').onclick=function(){alert('Bubble Pay customer sync will be enabled once the customer API is connected. Customers will then flow in here automatically.');};
+boot();
+</script>
+</body>
+</html>
