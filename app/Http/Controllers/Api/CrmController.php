@@ -88,20 +88,34 @@ class CrmController extends Controller {
             $card->user_id = $user->id;
             $card->type = $role === 'potential_investor' ? 'investor' : 'franchisee';
 
-            AdminNotifier::sendPlain(
-                [$user->email],
-                'Your Laundré franchising login',
-                'Welcome to the Laundré franchising portal',
-                'Thanks for your interest in a Laundré franchise. Your account is ready — set your password and sign your NDA using the link below.',
-                [
-                    ['Name', $user->name],
-                    ['Set up your login', url('/welcome/'.$user->invite_token)],
-                ],
-                'Once your NDA is signed we\'ll move you into document review. Reply to this email any time with questions.'
-            );
+            // Commit the card and mark the automation done up front, so the drag-and-drop
+            // move always succeeds instantly and never re-fires — even if SendGrid is slow.
             $auto['nda_email_sent'] = true;
             $card->automation = $auto;
             $card->save();
+
+            // Send the welcome/NDA email out of band (after the response is flushed) so a
+            // slow or failing SendGrid call can never block the move or revert the card.
+            $to = $user->email;
+            $name = $user->name;
+            $link = url('/welcome/'.$user->invite_token);
+            dispatch(function () use ($to, $name, $link) {
+                try {
+                    AdminNotifier::sendPlain(
+                        [$to],
+                        'Your Laundré franchising login',
+                        'Welcome to the Laundré franchising portal',
+                        'Thanks for your interest in a Laundré franchise. Your account is ready — set your password and sign your NDA using the link below.',
+                        [
+                            ['Name', $name],
+                            ['Set up your login', $link],
+                        ],
+                        'Once your NDA is signed we\'ll move you into document review. Reply to this email any time with questions.'
+                    );
+                } catch (\Throwable $e) {
+                    \Log::warning('[CRM] NDA welcome email failed for '.$to.': '.$e->getMessage());
+                }
+            })->afterResponse();
         } catch (\Throwable $e) {
             \Log::warning('[CRM] onNdaSent failed for card '.$card->id.': '.$e->getMessage());
         }

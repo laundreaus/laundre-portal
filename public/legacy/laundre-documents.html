@@ -99,7 +99,7 @@ function laundromats(){return LOCS;}
 function locName(id){const l=LOCS.find(x=>x.id==id);return l?l.name:id;}
 function visLabel(v){return v==='all'?'All franchises':locName(v);}
 
-function visibleToMe(d){ if(ADMIN) return true; return d.visibility==='all' || (''+d.visibility)===(''+ME.locationId); }
+function visibleToMe(d){ return true; /* server scopes non-admins to company-wide + their stores */ }
 
 function render(){
   const cats=[...new Set(DOCS.map(d=>d.category).filter(Boolean))].sort();
@@ -118,19 +118,30 @@ function render(){
   rows.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   const wrap=document.getElementById('tableWrap');
   if(!rows.length){wrap.innerHTML='<div class="empty">'+(ADMIN?'No documents yet. Click “＋ Add document”.':'No documents have been shared with your store yet.')+'</div>';return;}
-  let h='<table><thead><tr><th>Document</th><th>'+(ADMIN?'Visible to':'Category')+'</th><th>File</th>'+(ADMIN?'<th style="text-align:right">Actions</th>':'')+'</tr></thead><tbody>';
-  rows.forEach(d=>{
-    const file=d.protected?'<a class="dl" href="laundre-doc-viewer.html?doc='+d.id+'" target="_blank" rel="noopener">🔒 View only</a>'
+  function fileCell(d){return d.protected?'<a class="dl" href="laundre-doc-viewer.html?doc='+d.id+'" target="_blank" rel="noopener">🔒 View only</a>'
       :(d.link?'<a class="dl" href="'+esc(d.link)+'" target="_blank" rel="noopener">🔗 Open link</a>'
-      :(d.url?'<a class="dl" href="'+d.url+'" download="'+esc(d.fileName||'document')+'">📄 '+esc(d.fileName||'Download')+'</a>':'<span class="dcat">—</span>'));
-    h+='<tr>'
-      +'<td><div class="dtitle">'+esc(d.title)+'</div>'+(d.note?'<div class="dcat">'+esc(d.note)+'</div>':'')+(ADMIN&&d.category?'<div class="dcat">'+esc(d.category)+'</div>':'')+'</td>'
-      +'<td>'+(ADMIN?'<span class="vis '+(d.visibility==='all'?'all':'one')+'">'+esc(visLabel(d.visibility))+'</span>':'<span class="dcat">'+esc(d.category||'—')+'</span>')+'</td>'
-      +'<td>'+file+'</td>'
-      +(ADMIN?'<td><div class="rowbtns"><button class="btn btn-ghost" data-edit="'+d.id+'">Edit</button><button class="btn btn-danger" data-del="'+d.id+'">Delete</button></div></td>':'')
-      +'</tr>';
-  });
-  h+='</tbody></table>';
+      :(d.url?'<a class="dl" href="'+d.url+'" download="'+esc(d.fileName||'document')+'">📄 '+esc(d.fileName||'Download')+'</a>':'<span class="dcat">—</span>'));}
+  function tbl(list){
+    let t='<table><thead><tr><th>Document</th><th>'+(ADMIN?'Visible to':'Category')+'</th><th>File</th>'+(ADMIN?'<th style="text-align:right">Actions</th>':'')+'</tr></thead><tbody>';
+    list.forEach(d=>{
+      t+='<tr>'
+        +'<td><div class="dtitle">'+esc(d.title)+'</div>'+(d.note?'<div class="dcat">'+esc(d.note)+'</div>':'')+(ADMIN&&d.category?'<div class="dcat">'+esc(d.category)+'</div>':'')+'</td>'
+        +'<td>'+(ADMIN?'<span class="vis '+(d.visibility==='all'?'all':'one')+'">'+esc(visLabel(d.visibility))+'</span>':'<span class="dcat">'+esc(d.category||'—')+'</span>')+'</td>'
+        +'<td>'+fileCell(d)+'</td>'
+        +(ADMIN?'<td><div class="rowbtns"><button class="btn btn-ghost" data-edit="'+d.id+'">Edit</button><button class="btn btn-danger" data-del="'+d.id+'">Delete</button></div></td>':'')
+        +'</tr>';
+    });
+    return t+'</tbody></table>';
+  }
+  let h='';
+  if(ADMIN){ h=tbl(rows); }
+  else{
+    const lbl='font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#8a9790;font-weight:700;margin:4px 0 8px';
+    const fr=rows.filter(d=>d.visibility==='all'), st=rows.filter(d=>d.visibility!=='all');
+    if(fr.length){ h+='<div style="'+lbl+'">Franchise documents — shared with all stores</div>'+tbl(fr); }
+    if(st.length){ h+='<div style="'+lbl+';margin-top:22px">Your store documents</div>'+tbl(st); }
+    if(!h){ h='<div class="empty">No documents have been shared with your store yet.</div>'; }
+  }
   wrap.innerHTML=h;
   if(ADMIN){
     wrap.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEditor(b.dataset.edit));

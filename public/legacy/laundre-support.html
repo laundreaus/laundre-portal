@@ -39,6 +39,8 @@
   .tag.incident{background:#F5E3DB;color:#B4472F;} .tag.question{background:#E6EDF3;color:#3a5a74;}
   .st{display:inline-block;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;}
   .st.open{background:#FBEFD6;color:#8a6414;} .st.closed{background:#E6E6E0;color:#7a7a72;}
+  .st.awaiting{background:#E6EDF3;color:#3a5a74;} .st.resolved{background:#DDEBE0;color:#2f6b46;}
+  .sectlbl{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#8a9790;font-weight:700;margin:22px 0 8px;}
   .empty{padding:36px;text-align:center;color:#8a9790;background:#fff;border-radius:12px;}
   /* drawer */
   #overlay{position:fixed;inset:0;background:rgba(30,42,36,.55);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow-y:auto;padding:40px 16px;}
@@ -80,7 +82,7 @@
   <div class="toolbar" id="adminTools" style="display:none">
     <strong style="color:var(--green-d)">Queue</strong>
     <span class="spacer"></span>
-    <select id="fStatus"><option value="">All statuses</option><option value="Open">Open</option><option value="Closed">Closed</option></select>
+    <select id="fStatus"><option value="">All statuses</option><option value="Open">Open</option><option value="Awaiting info">Awaiting info</option><option value="Resolved">Resolved</option></select>
     <select id="fType"><option value="">All types</option><option value="Incident">Incidents</option><option value="Question">Questions</option></select>
   </div>
 
@@ -115,18 +117,10 @@ async function loadAll(){
   }catch(e){document.getElementById('listWrap').innerHTML='<div class="empty">Could not load requests \u2014 '+esc(e.message)+'. Try reloading.</div>';}
 }
 
-function render(){
-  if(ADMIN){document.getElementById('adminTools').style.display='flex';document.getElementById('pageTitle').textContent='Support Queue';}
-  else {document.getElementById('submitCard').style.display='block';document.getElementById('pageTitle').textContent='Support & Requests';}
-  let rows=TIX.slice();
-  if(ADMIN){
-    const fs=document.getElementById('fStatus').value, ft=document.getElementById('fType').value;
-    if(fs)rows=rows.filter(t=>t.status===fs);
-    if(ft)rows=rows.filter(t=>t.type===ft);
-  }
-  rows.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-  const wrap=document.getElementById('listWrap');
-  if(!rows.length){wrap.innerHTML='<div class="empty">'+(ADMIN?'No tickets in the queue.':'You haven\u2019t submitted any requests yet.')+'</div>';return;}
+function isClosed(s){return s==='Resolved'||s==='Closed';}
+function stCls(s){return isClosed(s)?'resolved':(s==='Awaiting info'?'awaiting':'open');}
+function stLabel(s){return s==='Closed'?'Resolved':s;}
+function tableFor(rows){
   let h='<table><thead><tr><th>Request</th><th>Type</th>'+(ADMIN?'<th>Laundromat</th>':'')+'<th>Status</th><th>Updated</th></tr></thead><tbody>';
   rows.forEach(t=>{
     const last=t.responses&&t.responses.length?t.responses[t.responses.length-1].at:t.createdAt;
@@ -134,28 +128,57 @@ function render(){
       +'<td><div class="tsub">'+esc(t.subject)+'</div><div class="tmeta">'+esc(t.userName||t.userEmail||'')+'</div></td>'
       +'<td><span class="tag '+(t.type==='Incident'?'incident':'question')+'">'+esc(t.type)+'</span></td>'
       +(ADMIN?'<td class="tmeta">'+esc(locName(t.locationId))+'</td>':'')
-      +'<td><span class="st '+(t.status==='Closed'?'closed':'open')+'">'+esc(t.status)+'</span></td>'
+      +'<td><span class="st '+stCls(t.status)+'">'+esc(stLabel(t.status))+'</span></td>'
       +'<td class="tmeta">'+fmt(last)+'</td>'
       +'</tr>';
   });
   h+='</tbody></table>';
+  return h;
+}
+function render(){
+  if(ADMIN){document.getElementById('adminTools').style.display='flex';document.getElementById('pageTitle').textContent='Support Queue';}
+  else {document.getElementById('submitCard').style.display='block';document.getElementById('pageTitle').textContent='Support & Requests';}
+  let rows=TIX.slice();
+  if(ADMIN){
+    const ft=document.getElementById('fType').value, fs=document.getElementById('fStatus').value;
+    if(ft)rows=rows.filter(t=>t.type===ft);
+    if(fs)rows=rows.filter(t=>(fs==='Resolved'?isClosed(t.status):t.status===fs));
+  }
+  rows.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const active=rows.filter(t=>!isClosed(t.status)), done=rows.filter(t=>isClosed(t.status));
+  const wrap=document.getElementById('listWrap');
+  if(!rows.length){wrap.innerHTML='<div class="empty">'+(ADMIN?'No tickets in the queue.':'You haven\u2019t submitted any requests yet.')+'</div>';return;}
+  let h='';
+  h+='<div class="sectlbl">Open requests</div>';
+  h+= active.length ? tableFor(active) : '<div class="empty" style="padding:20px">No open requests.</div>';
+  if(done.length){
+    h+='<div class="sectlbl">Resolved / closed \u2014 audit trail</div>';
+    h+=tableFor(done);
+  }
   wrap.innerHTML=h;
   wrap.querySelectorAll('[data-open]').forEach(r=>r.onclick=()=>openTicket(r.dataset.open));
 }
 
 function openTicket(id){
   openId=id;const t=TIX.find(x=>String(x.id)===String(id));if(!t)return;
-  document.getElementById('dTitle').innerHTML=esc(t.subject)+' <span class="st '+(t.status==='Closed'?'closed':'open')+'" style="margin-left:6px">'+esc(t.status)+'</span>';
+  document.getElementById('dTitle').innerHTML=esc(t.subject)+' <span class="st '+stCls(t.status)+'" style="margin-left:6px">'+esc(stLabel(t.status))+'</span>';
   let h='<div class="tmeta" style="margin-bottom:10px"><span class="tag '+(t.type==='Incident'?'incident':'question')+'">'+esc(t.type)+'</span> \u00b7 '+esc(locName(t.locationId))+' \u00b7 '+esc(t.userName||t.userEmail||'')+' \u00b7 '+fmt(t.createdAt)+'</div>';
   h+='<div class="thread"><div class="bub them"><div class="who">'+esc(t.userName||t.userEmail||'Franchisee')+'</div>'+esc(t.body)+'</div>';
   (t.responses||[]).forEach(r=>{h+='<div class="bub '+(r.role==='admin'?'staff':'them')+'"><div class="who">'+esc(r.from)+(r.role==='admin'?' \u00b7 Franchise team':'')+' \u00b7 '+fmt(r.at)+'</div>'+esc(r.text)+'</div>';});
   h+='</div>';
-  if(t.status!=='Closed' || ADMIN){
-    h+='<label>Reply</label><textarea id="replyBox" rows="2" placeholder="Type a reply\u2026"></textarea><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">';
-    if(ADMIN){ h+='<button class="btn btn-ghost" id="toggleStatus">'+(t.status==='Closed'?'Reopen':'Mark closed')+'</button>'; }
+  if(!isClosed(t.status) || ADMIN){
+    h+='<label>Reply</label><textarea id="replyBox" rows="2" placeholder="Type a reply\u2026"></textarea><div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;flex-wrap:wrap">';
+    if(ADMIN){
+      if(isClosed(t.status)){
+        h+='<button class="btn btn-ghost" data-status="Open" id="reopenBtn">Reopen</button>';
+      } else {
+        h+='<button class="btn btn-ghost" data-status="Awaiting info" id="infoBtn">Request info</button>';
+        h+='<button class="btn btn-green" data-status="Resolved" id="resolveBtn">Mark resolved</button>';
+      }
+    }
     h+='<button class="btn btn-green" id="sendReply">Send reply</button></div>';
   } else {
-    h+='<div class="tmeta">This request is closed. Submit a new request if you need more help.</div>';
+    h+='<div class="tmeta">This request is '+esc(stLabel(t.status).toLowerCase())+'. Submit a new request if you need more help.</div>';
   }
   document.getElementById('dBody').innerHTML=h;
   document.getElementById('overlay').classList.add('show');
@@ -166,12 +189,14 @@ function openTicket(id){
     try{const r=await fetch('/tickets-api/'+id+'/reply',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({text:txt})});if(!r.ok)throw new Error('HTTP '+r.status);await loadAll();}
     catch(e){alert('Could not send reply: '+e.message);sr.disabled=false;}
   };
-  const ts=document.getElementById('toggleStatus');
-  if(ts) ts.onclick=async ()=>{
-    const ns=t.status==='Closed'?'Open':'Closed';
-    try{const r=await fetch('/tickets-api/'+id+'/status',{method:'PATCH',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({status:ns})});if(!r.ok)throw new Error('HTTP '+r.status);await loadAll();}
-    catch(e){alert('Could not update status: '+e.message);}
-  };
+  document.getElementById('dBody').querySelectorAll('[data-status]').forEach(function(btn){
+    btn.onclick=async ()=>{
+      const ns=btn.getAttribute('data-status');
+      btn.disabled=true;
+      try{const r=await fetch('/tickets-api/'+id+'/status',{method:'PATCH',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({status:ns})});if(!r.ok)throw new Error('HTTP '+r.status);await loadAll();}
+      catch(e){alert('Could not update status: '+e.message);btn.disabled=false;}
+    };
+  });
 }
 document.getElementById('dClose').onclick=()=>{document.getElementById('overlay').classList.remove('show');openId=null;};
 

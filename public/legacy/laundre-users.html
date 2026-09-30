@@ -72,7 +72,7 @@
   <div id="tableWrap"></div>
   <div class="note">
     Assign each non-admin user to a laundromat. Franchisees see their store’s checklist, bookkeeping, documents and support; Cleaners see the daily cleaning checklist; Maintenance see machine guides and the maintenance log — each scoped to their assigned store.
-    Users are saved to the live database with securely hashed passwords, and can log in immediately.
+    Setting a password is optional — leave it blank and the new user is emailed a one-time link to set their own password and log in (the link also appears on screen so you can copy and share it directly). Admins must be given a password.
   </div>
 </main>
 
@@ -84,9 +84,9 @@
       <div><label>Email / username</label><input id="f_email" type="text" autocomplete="off" /></div>
       <div><label>Phone</label><input id="f_phone" type="text" autocomplete="off" placeholder="Optional" /></div>
       <div><label>Role</label><select id="f_role"><option value="franchisee">Franchisee</option><option value="cleaner">Cleaner</option><option value="maintenance">Maintenance</option><option value="user">User (staff)</option><option value="potential_franchisee">Potential Franchisee</option><option value="potential_investor">Potential Investor</option><option value="investor">Investor</option><option value="admin">Admin</option></select></div>
-      <div id="pwWrap"><label>Password</label><input id="f_password" type="text" autocomplete="new-password" /></div>
+      <div id="pwWrap"><label>Password <span style="font-weight:500;color:#8a9790">(optional)</span></label><input id="f_password" type="text" autocomplete="new-password" /></div>
       <div class="full" id="locWrap"><label>Assigned laundromat(s)</label><div id="locList" style="display:grid;grid-template-columns:1fr 1fr;gap:7px 16px;margin-top:4px"></div><div style="font-size:11.5px;color:#8a9790;margin-top:5px">Tick one or more. Multi-site users can switch between them in the portal.</div></div>
-      <div class="full" id="onbHint" style="display:none;font-size:12px;color:#6b7d73;background:#FBF9F4;border:1px solid var(--cream-line);border-radius:8px;padding:10px 12px;line-height:1.5">No password needed — after you save you’ll get a unique invite link to send them. They set their own password and sign the NDA, then get access to their portal (franchisees &amp; investors) or their tool (cleaners &amp; maintenance).</div>
+      <div class="full" id="onbHint" style="display:none;font-size:12px;color:#6b7d73;background:#FBF9F4;border:1px solid var(--cream-line);border-radius:8px;padding:10px 12px;line-height:1.5">Leave the password blank and we’ll email this person a one-time link to set their own password and log in — and you’ll get the same link on screen to copy and share directly (handy for cleaners &amp; maintenance). Franchisees &amp; investors sign the NDA first. Prefer to set it yourself? Just enter a password.</div>
       <div class="full" id="secWrap" style="display:none"><label>Sections this staff user can access</label><div id="secList" style="display:grid;grid-template-columns:1fr 1fr;gap:7px 16px;margin-top:4px"></div></div>
       <div class="full" id="invLocWrap" style="display:none"><label>Laundromats this investor can see (data dashboard)</label><div id="invLocList" style="display:grid;grid-template-columns:1fr 1fr;gap:7px 16px;margin-top:4px"></div></div>
     </div>
@@ -220,8 +220,8 @@ function selectedLocs(){return [].slice.call(document.querySelectorAll('#locList
 function toggleLocWrap(){
   var role=document.getElementById('f_role').value; var inv=isInvite(role); var staff=isStaff(role);
   document.getElementById('locWrap').style.display=needsLoc(role)?'block':'none';
-  document.getElementById('pwWrap').style.display=inv?'none':'block';
-  document.getElementById('onbHint').style.display=inv?'block':'none';
+  document.getElementById('pwWrap').style.display='block';
+  document.getElementById('onbHint').style.display=(role==='admin')?'none':'block';
   document.getElementById('secWrap').style.display=staff?'block':'none';
   document.getElementById('invLocWrap').style.display=isInvestor(role)?'block':'none';
 }
@@ -232,7 +232,7 @@ function openEditor(id){
   document.getElementById('f_email').value=u?(u.email||''):'';
   document.getElementById('f_phone').value=u?(u.phone||''):'';
   document.getElementById('f_password').value='';
-  document.getElementById('f_password').placeholder=id?'Leave blank to keep current':'Set a password';
+  document.getElementById('f_password').placeholder=id?'Leave blank to keep current':'Leave blank to email a set-password link';
   document.getElementById('f_role').value=u?(u.role||'franchisee'):'franchisee';
   renderLocList(u?((u.location_ids&&u.location_ids.length)?u.location_ids:(u.location_id?[u.location_id]:[])):[]);
   renderSecList(u?u.sections:[]);
@@ -257,10 +257,10 @@ document.getElementById('esave').onclick=async ()=>{
   const msg=document.getElementById('emsg');
   if(!name){msg.textContent='Full name is required.';return;}
   if(!email){msg.textContent='Email is required.';return;}
-  if(!inv && !editId && !password){msg.textContent='Please set a password.';return;}
+  if(role==='admin' && !editId && !password){msg.textContent='Please set a password for admin accounts.';return;}
   if(needsLoc(role) && !location_ids.length){msg.textContent='Assign at least one laundromat for '+role+' accounts.';return;}
   const payload={name,email,phone,role,location_ids:needsLoc(role)?location_ids:null,location_id:needsLoc(role)?(location_ids[0]||null):null};
-  if(password && !inv)payload.password=password;
+  if(password)payload.password=password;
   if(staff)payload.sections=selectedSections();
   if(isInvestor(role))payload.investor_location_ids=selectedInvLocs();
   const url=editId?(API+'/'+editId):API;

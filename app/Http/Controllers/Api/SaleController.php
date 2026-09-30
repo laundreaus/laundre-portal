@@ -10,7 +10,8 @@ class SaleController extends Controller {
         $u = $r->user();
         if (!$u->isAdmin()) {
             // Multi-site users see all their assigned stores; ?loc narrows to one of them.
-            $ids = $u->locationIds();
+            // Investors are scoped to their investor-assigned laundromats.
+            $ids = $u->isInvestor() ? $u->investorLocationIds() : $u->locationIds();
             if ($r->filled('loc') && in_array((int)$r->query('loc'), $ids)) $ids = [(int)$r->query('loc')];
             $q->whereIn('location_id', $ids);
         } elseif ($r->filled('location_id')) { $q->where('location_id', $r->location_id); }

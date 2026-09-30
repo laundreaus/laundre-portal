@@ -81,8 +81,6 @@ class SimplePdf
         $v = $this->enc($value);
         $x = $this->ml;
         $this->buf .= "BT /F2 " . $this->n($size) . " Tf " . $this->n($x) . " " . $this->n($this->y) . " Td (" . $this->esc($l) . ") Tj ET\n";
-        // Label is bold; the width table is for the regular face, so inflate slightly
-        // and add a clear gap so the value never butts against the label.
         $lw = $this->w($l, $size) * 1.08 + 11;
         $this->buf .= "BT /F1 " . $this->n($size) . " Tf " . $this->n($x + $lw) . " " . $this->n($this->y) . " Td (" . $this->esc($v) . ") Tj ET\n";
     }

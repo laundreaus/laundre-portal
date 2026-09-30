@@ -7,7 +7,10 @@ class DocumentController extends Controller {
     public function index(Request $r) {
         $u = $r->user();
         $q = Document::query()->orderByDesc('created_at');
-        if (!$u->isAdmin()) { $q->where(fn($w)=>$w->where('visibility','all')->orWhere('visibility',(string)$u->location_id)); }
+        if (!$u->isAdmin()) {
+            $ids = array_map('strval', $u->locationIds() ?: [(int)$u->location_id]);
+            $q->where(fn($w)=>$w->where('visibility','all')->orWhereIn('visibility',$ids));
+        }
         return $q->get();
     }
     public function store(Request $r) { return Document::create($this->rules($r)); }
@@ -17,7 +20,7 @@ class DocumentController extends Controller {
     // Stream a document inline (used by the secure viewer for view-only/protected docs).
     public function open(Request $r, Document $document) {
         $u = $r->user();
-        $allowed = $u->isAdmin() || $document->visibility === 'all' || (string)$document->visibility === (string)$u->location_id;
+        $allowed = $u->isAdmin() || $document->visibility === 'all' || in_array((string)$document->visibility, array_map('strval', $u->locationIds() ?: [(int)$u->location_id]), true);
         abort_unless($allowed, 403);
         abort_unless($document->file_path, 404);
         $path = public_path(ltrim($document->file_path, '/'));

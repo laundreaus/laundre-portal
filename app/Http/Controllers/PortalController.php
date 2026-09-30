@@ -15,7 +15,7 @@ class PortalController extends Controller {
         if ($u->isOnboarding() && !in_array($page, ['laundre-onboard','laundre-nda','laundre-doc-viewer','laundre-card'])) {
             return redirect('/');
         }
-        if ($u->isInvestor() && !in_array($page, ['laundre-portal','laundre-investor-dashboard','laundre-card','laundre-doc-viewer'])) {
+        if ($u->isInvestor() && !in_array($page, ['laundre-portal','laundre-investor-dashboard','laundre-card','laundre-doc-viewer','laundre-support'])) {
             return redirect('/');
         }
         // Keep cleaners & maintenance inside their own tools (so a "view as" preview lands
@@ -133,7 +133,10 @@ class PortalController extends Controller {
             ];
         }
         if ($role === 'investor') {
-            return [ ['items'=>[['i'=>'💳','n'=>'Membership Card','h'=>'laundre-card']]] ];
+            return [ ['items'=>[
+                ['i'=>'🆘','n'=>'Submit / Ask','h'=>'laundre-support'],
+                ['i'=>'💳','n'=>'Membership Card','h'=>'laundre-card'],
+            ]] ];
         }
         if ($role === 'cleaner') {
             return [ ['items'=>[['i'=>'🧹','n'=>'Daily Cleaning','h'=>'laundre-cleaning']]] ];
@@ -165,9 +168,11 @@ class PortalController extends Controller {
         // must NOT get the injected uniform header / nav / sidebar — those would override the
         // page's own "hide header" embed CSS and re-show its title bar inside the frame.
         $isEmbed = request()->query('embed') === '1';
-        $locIds = $u->locationIds();
+        // Investors are scoped to their investor-assigned laundromats; everyone else to their own store(s).
+        $locIds = $u->isInvestor() ? $u->investorLocationIds() : $u->locationIds();
+        $primaryLoc = $u->location_id ?: ($locIds[0] ?? null);
         $locList = $locIds ? Location::whereIn('id', $locIds)->orderBy('name')->get(['id','name'])->map(fn($l)=>['id'=>$l->id,'name'=>$l->name])->values()->all() : [];
-        $sessionJson = json_encode(['role'=>$u->role,'locationId'=>$u->location_id,'locationName'=>($u->location_id?optional(Location::find($u->location_id))->name:null),'locationIds'=>$locIds,'locations'=>$locList,'name'=>$u->name,'email'=>$u->email,'sections'=>$u->sections ?? []], JSON_UNESCAPED_SLASHES);
+        $sessionJson = json_encode(['role'=>$u->role,'locationId'=>$primaryLoc,'locationName'=>($primaryLoc?optional(Location::find($primaryLoc))->name:null),'locationIds'=>$locIds,'locations'=>$locList,'name'=>$u->name,'email'=>$u->email,'sections'=>$u->sections ?? []], JSON_UNESCAPED_SLASHES);
         $favicon = '<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/gif" href="/favicon.gif"><link rel="apple-touch-icon" href="/favicon-32.png">';
         $bridge = $favicon.'<style>#login{display:none!important}#app{display:block!important}</style><script>try{localStorage.setItem("laundre_auth","1");localStorage.setItem("laundre_session",'.json_encode($sessionJson).');}catch(e){}window.LAUNDRE_CSRF='.json_encode(csrf_token()).';</script>';
         $html = str_ireplace('<head>', '<head>'.$bridge, $html);

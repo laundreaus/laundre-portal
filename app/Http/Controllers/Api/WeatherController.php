@@ -16,7 +16,8 @@ class WeatherController extends Controller {
         $u = $r->user();
         $loc = (int) $r->query('loc');
         abort_if(!$loc, 422, 'No laundromat');
-        abort_unless($u->isAdmin() || in_array($loc, $u->locationIds()), 403);
+        $allowed = $u->isInvestor() ? $u->investorLocationIds() : $u->locationIds();
+        abort_unless($u->isAdmin() || in_array($loc, $allowed), 403);
 
         $location = Location::find($loc);
         if (!$location || $location->lat === null || $location->lng === null) {

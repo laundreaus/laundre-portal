@@ -65,6 +65,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/tickets-api', [TicketController::class, 'store']);
     Route::post('/tickets-api/{ticket}/reply', [TicketController::class, 'reply']);
     Route::patch('/tickets-api/{ticket}/status', [TicketController::class, 'status']);
+    Route::post('/cctv-access-request', [TicketController::class, 'cctvRequest']);
 
     Route::get('/cleaning-api', [CleaningController::class, 'index']);
     Route::post('/cleaning-api', [CleaningController::class, 'submit']);
@@ -90,6 +91,7 @@ Route::middleware('auth')->group(function () {
     // Contacts CRM (customers per laundromat + global admin contacts). Controllers enforce scope.
     Route::get('/contacts-api', [ContactController::class, 'index']);
     Route::post('/contacts-api', [ContactController::class, 'store']);
+    Route::post('/contacts-import', [ContactController::class, 'bulkImport']);
     Route::match(['put','patch'], '/contacts-api/{contact}', [ContactController::class, 'update']);
     Route::delete('/contacts-api/{contact}', [ContactController::class, 'destroy']);
     // Build roll-out milestones (read scoped; writes admin-only below).

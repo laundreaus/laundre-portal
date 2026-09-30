@@ -785,6 +785,33 @@ async function syncFromLocations() {
   }
 }
 
+/* ----------  STORE-OPEN CELEBRATION  ---------- */
+function renderStoreOpen(app, name){
+  var safe=String(name||'Your store').replace(/[&<>"]/g,'');
+  app.innerHTML='<div style="max-width:640px;margin:44px auto;padding:44px 28px;background:#fff;border:1px solid #bcd8c4;border-radius:16px;text-align:center;position:relative;overflow:hidden;">'
+    + '<div style="font-size:64px;line-height:1;margin-bottom:12px;">🎉</div>'
+    + '<div style="font-size:26px;font-weight:800;color:#435E53;">Woohoo — you’re open!</div>'
+    + '<div style="font-size:16px;color:#6b7d73;margin-top:8px;">'+safe+' is officially open for business. 🧺✨</div>'
+    + '<div style="font-size:14px;color:#8a9790;margin-top:14px;line-height:1.6;">The opening checklist is all done and dusted — nothing more to tick off here. Go make some magic happen!</div>'
+    + '</div>';
+  launchConfetti();
+}
+function launchConfetti(){
+  try{
+    var c=document.createElement('canvas');
+    c.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+    document.body.appendChild(c);
+    var ctx=c.getContext('2d'),W=c.width=innerWidth,H=c.height=innerHeight;
+    var cols=['#C4703F','#435E53','#E4B95B','#6b8e9e','#d98c5f','#8FB79A'];
+    var P=[];for(var i=0;i<140;i++){P.push({x:Math.random()*W,y:-20-Math.random()*H,r:4+Math.random()*6,c:cols[i%cols.length],vy:2+Math.random()*3.5,vx:-1.5+Math.random()*3,rot:Math.random()*6.28,vr:-0.2+Math.random()*0.4});}
+    var t0=Date.now();
+    (function frame(){
+      ctx.clearRect(0,0,W,H);
+      P.forEach(function(p){p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;if(p.y>H+20){p.y=-20;p.x=Math.random()*W;}ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.fillStyle=p.c;ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*0.6);ctx.restore();});
+      if(Date.now()-t0<4500){requestAnimationFrame(frame);}else{c.remove();}
+    })();
+  }catch(e){}
+}
 /* ----------  ROUTING  ---------- */
 function currentSession(){ try { return JSON.parse(localStorage.getItem('laundre_session')||'null'); } catch(e){ return null; } }
 function route() {
@@ -796,6 +823,12 @@ function route() {
   /* Franchisee: scoped to their own store's checklist only */
   if (sess && sess.role && sess.role !== 'admin') {
     if (navAdmin) navAdmin.style.display = 'none';
+    // If the store is already open/trading, skip the checklist and celebrate.
+    const myLoc = LOCS.find(l => String(l.id) === String(sess.locationId));
+    if (myLoc && /\b(open|live|trading|operat|active)/i.test(String(myLoc.status||''))) {
+      renderStoreOpen(app, myLoc.name);
+      return;
+    }
     const mine = Store.list().find(f => f.sourceLocationId === sess.locationId);
     if (mine) {
       const cAt = franchiseCompletedAt(mine);
@@ -825,7 +858,7 @@ async function boot(){
   const app = document.getElementById('app');
   try {
     const [locs, frs] = await Promise.all([apiGet('/locations-api'), apiGet('/franchises-api')]);
-    LOCS = (locs||[]).map(s => ({ id: s.id, name: s.name, address: s.address }));
+    LOCS = (locs||[]).map(s => ({ id: s.id, name: s.name, address: s.address, status: s.status }));
     CACHE = {}; (frs||[]).forEach(r => { const nf = normFr(r); CACHE[String(nf.id)] = nf; });
     const sess = currentSession();
     if (!(sess && sess.role && sess.role !== 'admin')) { await syncFromLocations(); }

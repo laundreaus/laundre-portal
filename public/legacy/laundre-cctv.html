@@ -94,7 +94,17 @@ function renderPreview(){
   var host=document.getElementById('feeds');
   var arr=feedsFor(id);
   var any=arr.some(function(v){return v&&v.trim();});
-  if(!any){host.innerHTML='<div class="empty" style="grid-column:1/-1">No camera feeds set for this laundromat yet.'+(isAdmin?' Add them above.':' Ask your admin to add them.')+'</div>';return;}
+  if(!any){
+    if(isAdmin){host.innerHTML='<div class="empty" style="grid-column:1/-1">No camera feeds set for this laundromat yet. Add them above.</div>';return;}
+    host.innerHTML='<div class="empty" style="grid-column:1/-1;text-align:left;line-height:1.75;max-width:640px;margin:0 auto">'
+      +'<p style="margin:0 0 10px;font-weight:700;font-size:15px;color:#2E3D36">📹 Live view isn’t available here yet</p>'
+      +'<p style="margin:0 0 8px;color:#4a5a52">The current cameras do not support HTML embedding. Don’t worry — the Laundré team are watching your site closely.</p>'
+      +'<p style="margin:0 0 14px;color:#4a5a52">If you would like access, you can request it here.</p>'
+      +'<button class="btn btn-green" id="cctvReq" onclick="requestCctv()">Request camera access</button>'
+      +'<div class="msg" id="cctvReqMsg" style="margin-top:10px"></div>'
+      +'</div>';
+    return;
+  }
   host.innerHTML='';
   for(var i=0;i<4;i++){
     var v=(arr[i]||'').trim();
@@ -105,6 +115,14 @@ function renderPreview(){
     else{var f=document.createElement('iframe');f.src=v;f.setAttribute('allow','autoplay; fullscreen');f.setAttribute('allowfullscreen','');d.appendChild(f);}
     host.appendChild(d);
   }
+}
+function requestCctv(){
+  var b=document.getElementById('cctvReq'), m=document.getElementById('cctvReqMsg');
+  if(b)b.disabled=true; if(m){m.className='msg';m.textContent='Sending your request…';}
+  fetch('/cctv-access-request',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({location_id:(sess&&sess.locationId)||null})})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json().catch(function(){return {};});})
+    .then(function(){if(m){m.className='msg ok';m.textContent='Thanks — your request has been sent to the Laundré team. We’ll be in touch.';}})
+    .catch(function(){if(b)b.disabled=false;if(m){m.className='msg err';m.textContent='Could not send your request — please try again.';}});
 }
 function loadSite(){
   var id=document.getElementById('siteSel').value;var arr=feedsFor(id);

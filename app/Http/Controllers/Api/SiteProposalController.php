@@ -29,17 +29,33 @@ class SiteProposalController extends Controller
         return null;
     }
 
+    // A previously-shared link whose quote has since changed (superseded by a new link).
+    private function isExpired(string $token): bool
+    {
+        $state = Setting::get(self::KEY, null);
+        if (!is_array($state) || empty($state['sites'])) return false;
+        foreach ($state['sites'] as $s) {
+            $ex = $s['expiredTokens'] ?? [];
+            if (is_array($ex) && in_array($token, $ex, true)) return true;
+        }
+        return false;
+    }
+
     public function publicShow(string $token)
     {
         $found = $this->findSite($token);
-        if (!$found) return response('Proposal not found.', 404);
-        return response($this->render($found['site'], true))->header('Content-Type', 'text/html');
+        if ($found) return response($this->render($found['site'], true))->header('Content-Type', 'text/html');
+        if ($this->isExpired($token)) return response($this->renderExpired(), 410)->header('Content-Type', 'text/html');
+        return response('Proposal not found.', 404);
     }
 
     public function publicSign(Request $r, string $token)
     {
         $found = $this->findSite($token);
-        if (!$found) return response('Proposal not found.', 404);
+        if (!$found) {
+            if ($this->isExpired($token)) return response($this->renderExpired(), 410)->header('Content-Type', 'text/html');
+            return response('Proposal not found.', 404);
+        }
         $site  = $found['site'];
         $f     = $site['f'] ?? [];
 
@@ -116,6 +132,22 @@ class SiteProposalController extends Controller
             $ms[] = $add('Open for trade', substr($open, 0, 10));
         }
         return $ms;
+    }
+
+    // Shown when someone opens an old link whose quote has been superseded.
+    private function renderExpired(): string
+    {
+        return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            . '<title>Laundré · Proposal link expired</title><style>'
+            . 'body{margin:0;background:#F4EFE6;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:60px 16px;color:#2E3D36;}'
+            . '.card{max-width:560px;margin:0 auto;background:#fff;border:1px solid #E4DBCB;border-radius:14px;border-top:5px solid #C4703F;padding:34px 30px;text-align:center;box-shadow:0 2px 14px rgba(52,73,61,.08);}'
+            . 'h1{font-size:22px;margin:8px 0 10px;color:#33473D;} p{font-size:14px;line-height:1.65;color:#5f7469;margin:0 0 10px;}'
+            . '</style></head><body><div class="card">'
+            . '<div style="font-size:44px;line-height:1">⌛</div>'
+            . '<h1>This proposal link has expired</h1>'
+            . '<p>The costs on this proposal have since been updated, so this link is no longer valid and can\'t be signed.</p>'
+            . '<p>Please use the most recent link sent to you, or contact the Laundré team and we\'ll send your current proposal.</p>'
+            . '</div></body></html>';
     }
 
     private function render(array $site, bool $publicForm = false): string

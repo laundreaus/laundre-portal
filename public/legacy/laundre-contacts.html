@@ -37,8 +37,11 @@
     <select id="catf"><option value="">All categories</option><option>customer</option><option>agent</option><option>landlord</option><option>supplier</option><option>contractor</option><option>other</option></select>
     <span class="spacer"></span>
     <button class="btn btn-ghost" id="syncBp" style="display:none">⟳ Sync from Bubble Pay</button>
+    <button class="btn btn-ghost" id="importCsv" style="display:none">⬆ Import CSV</button>
+    <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
     <button class="btn btn-green" id="add">＋ Add contact</button>
   </div>
+  <div id="importMsg" style="font-size:12.5px;margin:0 0 10px;min-height:14px"></div>
   <div id="list"><div class="empty">Loading…</div></div>
 </main>
 <div id="ov"><div class="modal">
@@ -62,14 +65,57 @@ function apiGet(u){return fetch(u,{headers:hdrs(false),credentials:'same-origin'
 function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:b?JSON.stringify(b):null}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.status===204?null:r.json();});}
 function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 var LOC=window.__FIXED_LOC||new URLSearchParams(location.search).get('loc')||'';
+// A franchisee opening Contacts with no ?loc defaults to their own store's customers.
+try{ if(!LOC){ var _s=JSON.parse(localStorage.getItem('laundre_session')||'null'); if(_s&&_s.role&&_s.role!=='admin'&&_s.locationId){ LOC=String(_s.locationId); } } }catch(e){}
 var ADMIN=!!window.__ADMIN, CUSTOMER=!!LOC, ROWS=[], curId=null;
 function baseUrl(){return '/contacts-api?'+(CUSTOMER?('loc='+encodeURIComponent(LOC)):'global=1');}
 function boot(){
   document.getElementById('ttl').textContent=CUSTOMER?'Customers':'Contacts';
   document.getElementById('mtitle').textContent=CUSTOMER?'Customer':'Contact';
-  if(CUSTOMER){document.getElementById('topnote').innerHTML='<div class="note">👥 Customer records will sync automatically from Bubble Pay. Add or search customers here in the meantime.</div>';document.getElementById('c_category').value='customer';if(ADMIN)document.getElementById('syncBp').style.display='';}
+  if(CUSTOMER){document.getElementById('topnote').innerHTML='<div class="note">👥 Customer records will sync automatically from Bubble Pay. Add, search, or import customers here in the meantime.</div>';document.getElementById('c_category').value='customer';if(ADMIN)document.getElementById('syncBp').style.display='';document.getElementById('importCsv').style.display='';}
   load();
 }
+// --- CSV customer import (name, email, phone, notes) ---
+function parseCSV(text){
+  text=text.replace(/^﻿/,'').replace(/\r\n?/g,'\n');
+  var rows=[],row=[],cur='',q=false;
+  for(var i=0;i<text.length;i++){var c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else{ if(c==='"')q=true; else if(c===','){row.push(cur);cur='';} else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur='';} else cur+=c; }
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(function(r){return r.some(function(x){return (x||'').trim()!=='';});});
+}
+function runImport(file){
+  var m=document.getElementById('importMsg'); m.style.color='#6b7d73'; m.textContent='Reading '+file.name+'…';
+  var reader=new FileReader();
+  reader.onload=function(){
+    try{
+      var grid=parseCSV(String(reader.result||''));
+      if(!grid.length){m.style.color='#B4472F';m.textContent='That file looks empty.';return;}
+      var head=grid[0].map(function(h){return (h||'').trim().toLowerCase();});
+      var looksHeader=head.some(function(h){return ['name','email','phone','notes','note','mobile','full name'].indexOf(h)>=0;});
+      function col(names){for(var k=0;k<names.length;k++){var ix=head.indexOf(names[k]);if(ix>=0)return ix;}return -1;}
+      var iN=looksHeader?col(['name','full name','customer','customer name']):0,
+          iE=looksHeader?col(['email','e-mail','email address']):1,
+          iP=looksHeader?col(['phone','mobile','phone number','contact']):2,
+          iX=looksHeader?col(['notes','note','comments']):3;
+      var body=grid.slice(looksHeader?1:0).map(function(r){
+        return {name:(r[iN]||'').trim(),email:(iE>=0?(r[iE]||''):'').trim(),phone:(iP>=0?(r[iP]||''):'').trim(),notes:(iX>=0?(r[iX]||''):'').trim()};
+      }).filter(function(x){return x.name;});
+      if(!body.length){m.style.color='#B4472F';m.textContent='No rows with a name found. Expected columns: name, email, phone, notes.';return;}
+      m.textContent='Importing '+body.length+' customer'+(body.length>1?'s':'')+'…';
+      fetch('/contacts-import',{method:'POST',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({location_id:Number(LOC),rows:body})})
+        .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
+        .then(function(j){m.style.color='#2f6b46';m.textContent='Imported '+(j.created||0)+' customer'+((j.created||0)===1?'':'s')+'.';load();})
+        .catch(function(e){m.style.color='#B4472F';m.textContent='Import failed — '+e.message;});
+    }catch(e){m.style.color='#B4472F';m.textContent='Could not read that CSV — '+e.message;}
+  };
+  reader.readAsText(file);
+}
+(function(){var b=document.getElementById('importCsv'),f=document.getElementById('csvFile');
+  if(b&&f){b.onclick=function(){f.value='';f.click();};f.onchange=function(){if(f.files&&f.files[0])runImport(f.files[0]);};}
+})();
 function load(){
   var q=document.getElementById('q').value.trim(), cat=document.getElementById('catf').value;
   var u=baseUrl()+(q?('&q='+encodeURIComponent(q)):'')+(cat?('&category='+encodeURIComponent(cat)):'');

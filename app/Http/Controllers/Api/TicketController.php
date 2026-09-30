@@ -31,8 +31,19 @@ class TicketController extends Controller {
     }
     public function status(Request $r, Ticket $ticket) {
         abort_unless($r->user()->isAdmin(), 403);
-        $ticket->update(['status'=>$r->validate(['status'=>'required|in:Open,Closed'])['status']]);
+        $ticket->update(['status'=>$r->validate(['status'=>'required|in:Open,Awaiting info,Resolved,Closed'])['status']]);
         return $ticket;
+    }
+    // A franchisee requests CCTV/camera access from their store view — notifies the admins.
+    public function cctvRequest(Request $r) {
+        $u = $r->user();
+        $loc = (int) ($r->input('location_id') ?: $u->location_id);
+        $locName = \App\Models\Location::find($loc)?->name ?? 'their store';
+        \App\Services\AdminNotifier::notify('cctv_access_request',
+            'CCTV access request from '.$u->name.' ('.$locName.')',
+            ['summary'=>$u->name.' has requested CCTV / camera access for '.$locName.'.',
+             'from_name'=>$u->name, 'from_email'=>$u->email, 'location'=>$locName]);
+        return response()->json(['ok'=>true]);
     }
     private function authorizeTicket($u, Ticket $t): void {
         if (!$u->isAdmin() && !in_array($t->location_id, $u->locationIds()) && $t->user_id !== $u->id) abort(403);

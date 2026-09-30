@@ -19,11 +19,13 @@ class UserController extends Controller {
     public function store(Request $r) {
         $data = $this->normalizeLocations($this->rules($r, true));
         $role = $data['role'];
-        // Every new account except an admin one gets a one-time "set your password" link
-        // emailed to them — so the admin never has to set a password by hand.
-        $sendInvite = ($role !== 'admin');
         $onboarding = in_array($role, ['potential_franchisee','potential_investor']);
-        if (!empty($data['password'])) {
+        // Password is optional for every non-admin account. If the admin leaves it blank we
+        // email (and surface) a one-time "set your password" link instead — so they never have
+        // to set a password by hand. Prospects always go through the invite/NDA flow regardless.
+        $hasPassword = !empty($data['password']) && !$onboarding;
+        $sendInvite = ($role !== 'admin') && !$hasPassword;
+        if ($hasPassword) {
             $data['password'] = Hash::make($data['password']);
         } else {
             $data['password'] = Hash::make(bin2hex(random_bytes(16))); // placeholder until they set their own

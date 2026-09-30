@@ -45,6 +45,37 @@ class ContactController extends Controller {
         $contact->delete();
         return response()->noContent();
     }
+    // Bulk-create customers for a store from a parsed CSV (rows of name/email/phone/notes).
+    public function bulkImport(Request $r) {
+        $u = $r->user();
+        $d = $r->validate([
+            'location_id'=>'required|integer',
+            'rows'=>'required|array|max:5000',
+            'rows.*.name'=>'nullable|string',
+            'rows.*.email'=>'nullable|string',
+            'rows.*.phone'=>'nullable|string',
+            'rows.*.notes'=>'nullable|string',
+        ]);
+        $loc = (int) $d['location_id'];
+        $this->authorizeScope($u, $loc);
+        $created = 0;
+        foreach ($d['rows'] as $row) {
+            $name = trim((string)($row['name'] ?? ''));
+            if ($name === '') continue;
+            Contact::create([
+                'location_id' => $loc,
+                'name'        => $name,
+                'email'       => trim((string)($row['email'] ?? '')) ?: null,
+                'phone'       => trim((string)($row['phone'] ?? '')) ?: null,
+                'notes'       => trim((string)($row['notes'] ?? '')) ?: null,
+                'category'    => 'customer',
+                'source'      => 'csv-import',
+                'created_by'  => $u->name,
+            ]);
+            $created++;
+        }
+        return response()->json(['ok'=>true, 'created'=>$created]);
+    }
     private function authorizeScope($u, $locationId): void {
         if ($u->isAdmin()) return;
         if ($locationId === null || !in_array((int) $locationId, $u->locationIds())) abort(403);

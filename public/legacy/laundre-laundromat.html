@@ -5,18 +5,41 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Laundré · Laundromat</title>
 <script>(function(){var a=localStorage.getItem('laundre_auth')==='1',s=null;try{s=JSON.parse(localStorage.getItem('laundre_session')||'null');}catch(e){}if(!a||(s&&s.role&&s.role!=='admin'))location.replace('laundre-portal.html');})();</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root{--cream:#F4EFE6;--cream-line:#E4DBCB;--field:#FFFFFF;--green:#435E53;--green-d:#33473D;--accent:#C4703F;--muted:#8a9790;--ink:#2E3D36;}
   *{box-sizing:border-box;}
-  html,body{margin:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
+  html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--cream);}
   button{font-family:inherit;cursor:pointer;}
-  .top{background:var(--green-d);color:#EAF0EC;padding:12px 22px;display:flex;align-items:center;gap:14px;}
-  .top a.back,.top button.hbtn{color:#EAF0EC;text-decoration:none;font-size:13px;font-weight:700;border:1px solid rgba(255,255,255,.25);border-radius:7px;padding:7px 12px;background:transparent;}
-  .top a.back:hover,.top button.hbtn:hover{background:rgba(255,255,255,.1);}
-  .top .name{font-size:17px;font-weight:800;} .top .addr{font-size:12px;color:#b9c7bf;margin-top:1px;}
-  .top .spacer{flex:1;}
+  .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;}
+  .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);} .btn-ghost:hover{background:#EFEADD;}
+  header{background:var(--cream);border-bottom:1px solid var(--cream-line);display:flex;align-items:center;gap:14px;padding:14px 22px;position:sticky;top:0;z-index:20;}
+  header .name{font-size:17px;font-weight:800;color:var(--green-d);} header .addr{font-size:12px;color:var(--muted);margin-top:1px;}
+  header .spacer{flex:1;}
+  input[type=date]{font-family:inherit;font-size:13px;color:var(--ink);background:var(--field);border:1px solid var(--cream-line);border-radius:7px;padding:8px 10px;}
   main{max-width:1120px;margin:0 auto;padding:22px;}
+  /* native store dashboard */
+  .dash{background:#fff;border:1px solid var(--cream-line);border-radius:16px;padding:18px 20px;margin-bottom:22px;}
+  .dhead{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .dhead h3{margin:0;font-size:16px;color:var(--green-d);} .dhead .spacer{flex:1;}
+  .seg{display:inline-flex;background:#EFEADD;border:1px solid var(--cream-line);border-radius:9px;overflow:hidden;}
+  .seg button{background:transparent;border:none;padding:8px 14px;font-size:12.5px;font-weight:700;color:#6b8073;cursor:pointer;font-family:inherit;}
+  .seg button.on{background:var(--green);color:#fff;}
+  .ctl{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap;} .ctl .lbl{font-size:12px;color:#5f7469;font-weight:600;}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi{background:#F3F6F3;border:1px solid #dfe7df;border-radius:12px;padding:13px 15px;}
+  .kpi .n{font-size:22px;font-weight:800;color:var(--green-d);} .kpi .l{font-size:11.5px;color:#7a8b84;margin-top:2px;}
+  .chartcard{border:1px solid var(--cream-line);border-radius:12px;padding:14px 16px;background:#FCFBF7;}
+  .chartcard .ct{margin:0 0 10px;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);display:flex;align-items:center;gap:8px;}
+  .chartcard .ct .spacer{flex:1;} .chartcard .ct .wxnote{font-size:11px;color:#8a9790;font-weight:600;text-transform:none;letter-spacing:0;}
+  .bp-badge{display:inline-flex;align-items:center;gap:5px;background:#E1EDE4;color:#2f6b46;border-radius:20px;padding:2px 10px;font-size:10.5px;font-weight:800;letter-spacing:.02em;}
+  .chartbox{position:relative;height:320px;}
+  .chartempty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8a9790;font-size:13.5px;text-align:center;padding:20px;}
+  .wxstrip{display:flex;gap:0;margin-top:6px;padding:0 6px;}
+  .wxstrip .wxc{flex:1;min-width:0;text-align:center;font-size:10.5px;color:#7a8b84;white-space:nowrap;overflow:hidden;}
   /* module grid: 6 across */
+  .seclabel{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:800;margin:4px 0 12px;display:flex;align-items:center;gap:12px;}
+  .seclabel .ln{flex:1;height:1px;background:var(--cream-line);}
   .grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;}
   @media(max-width:1000px){.grid{grid-template-columns:repeat(4,1fr);}}
   @media(max-width:680px){.grid{grid-template-columns:repeat(3,1fr);}}
@@ -24,14 +47,6 @@
   .tile{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:16px 10px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:transform .08s,box-shadow .08s;text-decoration:none;color:inherit;}
   .tile:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(51,71,61,.12);border-color:#cdbfa6;}
   .tile .ic{font-size:26px;line-height:1;} .tile .lb{font-size:12.5px;font-weight:700;color:var(--green-d);line-height:1.2;}
-  .hint{color:#8a9790;font-size:12.5px;margin:2px 0 16px;}
-  .dashtop{margin-bottom:8px;} .dashtop iframe{width:100%;height:660px;border:none;border-radius:0;background:transparent;display:block;overflow:hidden;}
-  /* module viewer */
-  .viewer{display:none;}
-  .viewer.show{display:block;}
-  .vbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
-  .vbar .vt{font-size:16px;font-weight:800;color:var(--green-d);}
-  iframe{width:100%;border:none;background:var(--cream);height:calc(100vh - 180px);border:1px solid var(--cream-line);border-radius:12px;}
   .loading{padding:50px;text-align:center;color:#8a9790;font-size:14px;}
   /* setup modal */
   #ov{position:fixed;inset:0;background:rgba(30,42,36,.55);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow-y:auto;padding:44px 16px;}
@@ -46,17 +61,15 @@
   .sw input{opacity:0;width:0;height:0;} .sw .tk{position:absolute;inset:0;background:#d8d0c0;border-radius:20px;transition:.2s;}
   .sw .tk:before{content:'';position:absolute;height:18px;width:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
   .sw input:checked + .tk{background:var(--green);} .sw input:checked + .tk:before{transform:translateX(18px);}
-  .mfoot{display:flex;gap:10px;justify-content:flex-end;padding:0 20px 18px;} .btn{border:none;border-radius:7px;padding:9px 15px;font-size:13px;font-weight:700;} .btn-green{background:var(--green);color:#fff;} .btn-ghost{background:transparent;color:var(--green);border:1px solid var(--cream-line);}
-  #setmsg{font-size:12px;color:#6b7d73;flex:1;align-self:center;}
+  .mfoot{display:flex;gap:10px;justify-content:flex-end;padding:0 20px 18px;} #setmsg{font-size:12px;color:#6b7d73;flex:1;align-self:center;}
 </style>
 </head>
 <body>
-<div class="top">
-  <a class="back" href="laundre-portal.html">← Laundromats</a>
+<header>
   <div><div class="name" id="sName">Laundromat</div><div class="addr" id="sAddr"></div></div>
   <span class="spacer"></span>
-  <button class="hbtn" id="setupBtn">⚙ Set up modules</button>
-</div>
+  <button class="btn btn-ghost" id="setupBtn">⚙ Set up modules</button>
+</header>
 <main id="main"><div class="loading" id="ld">Loading…</div></main>
 
 <div id="ov"><div class="modal">
@@ -67,11 +80,10 @@
 
 <script>
 var CSRF=window.LAUNDRE_CSRF||'';
-// Auto-size the embedded store dashboard so it blends in (no iframe scrollbars / seams).
-window.addEventListener('message',function(e){ if(e&&e.data&&e.data.t==='lembedH'&&e.data.h){ var f=document.querySelector('.dashtop iframe'); if(f){ f.style.height=(e.data.h+6)+'px'; } } });
 function hdrs(j){var h={'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};if(j)h['Content-Type']='application/json';return h;}
 function apiGet(u){return fetch(u,{headers:hdrs(false),credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
 function apiSend(u,m,b){return fetch(u,{method:m,headers:hdrs(true),credentials:'same-origin',body:JSON.stringify(b)}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
+function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 var LOC=new URLSearchParams(location.search).get('loc')||'';
 // canonical module set
 var MODS=[
@@ -94,16 +106,96 @@ var MODS=[
 ];
 var LOCOBJ=null, MODCFG={};
 function on(k){ if(!MODCFG||!(k in MODCFG)) return true; return !!MODCFG[k]; }
-function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+
+/* ---------- native store sales dashboard (was an embedded iframe) ---------- */
+var D_ALL=[], D_GROUP=[], D_WX={}, dGran='daily', dFrom='', dTo='', dChart=null;
+var D_PAL=['#435E53','#C4703F','#3a6ea5'];
+function d10(s){return (''+s).slice(0,10);}
+function AUD(n){return '$'+(Math.round(n||0)).toLocaleString('en-AU');}
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function isoWeekStart(ds){var d=new Date(ds+'T00:00');var day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return ymd(d);}
+function dMax(){return D_ALL.length?d10(D_ALL[D_ALL.length-1].date):ymd(new Date());}
+function dMin(){return D_ALL.length?d10(D_ALL[0].date):ymd(new Date());}
+function dLoadAll(){ if(!LOC) return Promise.resolve(); return apiGet('/sales-api?loc='+encodeURIComponent(LOC)).then(function(rows){
+  D_ALL=(Array.isArray(rows)?rows:[]).filter(function(x){return String(x.location_id)===String(LOC);})
+    .map(function(x){return {date:d10(x.date),revenue:+x.revenue||0,txns:+x.txns||0};})
+    .sort(function(a,b){return a.date<b.date?-1:1;});
+}).catch(function(){D_ALL=[];}); }
+function dLoadGroup(){ return apiGet('/sales-group-series').then(function(rows){D_GROUP=Array.isArray(rows)?rows.map(function(x){return {date:d10(x.date),total:+x.total||0,n:+x.n||0};}):[];}).catch(function(){D_GROUP=[];}); }
+function dLoadWx(){ if(!LOC) return Promise.resolve(); return apiGet('/weather-api?loc='+encodeURIComponent(LOC)).then(function(d){((d&&d.days)?d.days:[]).forEach(function(w){D_WX[d10(w.date)]=w;});}).catch(function(){}); }
+function dSetRange(days){var to=new Date(dMax()+'T00:00');var from=new Date(to);from.setDate(from.getDate()-(days-1));dTo=ymd(to);dFrom=ymd(from);dSync();dRender();}
+function dSync(){var f=document.getElementById('dFrom'),t=document.getElementById('dTo');if(f)f.value=dFrom;if(t)t.value=dTo;}
+function dRender(){
+  var rows=D_ALL.filter(function(x){return x.date>=dFrom&&x.date<=dTo;});
+  var keyFn=function(dt){return dGran==='monthly'?dt.slice(0,7):dGran==='weekly'?isoWeekStart(dt):dt;};
+  var keys=[],seen={}; rows.forEach(function(r){var k=keyFn(r.date);if(!seen[k]){seen[k]=1;keys.push(k);}}); keys.sort();
+  var labels=keys.map(function(k){if(dGran==='monthly'){var p=k.split('-');return new Date(p[0],p[1]-1,1).toLocaleDateString('en-AU',{month:'short',year:'2-digit'});}var d=new Date(k+'T00:00');return d.toLocaleDateString('en-AU',{day:'numeric',month:'short'});});
+  var byKey={}; rows.forEach(function(r){var k=keyFn(r.date);byKey[k]=(byKey[k]||0)+r.revenue;});
+  var datasets=[{label:'This store',data:keys.map(function(k){return Math.round(byKey[k]||0);}),backgroundColor:dGran==='daily'?D_PAL[0]+'33':D_PAL[0],borderColor:D_PAL[0],borderWidth:2,fill:dGran==='daily',tension:.3,pointRadius:dGran==='daily'?2:0,order:2}];
+  if(keys.length && D_GROUP.length){
+    var gt={},gn={},gd={};
+    D_GROUP.filter(function(r){return r.date>=dFrom&&r.date<=dTo;}).forEach(function(r){var k=keyFn(r.date);gt[k]=(gt[k]||0)+r.total;gn[k]=(gn[k]||0)+r.n;gd[k]=(gd[k]||0)+1;});
+    var avgData=keys.map(function(k){var t=gt[k]||0,sn=gn[k]||0,d=gd[k]||0;var stores=d?sn/d:0;return stores?Math.round(t/stores):0;});
+    var overall=avgData.length?Math.round(avgData.reduce(function(a,b){return a+b;},0)/avgData.length):0;
+    datasets.push({type:'line',label:'Group average ('+AUD(overall)+')',data:avgData,borderColor:'#C4703F',borderDash:[6,5],borderWidth:2,pointRadius:0,fill:false,tension:0,order:0});
+  }
+  var totRev=rows.reduce(function(s,r){return s+r.revenue;},0), totTx=rows.reduce(function(s,r){return s+r.txns;},0), dayCount=(function(){var s={};rows.forEach(function(r){s[r.date]=1;});return Object.keys(s).length;})();
+  document.getElementById('dKpis').innerHTML=
+     '<div class="kpi"><div class="n">'+AUD(totRev)+'</div><div class="l">Total revenue</div></div>'
+    +'<div class="kpi"><div class="n">'+totTx.toLocaleString('en-AU')+'</div><div class="l">Transactions</div></div>'
+    +'<div class="kpi"><div class="n">'+AUD(dayCount?totRev/dayCount:0)+'</div><div class="l">Avg / day</div></div>'
+    +'<div class="kpi"><div class="n">'+AUD(totTx?totRev/totTx:0)+'</div><div class="l">Avg / transaction</div></div>';
+  var ctx=document.getElementById('dChartCv'), emptyEl=document.getElementById('dEmpty');
+  if(dChart){dChart.destroy();dChart=null;}
+  var noData=(typeof Chart==='undefined')||!keys.length;
+  if(noData){ ctx.style.display='none'; emptyEl.style.display='flex'; emptyEl.textContent=(typeof Chart==='undefined')?'Chart library unavailable (offline).':'No sales in this period. Data syncs automatically from Bubble Pay.'; document.getElementById('dWx').style.display='none'; return; }
+  ctx.style.display=''; emptyEl.style.display='none';
+  dChart=new Chart(ctx,{type:dGran==='daily'?'line':'bar',data:{labels:labels,datasets:datasets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,font:{size:11}}},tooltip:{callbacks:{label:function(c){return c.dataset.label.replace(/ \(\$.*\)$/,'')+': $'+c.parsed.y.toLocaleString('en-AU');}}}},
+      scales:{y:{beginAtZero:true,ticks:{callback:function(v){return '$'+v.toLocaleString('en-AU');}}}}}});
+  dRenderWx(keys);
+}
+function dRenderWx(keys){
+  var strip=document.getElementById('dWx');
+  if(dGran!=='daily'){ strip.style.display='none'; return; }
+  var any=keys.some(function(k){return D_WX[k]&&D_WX[k].tmax!=null;});
+  if(!any){ strip.style.display='none'; return; }
+  strip.style.display='flex';
+  strip.innerHTML=keys.map(function(k){var w=D_WX[k];var lab='';if(w&&w.tmax!=null){var rain=(+w.precip||0);lab=(rain>=1?'🌧':'☀️')+' '+Math.round(w.tmax)+'°';}return '<div class="wxc" title="'+k+(w&&w.tmax!=null?(' · '+Math.round(w.tmax)+'°'+((+w.precip||0)>0?(' · '+w.precip+'mm'):'')):'')+'">'+lab+'</div>';}).join('');
+}
+function dashHtml(){
+  return '<div class="dash">'
+    +'<div class="dhead"><h3>Store sales — '+esc((LOCOBJ&&LOCOBJ.name)||'this store')+'</h3><span class="spacer"></span>'
+    +'<div class="seg" id="dSeg"><button data-g="daily" class="on">Daily</button><button data-g="weekly">Weekly</button><button data-g="monthly">Monthly</button></div></div>'
+    +'<div class="ctl"><span class="lbl">From</span><input type="date" id="dFrom">'
+    +'<span class="lbl">to</span><input type="date" id="dTo">'
+    +'<button class="btn btn-ghost" id="dR7" style="padding:7px 12px">7 days</button>'
+    +'<button class="btn btn-ghost" id="dR30" style="padding:7px 12px">30 days</button>'
+    +'<button class="btn btn-ghost" id="dRAll" style="padding:7px 12px">All dates</button></div>'
+    +'<div class="kpis" id="dKpis"></div>'
+    +'<div class="chartcard"><div class="ct"><span class="bp-badge">● Bubble Pay</span> Daily revenue <span class="spacer"></span><span class="wxnote">— vs group average · ☀ weather overlay</span></div>'
+    +'<div class="chartbox"><canvas id="dChartCv"></canvas><div class="chartempty" id="dEmpty" style="display:none"></div></div>'
+    +'<div class="wxstrip" id="dWx" style="display:none"></div></div>'
+    +'</div>';
+}
+function wireDash(){
+  document.querySelectorAll('#dSeg button').forEach(function(b){b.onclick=function(){dGran=b.dataset.g;document.querySelectorAll('#dSeg button').forEach(function(x){x.classList.toggle('on',x===b);});dRender();};});
+  document.getElementById('dFrom').addEventListener('change',function(e){dFrom=e.target.value;if(dTo<dFrom){dTo=dFrom;dSync();}dRender();});
+  document.getElementById('dTo').addEventListener('change',function(e){dTo=e.target.value;if(dTo<dFrom){dFrom=dTo;dSync();}dRender();});
+  document.getElementById('dR7').addEventListener('click',function(){dSetRange(7);});
+  document.getElementById('dR30').addEventListener('click',function(){dSetRange(30);});
+  document.getElementById('dRAll').addEventListener('click',function(){dFrom=dMin();dTo=dMax();dSync();dRender();});
+  Promise.all([dLoadAll(), dLoadGroup(), dLoadWx()]).then(function(){ dSetRange(7); });
+}
 function renderGrid(){
   var m=document.getElementById('main');
   var vis=MODS.filter(function(t){return on(t.k);});
-  // Dashboard is always open at the top (not a module tile).
-  var h='<div class="dashtop"><iframe title="Sales dashboard" src="laundre-store-dashboard?loc='+encodeURIComponent(LOC)+'&embed=1"></iframe></div>';
-  h+='<div class="hint">Choose a module to open. Use ⚙ Set up modules to show or hide modules for this laundromat.</div>';
-  // Each tile navigates to the individual module page for this laundromat (no embedding).
+  var h=dashHtml();
+  h+='<div class="seclabel">Modules<span class="ln"></span></div>';
   h+='<div class="grid">'+vis.map(function(t){return '<a class="tile" href="'+t.page+'?loc='+encodeURIComponent(LOC)+'"><div class="ic">'+t.ic+'</div><div class="lb">'+esc(t.label)+'</div></a>';}).join('')+'</div>';
   m.innerHTML=h;
+  wireDash();
 }
 /* ---- setup modal ---- */
 function openSetup(){
@@ -127,7 +219,7 @@ document.getElementById('setClose').onclick=function(){document.getElementById('
 document.getElementById('setCancel').onclick=function(){document.getElementById('ov').classList.remove('show');};
 document.getElementById('setSave').onclick=saveSetup;
 
-if(!LOC){document.getElementById('main').innerHTML='<div class="loading">No laundromat selected. <a href="laundre-portal.html">Back to portal</a></div>';}
+if(!LOC){document.getElementById('main').innerHTML='<div class="loading">No laundromat selected. <a href="laundre-live-laundromats">Back to laundromats</a></div>';}
 else{
   apiGet('/locations-api').then(function(list){
     LOCOBJ=(list||[]).find(function(l){return String(l.id)===String(LOC);})||{name:'Laundromat'};
@@ -135,7 +227,7 @@ else{
     document.getElementById('sName').textContent=LOCOBJ.name||'Laundromat';
     document.getElementById('sAddr').textContent=LOCOBJ.address||'';
     document.title='Laundré · '+(LOCOBJ.name||'Laundromat');
-    document.getElementById('ld').remove();
+    var ld=document.getElementById('ld'); if(ld) ld.remove();
     renderGrid();
   }).catch(function(){document.getElementById('main').innerHTML='<div class="loading">Could not load this laundromat.</div>';});
 }

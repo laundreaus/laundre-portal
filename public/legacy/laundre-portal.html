@@ -110,6 +110,13 @@
   .kpi{background:#F3F6F3;border:1px solid #dfe7df;border-radius:11px;padding:12px 14px;}
   .kpi .n{font-size:22px;font-weight:800;color:var(--green);} .kpi .l{font-size:11.5px;color:#7a8b84;margin-top:2px;}
   .chartbox{position:relative;height:320px;}
+  /* Investor dashboard (native, per-site) */
+  .icharts{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  @media(max-width:760px){.icharts{grid-template-columns:1fr;}}
+  .ibox{border:1px solid var(--cream-line);border-radius:12px;padding:12px 14px;background:#FCFBF7;}
+  .ibox .ict{font-size:12px;font-weight:700;color:var(--green-d);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;}
+  .iwrap{position:relative;height:250px;}
+  .invsel{font-family:inherit;font-size:13.5px;font-weight:700;color:var(--green);background:#fff;border:1px solid var(--cream-line);border-radius:8px;padding:8px 11px;cursor:pointer;}
   .wxstrip{display:flex;gap:0;margin-top:6px;padding:0 6px;}
   .wxstrip .wxc{flex:1;min-width:0;text-align:center;font-size:10.5px;color:#7a8b84;white-space:nowrap;overflow:hidden;}
   .chartempty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8a9790;font-size:13.5px;text-align:center;padding:20px;}
@@ -229,8 +236,8 @@ function showApp(){
       document.getElementById('heroSub').textContent = homes[role] || 'Your Laundré home';
       document.getElementById('stats').innerHTML='';
       try{renderSiteSwitcher(role);}catch(e){}
-      // Franchisees get a store-sales widget too — pull live DB sales, then re-render it.
-      if(role==='franchisee'){ try{Promise.all([fetchDbSales(),fetchGroupSeries(),fetchAllLocs()]).then(function(){try{dashFrom='';dashTo='';renderDashboard(role);}catch(e){}});}catch(e){} }
+      // Franchisees & investors get the same store-sales dashboard — pull live DB sales, then re-render it.
+      if(role==='franchisee'||role==='investor'){ try{Promise.all([fetchDbSales(),fetchGroupSeries(),fetchAllLocs()]).then(function(){try{dashFrom='';dashTo='';renderDashboard(role);}catch(e){}});}catch(e){} }
     }
   }catch(err){ console.error('portal render error',err); }
   document.getElementById('app').classList.add('show');
@@ -354,7 +361,10 @@ var FR_SIDEBAR=[
     {i:'💳',n:'Membership Card',h:'laundre-card'}
   ]}
 ];
-var INV_SIDEBAR=[ {items:[{i:'💳',n:'Membership Card',h:'laundre-card'}]} ];
+var INV_SIDEBAR=[ {items:[
+  {i:'🆘',n:'Submit / Ask',h:'laundre-support'},
+  {i:'💳',n:'Membership Card',h:'laundre-card'}
+]} ];
 var CL_SIDEBAR=[ {items:[{i:'🧹',n:'Daily Cleaning',h:'laundre-cleaning'}]} ];
 var MT_SIDEBAR=[ {items:[{i:'🛠️',n:'Maintenance',h:'laundre-maintenance'},{i:'📘',n:'Maintenance Docs',h:'laundre-maintenance-docs'}]} ];
 // slug -> {i,l} for building a staff user's sidebar from their assigned sections
@@ -445,7 +455,7 @@ function renderSiteSwitcher(role){
   host.innerHTML='<span style="font-size:12.5px;color:#5f7469;font-weight:700">Viewing site</span>'
     +'<select id="siteSwitchSel" style="font-family:inherit;font-size:13.5px;font-weight:700;color:var(--green);background:#fff;border:1px solid var(--cream-line);border-radius:8px;padding:8px 11px;cursor:pointer">'
     +locs.map(l=>'<option value="'+l.id+'"'+(String(l.id)===String(AL)?' selected':'')+'>'+esc(l.name)+'</option>').join('')+'</select>';
-  document.getElementById('siteSwitchSel').onchange=function(){ setActiveLoc(this.value); renderTiles(role); if(role==='franchisee'){ try{renderDashboard(role);}catch(e){} } };
+  document.getElementById('siteSwitchSel').onchange=function(){ setActiveLoc(this.value); renderTiles(role); if(role==='franchisee'||role==='investor'){ try{renderDashboard(role);}catch(e){} } };
 }
 /* Admin dashboard: global "Admin tools" (6-across) + a "Laundromats" section of store cards. */
 var HIDDEN_TOOLS=[], CUSTOMIZE=false, HIDDEN_LOADED=false;
@@ -668,40 +678,6 @@ async function renderAlerts(){
   host.querySelectorAll('.cb-alert').forEach(function(el){var x=el.querySelector('.cb-x');if(x)x.onclick=function(e){e.preventDefault();e.stopPropagation();dismissAlert(el.dataset.key);el.remove();};});
 }
 
-/* ---------- Admin alerts (Bubblepay, investors, onboarding follow-ups) ---------- */
-function dismissedAlerts(){try{var a=JSON.parse(localStorage.getItem('laundre_dismissed_alerts')||'[]');return Array.isArray(a)?a:[];}catch(e){return [];}}
-function dismissAlert(key){try{var d=dismissedAlerts();if(d.indexOf(key)<0){d.push(key);localStorage.setItem('laundre_dismissed_alerts',JSON.stringify(d));}}catch(e){}}
-async function renderAlerts(){
-  var host=document.getElementById('alerts'); if(!host) return;
-  var out=[];
-  if(new Date().getDate()===1){
-    out.push({cls:'warn',icon:'💳',txt:'It’s the 1st of the month — upload the Bubble Pay monthly payout data.',href:'laundre-reporting.html',cta:'Go to Reporting'});
-  }
-  var CSRF=(window.LAUNDRE_CSRF||'');
-  function hd(){return {'Accept':'application/json','X-CSRF-TOKEN':CSRF,'X-Requested-With':'XMLHttpRequest'};}
-  try{
-    var inv=await (await fetch('/investors-api',{headers:hd(),credentials:'same-origin'})).json();
-    var newInt=(inv||[]).filter(function(o){return o.interest_submitted_at;});
-    if(newInt.length){ out.push({cls:'info',icon:'💼',txt:newInt.length+' investor'+(newInt.length>1?'s have':' has')+' registered interest.',href:'laundre-investors.html',cta:'View investors'}); }
-  }catch(e){}
-  try{
-    var ob=await (await fetch('/onboarding-admin-api',{headers:hd(),credentials:'same-origin'})).json();
-    var due=(ob||[]).filter(function(o){return o.nda_signed_at && o.contact_due_at && (new Date(o.contact_due_at)-new Date())/864e5 <= 3 && o.crm_stage!=='pending_approval' && o.crm_stage!=='approved';});
-    if(due.length){ out.push({cls:'warn',icon:'⏰',txt:due.length+' onboarding follow-up'+(due.length>1?'s are':' is')+' due within 3 days (14-day contact).',href:'laundre-onboarding.html',cta:'Open tracker'}); }
-  }catch(e){}
-  var dis=dismissedAlerts(); out=out.filter(function(a){return dis.indexOf(a.txt)<0;});
-  if(!out.length){host.innerHTML='';return;}
-  host.innerHTML='<div style="margin:6px 0 20px">'+out.map(function(a){
-    var bg=a.cls==='warn'?'#FBE9E2':'#E7EFE9', bd=a.cls==='warn'?'#e6cabb':'#bcd8c4', cl=a.cls==='warn'?'#9a3a22':'#2f6b46';
-    return '<div class="cb-alert" data-key="'+esc(a.txt)+'" style="display:flex;align-items:center;gap:12px;background:'+bg+';border:1px solid '+bd+';color:'+cl+';border-radius:12px;padding:12px 16px;margin-bottom:10px;font-size:14px;font-weight:600">'
-      +'<span style="font-size:18px">'+a.icon+'</span>'
-      +'<a href="'+a.href+'" style="flex:1;display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit"><span style="flex:1">'+esc(a.txt)+'</span><span style="font-weight:700;white-space:nowrap">'+esc(a.cta)+' →</span></a>'
-      +'<button class="cb-x" title="Dismiss" aria-label="Dismiss" style="background:transparent;border:none;color:inherit;font-size:17px;line-height:1;cursor:pointer;opacity:.65;padding:2px 4px">✕</button>'
-      +'</div>';
-  }).join('')+'</div>';
-  host.querySelectorAll('.cb-alert').forEach(function(el){var x=el.querySelector('.cb-x');if(x)x.onclick=function(e){e.preventDefault();e.stopPropagation();dismissAlert(el.dataset.key);el.remove();};});
-}
-
 /* ---------- Sales dashboard (admin only) ---------- */
 const SALES_KEY='laundre_sales_v1';
 const SALES_SEED=[{"locationId":"coomera","site":"Coomera","date":"2026-06-01","revenue":760.2,"txns":57},{"locationId":"coomera","site":"Coomera","date":"2026-06-02","revenue":425.25,"txns":41},{"locationId":"coomera","site":"Coomera","date":"2026-06-03","revenue":574.35,"txns":54},{"locationId":"coomera","site":"Coomera","date":"2026-06-04","revenue":576.45,"txns":42},{"locationId":"coomera","site":"Coomera","date":"2026-06-05","revenue":715.05,"txns":65},{"locationId":"coomera","site":"Coomera","date":"2026-06-06","revenue":660.45,"txns":53},{"locationId":"coomera","site":"Coomera","date":"2026-06-07","revenue":1117.2,"txns":101},{"locationId":"coomera","site":"Coomera","date":"2026-06-08","revenue":1118.25,"txns":91},{"locationId":"coomera","site":"Coomera","date":"2026-06-09","revenue":849.45,"txns":81},{"locationId":"coomera","site":"Coomera","date":"2026-06-10","revenue":1236.9,"txns":123},{"locationId":"coomera","site":"Coomera","date":"2026-06-11","revenue":1288.35,"txns":117},{"locationId":"coomera","site":"Coomera","date":"2026-06-12","revenue":1115.1,"txns":106},{"locationId":"coomera","site":"Coomera","date":"2026-06-13","revenue":1193.85,"txns":104},{"locationId":"coomera","site":"Coomera","date":"2026-06-14","revenue":1375.5,"txns":117},{"locationId":"coomera","site":"Coomera","date":"2026-06-15","revenue":1239.0,"txns":99},{"locationId":"coomera","site":"Coomera","date":"2026-06-16","revenue":1107.75,"txns":99},{"locationId":"coomera","site":"Coomera","date":"2026-06-17","revenue":733.95,"txns":72},{"locationId":"coomera","site":"Coomera","date":"2026-06-18","revenue":583.8,"txns":54},{"locationId":"coomera","site":"Coomera","date":"2026-06-19","revenue":644.7,"txns":60},{"locationId":"coomera","site":"Coomera","date":"2026-06-20","revenue":948.15,"txns":78},{"locationId":"coomera","site":"Coomera","date":"2026-06-21","revenue":1471.05,"txns":129},{"locationId":"coomera","site":"Coomera","date":"2026-06-22","revenue":607.95,"txns":64},{"locationId":"coomera","site":"Coomera","date":"2026-06-23","revenue":655.2,"txns":50},{"locationId":"coomera","site":"Coomera","date":"2026-06-24","revenue":556.5,"txns":47},{"locationId":"coomera","site":"Coomera","date":"2026-06-25","revenue":648.9,"txns":57},{"locationId":"coomera","site":"Coomera","date":"2026-06-26","revenue":999.6,"txns":87},{"locationId":"coomera","site":"Coomera","date":"2026-06-27","revenue":847.35,"txns":78},{"locationId":"coomera","site":"Coomera","date":"2026-06-28","revenue":1346.1,"txns":130},{"locationId":"coomera","site":"Coomera","date":"2026-06-29","revenue":773.85,"txns":70},{"locationId":"coomera","site":"Coomera","date":"2026-06-30","revenue":1167.6,"txns":113},{"locationId":"sthport","site":"Southport","date":"2026-06-01","revenue":291.2,"txns":27},{"locationId":"sthport","site":"Southport","date":"2026-06-02","revenue":293.28,"txns":21},{"locationId":"sthport","site":"Southport","date":"2026-06-03","revenue":486.25,"txns":36},{"locationId":"sthport","site":"Southport","date":"2026-06-04","revenue":182.75,"txns":17},{"locationId":"sthport","site":"Southport","date":"2026-06-05","revenue":287.21,"txns":24},{"locationId":"sthport","site":"Southport","date":"2026-06-06","revenue":531.96,"txns":45},{"locationId":"sthport","site":"Southport","date":"2026-06-07","revenue":582.16,"txns":56},{"locationId":"sthport","site":"Southport","date":"2026-06-08","revenue":326.13,"txns":30},{"locationId":"sthport","site":"Southport","date":"2026-06-09","revenue":542.98,"txns":35},{"locationId":"sthport","site":"Southport","date":"2026-06-10","revenue":543.78,"txns":48},{"locationId":"sthport","site":"Southport","date":"2026-06-11","revenue":969.36,"txns":88},{"locationId":"sthport","site":"Southport","date":"2026-06-12","revenue":288.27,"txns":24},{"locationId":"sthport","site":"Southport","date":"2026-06-13","revenue":776.14,"txns":65},{"locationId":"sthport","site":"Southport","date":"2026-06-14","revenue":529.32,"txns":53},{"locationId":"sthport","site":"Southport","date":"2026-06-15","revenue":372.09,"txns":34},{"locationId":"sthport","site":"Southport","date":"2026-06-16","revenue":808.6,"txns":47},{"locationId":"sthport","site":"Southport","date":"2026-06-17","revenue":346.32,"txns":27},{"locationId":"sthport","site":"Southport","date":"2026-06-18","revenue":304.06,"txns":23},{"locationId":"sthport","site":"Southport","date":"2026-06-19","revenue":324.0,"txns":21},{"locationId":"sthport","site":"Southport","date":"2026-06-20","revenue":384.09,"txns":34},{"locationId":"sthport","site":"Southport","date":"2026-06-21","revenue":731.75,"txns":65},{"locationId":"sthport","site":"Southport","date":"2026-06-22","revenue":204.31,"txns":18},{"locationId":"sthport","site":"Southport","date":"2026-06-23","revenue":757.73,"txns":46},{"locationId":"sthport","site":"Southport","date":"2026-06-24","revenue":415.41,"txns":37},{"locationId":"sthport","site":"Southport","date":"2026-06-25","revenue":385.73,"txns":34},{"locationId":"sthport","site":"Southport","date":"2026-06-26","revenue":318.76,"txns":26},{"locationId":"sthport","site":"Southport","date":"2026-06-27","revenue":518.79,"txns":45},{"locationId":"sthport","site":"Southport","date":"2026-06-28","revenue":635.73,"txns":58},{"locationId":"sthport","site":"Southport","date":"2026-06-29","revenue":284.12,"txns":27},{"locationId":"sthport","site":"Southport","date":"2026-06-30","revenue":646.99,"txns":52},{"locationId":"tweed","site":"Tweed","date":"2026-06-01","revenue":799.05,"txns":80},{"locationId":"tweed","site":"Tweed","date":"2026-06-02","revenue":519.75,"txns":60},{"locationId":"tweed","site":"Tweed","date":"2026-06-03","revenue":354.9,"txns":36},{"locationId":"tweed","site":"Tweed","date":"2026-06-04","revenue":656.25,"txns":78},{"locationId":"tweed","site":"Tweed","date":"2026-06-05","revenue":323.4,"txns":40},{"locationId":"tweed","site":"Tweed","date":"2026-06-06","revenue":530.25,"txns":53},{"locationId":"tweed","site":"Tweed","date":"2026-06-07","revenue":1151.85,"txns":114},{"locationId":"tweed","site":"Tweed","date":"2026-06-08","revenue":1115.1,"txns":118},{"locationId":"tweed","site":"Tweed","date":"2026-06-09","revenue":1089.9,"txns":93},{"locationId":"tweed","site":"Tweed","date":"2026-06-10","revenue":936.6,"txns":104},{"locationId":"tweed","site":"Tweed","date":"2026-06-11","revenue":1026.9,"txns":108},{"locationId":"tweed","site":"Tweed","date":"2026-06-12","revenue":1227.45,"txns":114},{"locationId":"tweed","site":"Tweed","date":"2026-06-13","revenue":1088.85,"txns":99},{"locationId":"tweed","site":"Tweed","date":"2026-06-14","revenue":1295.75,"txns":131},{"locationId":"tweed","site":"Tweed","date":"2026-06-15","revenue":871.5,"txns":94},{"locationId":"tweed","site":"Tweed","date":"2026-06-16","revenue":1012.2,"txns":116},{"locationId":"tweed","site":"Tweed","date":"2026-06-17","revenue":531.3,"txns":56},{"locationId":"tweed","site":"Tweed","date":"2026-06-18","revenue":888.32,"txns":97},{"locationId":"tweed","site":"Tweed","date":"2026-06-19","revenue":764.43,"txns":74},{"locationId":"tweed","site":"Tweed","date":"2026-06-20","revenue":663.61,"txns":58},{"locationId":"tweed","site":"Tweed","date":"2026-06-21","revenue":1246.37,"txns":119},{"locationId":"tweed","site":"Tweed","date":"2026-06-22","revenue":942.91,"txns":97},{"locationId":"tweed","site":"Tweed","date":"2026-06-23","revenue":763.36,"txns":75},{"locationId":"tweed","site":"Tweed","date":"2026-06-24","revenue":811.66,"txns":74},{"locationId":"tweed","site":"Tweed","date":"2026-06-25","revenue":853.66,"txns":87},{"locationId":"tweed","site":"Tweed","date":"2026-06-26","revenue":921.91,"txns":92},{"locationId":"tweed","site":"Tweed","date":"2026-06-27","revenue":1067.86,"txns":108},{"locationId":"tweed","site":"Tweed","date":"2026-06-28","revenue":1110.9,"txns":105},{"locationId":"tweed","site":"Tweed","date":"2026-06-29","revenue":1132.97,"txns":99},{"locationId":"tweed","site":"Tweed","date":"2026-06-30","revenue":1097.26,"txns":112}];
@@ -758,10 +734,69 @@ let dashGran='daily', dashFrom='', dashTo='', dashSites=null, salesChart=null, l
 const PALETTE=['#435E53','#C4703F','#3a6ea5','#8a7fa3','#c9a24b','#6b8e9e','#a35c5c'];
 function AUD(n){return '$'+(Math.round(n||0)).toLocaleString('en-AU');}
 function isoWeekStart(ds){const d=new Date(ds+'T00:00');const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+/* ---------- Investor dashboard (native, per-site with a location dropdown) ---------- */
+var INV_CHARTS=[];
+function invSumArr(a){return (a||[]).reduce(function(x,y){return x+(+y||0);},0);}
+function invBlock(series){
+  var mv=(series.monthly&&series.monthly.values)||[], ml=(series.monthly&&series.monthly.labels)||[];
+  var latest=mv.length?mv[mv.length-1]:0, lastLabel=ml.length?ml[ml.length-1]:'—';
+  return '<div class="kpis">'
+    +'<div class="kpi"><div class="n">'+AUD(series.total)+'</div><div class="l">Revenue on record</div></div>'
+    +'<div class="kpi"><div class="n">'+AUD(invSumArr(mv))+'</div><div class="l">Last 12 months</div></div>'
+    +'<div class="kpi"><div class="n">'+AUD(latest)+'</div><div class="l">Latest month ('+esc(lastLabel)+')</div></div>'
+    +'</div>'
+    +'<div class="icharts">'
+      +'<div class="ibox"><div class="ict">Monthly revenue — last 12 months</div><div class="iwrap"><canvas id="invChartM"></canvas></div></div>'
+      +'<div class="ibox"><div class="ict">Annual revenue — last 3 years</div><div class="iwrap"><canvas id="invChartA"></canvas></div></div>'
+    +'</div>';
+}
+function invDraw(series){
+  INV_CHARTS.forEach(function(c){try{c.destroy();}catch(e){}});INV_CHARTS=[];
+  if(typeof Chart==='undefined') return;
+  var m=document.getElementById('invChartM'), a=document.getElementById('invChartA');
+  var moneyTick={callback:function(v){return AUD(v);},font:{size:10}};
+  if(m) INV_CHARTS.push(new Chart(m,{type:'line',data:{labels:series.monthly.labels,datasets:[{data:series.monthly.values,borderColor:'#435E53',backgroundColor:'rgba(67,94,83,.10)',fill:true,tension:.32,borderWidth:2,pointRadius:2,pointBackgroundColor:'#435E53'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return AUD(c.raw);}}}},scales:{y:{ticks:moneyTick,grid:{color:'#eee'}},x:{ticks:{font:{size:10}},grid:{display:false}}}}}));
+  if(a) INV_CHARTS.push(new Chart(a,{type:'bar',data:{labels:series.annual.labels,datasets:[{data:series.annual.values,backgroundColor:'#C4703F',borderRadius:6,maxBarThickness:60}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return AUD(c.raw);}}}},scales:{y:{ticks:moneyTick,grid:{color:'#eee'}},x:{ticks:{font:{size:11}},grid:{display:false}}}}}));
+}
+// Aggregate daily /sales-api rows for one store into the "Last 12 months" series
+// (monthly totals for the last 12 months + last 3 financial years + revenue on record).
+function computeSeriesFromSales(sales, locId){
+  var rows=(sales||[]).filter(function(r){return String(r.locationId)===String(locId);});
+  var byMonth={}, byFy={}, total=0;
+  rows.forEach(function(r){
+    var d=(''+(r.date||'')).slice(0,10); if(d.length<7) return;
+    var rev=+r.revenue||0; var ym=d.slice(0,7);
+    byMonth[ym]=(byMonth[ym]||0)+rev;
+    var y=+d.slice(0,4), m=+d.slice(5,7); var fy=(m>=7)?y+1:y;
+    byFy[fy]=(byFy[fy]||0)+rev; total+=rev;
+  });
+  var mk=Object.keys(byMonth).sort();
+  var endYM=mk.length?mk[mk.length-1]:(new Date().toISOString().slice(0,7));
+  var base=new Date(+endYM.slice(0,4), +endYM.slice(5,7)-1, 1);
+  var mLabels=[], mValues=[];
+  for(var i=11;i>=0;i--){ var dd=new Date(base.getFullYear(), base.getMonth()-i, 1);
+    var key=dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0');
+    mLabels.push(dd.toLocaleDateString('en-AU',{month:'short',year:'2-digit'}));
+    mValues.push(Math.round(byMonth[key]||0)); }
+  var fk=Object.keys(byFy).map(Number).sort(function(a,b){return a-b;});
+  var now=new Date(); var lastFy=fk.length?fk[fk.length-1]:((now.getMonth()+1>=7)?now.getFullYear()+1:now.getFullYear());
+  var aLabels=[], aValues=[];
+  for(var j=2;j>=0;j--){ var fy=lastFy-j; aLabels.push('FY'+fy); aValues.push(Math.round(byFy[fy]||0)); }
+  return {monthly:{labels:mLabels,values:mValues},annual:{labels:aLabels,values:aValues},total:Math.round(total)};
+}
+// Secondary "Last 12 months" section under the main store dashboard — same for franchisee & investor.
+function renderLast12(sales, locId){
+  var host=document.getElementById('last12sec'); if(!host) return;
+  if(!locId){ host.innerHTML=''; return; }
+  var series=computeSeriesFromSales(sales, locId);
+  host.innerHTML='<div class="dash"><div class="dhead"><h3>Last 12 months</h3><span class="spacer"></span></div>'+invBlock(series)+'</div>';
+  invDraw(series);
+}
 function renderDashboard(role){
   const host=document.getElementById('salesDash'); if(!host) return;
-  if(role==='investor'){ host.innerHTML='<iframe title="Data dashboard" style="width:100%;height:620px;border:1px solid var(--cream-line);border-radius:14px;background:#fff;display:block" src="laundre-investor-dashboard.html?embed=1"></iframe>'; return; }
-  if(role!=='admin' && role!=='franchisee'){ host.innerHTML=''; return; }   // cleaners/maintenance: no sales
+  if(role!=='admin' && role!=='franchisee' && role!=='investor'){ host.innerHTML=''; return; }   // cleaners/maintenance: no sales
   if(role!==lastDashRole){ dashSites=null; dashFrom=''; dashTo=''; lastDashRole=role; }  // reset scope on account change
   const isAdmin=role==='admin';
   const sess=currentSession()||{};
@@ -769,7 +804,7 @@ function renderDashboard(role){
   let sites=[...new Map(sales.map(r=>[String(r.locationId),{id:String(r.locationId),name:(locName(r.locationId)||r.site||r.locationId)}])).values()];
   (ALL_LOCS||[]).forEach(function(l){ if((l.status||'active')!=='active') return; var id=String(l.id); if(!sites.some(function(s){return String(s.id)===id;})) sites.push({id:id,name:l.name}); });
   if(!isAdmin){ var AL=activeLoc(); if(sites.length && !sites.some(s=>String(s.id)===String(AL))) AL=String(sites[0].id); sites=sites.filter(s=>String(s.id)===String(AL)); dashSites=[String(AL)]; }   // franchisee: the active store (multi-site aware; ids compared as strings)
-  const scoped=sales.filter(r=>isAdmin || String(r.locationId)===String(sess.locationId));
+  const scoped=sales.filter(r=>isAdmin || (dashSites||[]).map(String).indexOf(String(r.locationId))>=0);
   const allDates=scoped.map(r=>r.date).sort();
   const minD=allDates[0]||'', maxD=allDates[allDates.length-1]||'';
   if(!dashTo||dashTo>maxD) dashTo=maxD;
@@ -792,7 +827,8 @@ function renderDashboard(role){
     +'<span class="lbl">to</span><input type="date" class="datein" id="toDate" min="'+minD+'" max="'+maxD+'" value="'+dashTo+'">'
     +'<button class="btn btn-ghost" id="rangeAll" style="padding:7px 12px">All dates</button></div>'
     +'<div class="kpis" id="kpis"></div><div class="chartbox"><canvas id="salesChart"></canvas><div class="chartempty" id="chartEmpty" style="display:none"></div></div>'
-    +'<div class="wxstrip" id="wxStrip" style="display:none"></div></div>';
+    +'<div class="wxstrip" id="wxStrip" style="display:none"></div></div>'
+    +(isAdmin?'':'<div id="last12sec" style="margin-top:24px"></div>');
   document.querySelectorAll('#granSeg button').forEach(b=>{b.classList.toggle('on',b.dataset.g===dashGran);b.onclick=()=>{dashGran=b.dataset.g;document.querySelectorAll('#granSeg button').forEach(x=>x.classList.toggle('on',x===b));drawSales(sales,sites);};});
   if(isAdmin){
     const updateSum=()=>{document.getElementById('siteSum').textContent='Laundromats ('+dashSites.length+'/'+sites.length+')';document.getElementById('msAll').checked=dashSites.length===sites.length&&sites.length>0;};
@@ -804,6 +840,8 @@ function renderDashboard(role){
   document.getElementById('toDate').onchange=e=>{dashTo=e.target.value;if(dashTo<dashFrom){dashFrom=dashTo;document.getElementById('fromDate').value=dashFrom;}drawSales(sales,sites);};
   document.getElementById('rangeAll').onclick=()=>{dashFrom=minD;dashTo=maxD;document.getElementById('fromDate').value=minD;document.getElementById('toDate').value=maxD;drawSales(sales,sites);};
   drawSales(sales,sites);
+  // Secondary "Last 12 months" section (franchisee & investor) — auto-updates with the active store.
+  if(!isAdmin){ try{ renderLast12(sales,(sites[0]&&String(sites[0].id))||null); }catch(e){} }
 }
 function drawSales(sales,sites){
   const rows=sales.filter(r=>r.date>=dashFrom && r.date<=dashTo && dashSites.includes(r.locationId));

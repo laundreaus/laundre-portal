@@ -149,6 +149,8 @@ function load(){
   });
 }
 function save(){
+  // Before persisting, roll any shared quote link whose costs changed (and aren't signed).
+  (STATE.sites||[]).forEach(function(s){ if(s&&s.shareToken) syncShareToken(s); });
   var b=document.getElementById('saveBtn'); if(b){b.disabled=true;b.textContent='Saving…';}
   return fetch('/settings-api/'+KEY,{method:'PUT',headers:hdrs(true),credentials:'same-origin',body:JSON.stringify({value:STATE})})
     .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();})
@@ -620,15 +622,38 @@ function proposalHtml(s){
     +'<div style="background:#33473D;color:#cdd9d1;text-align:center;font-size:11px;padding:11px;letter-spacing:.03em">Laundré Franchising · Commercial-in-confidence</div>'
     +'</div>';
 }
+/* A fingerprint of the cost/quote so we can tell when a proposal's numbers change. */
+function quoteKey(s){var f=(s&&s.f)||{};return JSON.stringify({t:f.turnkey_price||0,c:f.calc||null,fo:f.fitout||0,sq:f.sqm||0});}
+/* Keep the shareable link in sync with the quote: if the costs change before it's
+   signed, issue a brand-new link and mark the previous one expired so nobody signs
+   an out-of-date price. Returns true if the token was created or rotated. */
+function syncShareToken(s){
+  if(!s.f)s.f={};
+  var key=quoteKey(s);
+  if(!s.shareToken){ s.shareToken=uid()+uid(); s.sharedQuoteKey=key; return true; }
+  if(s.f.signed_at) return false;                      // signed → never change the link
+  if(s.sharedQuoteKey==null){ s.sharedQuoteKey=key; return false; } // baseline existing links
+  if(s.sharedQuoteKey!==key){
+    s.expiredTokens=s.expiredTokens||[];
+    if(s.expiredTokens.indexOf(s.shareToken)<0) s.expiredTokens.push(s.shareToken);
+    s.shareToken=uid()+uid(); s.sharedQuoteKey=key;
+    return true;
+  }
+  return false;
+}
 function renderPackage(s){
-  if(!s.shareToken)s.shareToken=uid()+uid();
+  var rotated=syncShareToken(s);
   var shareUrl = location.origin+'/site-proposal/'+s.shareToken;
+  if(rotated){ try{ save(); }catch(e){} }
+  var expNote = (s.expiredTokens&&s.expiredTokens.length&&!s.f.signed_at)
+    ? '<p class="hint" style="margin:8px 0 0;color:#B4472F">↻ The quote changed, so a fresh link was issued and '+s.expiredTokens.length+' earlier link'+(s.expiredTokens.length>1?'s were':' was')+' expired.</p>' : '';
   return '<p class="hint">Preview the full proposal PDF built from everything above, then download it or share the signable link.</p>'
     +'<div id="propPreview">'+proposalHtml(s)+'</div>'
     +'<div style="display:flex;gap:8px;margin-top:12px"><button class="btn btn-accent" id="dlPdf">⬇ Download PDF</button></div>'
     +'<div class="sharebox"><div class="sharehd">🔗 Shareable &amp; signable link</div>'
     +'<div class="linkrow"><input id="shareUrl" readonly value="'+esc(shareUrl)+'"><button class="btn btn-green" id="copyShare">Copy link</button></div>'
-    +'<p class="hint" style="margin:10px 0 0">Opens a public proposal page with this summary, the signable cost quote and an accept &amp; sign pad. Signing creates the Live Laundromat + Project Delivery timeline automatically.</p></div>';
+    +'<p class="hint" style="margin:10px 0 0">Opens a public proposal page with this summary, the signable cost quote and an accept &amp; sign pad. Signing creates the Live Laundromat + Project Delivery timeline automatically. If you change the costs before it is signed, this link is replaced automatically and the old one stops working.</p>'
+    +expNote+'</div>';
 }
 /* ---------- allocation / send ---------- */
 function renderAlloc(s){
@@ -678,7 +703,7 @@ document.addEventListener('click',function(e){
 });
 function sendProposal(){
   var s=cur, note=document.getElementById('sendNote'); if(!s.f.assigned_email){ alert('Add an assigned email in the Recipient field first.'); return; }
-  if(!s.shareToken)s.shareToken=uid()+uid();
+  syncShareToken(s);
   e_disable('sendProposalNav',true); if(note)note.textContent='Sending…';
   var body={event:'site_proposal',to:[s.f.assigned_email],subject:'Your Laundré site quote & proposal — '+(s.name||''),
     heading:'Your site proposal',summary:'See attached your site quote and proposal for '+(s.name||'your site')+'.',

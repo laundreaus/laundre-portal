@@ -14,49 +14,123 @@
   .lead{color:var(--muted);font-size:13.5px;margin:0 0 16px;}
   .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
   .kpi{background:#fff;border:1px solid var(--cream-line);border-radius:12px;padding:14px 16px;} .kpi .n{font-size:24px;font-weight:900;color:var(--green-d);} .kpi .l{font-size:11.5px;color:var(--muted);margin-top:2px;}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
-  .card{background:#fff;border:1px solid var(--cream-line);border-radius:14px;padding:18px 20px;text-decoration:none;color:inherit;display:block;transition:.14s;}
-  .card:hover{border-color:var(--green);box-shadow:0 8px 22px rgba(52,73,61,.12);transform:translateY(-2px);}
-  .card .nm{font-size:17px;font-weight:800;color:var(--green-d);} .card .ad{font-size:12.5px;color:var(--muted);margin-top:3px;min-height:32px;}
-  .badge{display:inline-block;border-radius:20px;padding:2px 11px;font-size:11px;font-weight:800;} .badge.on{background:#E1EDE4;color:#2f6b46;} .badge.off{background:#F5EEE2;color:#9a7b48;}
-  .meta{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:#5f7469;} .meta b{color:var(--green-d);}
-  .empty{padding:40px;text-align:center;color:var(--muted);background:#fff;border:1px solid var(--cream-line);border-radius:14px;}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;}
+  .search{flex:1;min-width:220px;position:relative;}
+  .search input{width:100%;border:1px solid var(--cream-line);border-radius:9px;padding:10px 12px 10px 34px;font-size:13.5px;background:#fff;color:var(--ink);}
+  .search input:focus{outline:none;border-color:var(--green);}
+  .search .ic{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none;}
+  .filters{display:flex;gap:6px;}
+  .chip{border:1px solid var(--cream-line);background:#fff;border-radius:20px;padding:7px 14px;font-size:12.5px;font-weight:700;color:#5f7469;}
+  .chip.active{background:var(--green);border-color:var(--green);color:#fff;}
+  .tablewrap{background:#fff;border:1px solid var(--cream-line);border-radius:14px;overflow:hidden;}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  thead th{text-align:left;background:#FBF8F2;color:var(--green-d);font-size:11.5px;letter-spacing:.03em;text-transform:uppercase;font-weight:800;padding:11px 16px;border-bottom:1px solid var(--cream-line);white-space:nowrap;cursor:pointer;user-select:none;}
+  thead th.num{text-align:right;} thead th .ar{color:var(--muted);font-size:10px;margin-left:3px;}
+  tbody tr{border-bottom:1px solid #F0EADE;cursor:pointer;transition:background .1s;}
+  tbody tr:last-child{border-bottom:none;} tbody tr:hover{background:#FBF8F2;}
+  td{padding:12px 16px;vertical-align:middle;} td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  td .nm{font-weight:800;color:var(--green-d);font-size:14px;} td .ad{color:var(--muted);font-size:12.5px;margin-top:1px;}
+  .badge{display:inline-block;border-radius:20px;padding:2px 11px;font-size:11px;font-weight:800;white-space:nowrap;} .badge.on{background:#E1EDE4;color:#2f6b46;} .badge.off{background:#F5EEE2;color:#9a7b48;}
+  .rev{font-weight:800;color:var(--green-d);} .dt{color:#5f7469;} .go{color:var(--muted);font-size:15px;}
+  .empty{padding:40px;text-align:center;color:var(--muted);}
+  @media(max-width:640px){ td .ad{display:none;} thead th.hidem,td.hidem{display:none;} }
 </style>
 </head>
 <body>
 <header><span class="ttl">🧺 Live Laundromats</span><span class="spacer"></span><a class="btn btn-ghost" href="laundre-portal.html">← Portal</a></header>
 <main>
-  <p class="lead">Every operating laundromat — the source of truth for each site, holding its acquisition history, delivery timeline and live operations. Open one to see its full record.</p>
+  <p class="lead">Every operating laundromat — the source of truth for each site, holding its acquisition history, delivery timeline and live operations. Click a row to open its full record.</p>
   <div class="kpis" id="kpis"></div>
-  <div class="grid" id="grid"><div class="empty" style="grid-column:1/-1">Loading…</div></div>
+  <div class="toolbar">
+    <div class="search"><span class="ic">🔍</span><input id="q" type="text" placeholder="Filter by name or address…" autocomplete="off" /></div>
+    <div class="filters">
+      <button class="chip active" data-f="all">All</button>
+      <button class="chip" data-f="trading">Trading</button>
+      <button class="chip" data-f="build">In build</button>
+    </div>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr>
+        <th data-k="name">Name<span class="ar"></span></th>
+        <th data-k="status">Status<span class="ar"></span></th>
+        <th data-k="date" class="hidem">Opened / Keys<span class="ar"></span></th>
+        <th data-k="rev" class="num">Revenue<span class="ar"></span></th>
+        <th style="width:24px"></th>
+      </tr></thead>
+      <tbody id="rows"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
 </main>
 <script>
-var CSRF=window.LAUNDRE_CSRF||'';
 function apiGet(u){return fetch(u,{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});}
 function esc(s){return (''+(s==null?'':s)).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 function fdate(d){ if(!d) return ''; var x=new Date((''+d).slice(0,10)+'T00:00'); return isNaN(x)?'':x.toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'}); }
+
+var ALL=[], REV={}, Q='', FILTER='all', SORT={k:'name',dir:1};
+
 Promise.all([apiGet('/locations-api').catch(function(){return[];}), apiGet('/sales-api').catch(function(){return[];})]).then(function(res){
   var locs=res[0]||[], sales=res[1]||[];
-  var rev={}; sales.forEach(function(s){ var id=String(s.location_id); rev[id]=(rev[id]||0)+(+s.revenue||0); });
-  var active=locs.filter(function(l){return (l.status||'active')==='active';});
-  var opened=active.filter(function(l){return l.opening_date;}).length;
-  var totRev=Object.keys(rev).reduce(function(a,k){return a+rev[k];},0);
+  sales.forEach(function(s){ var id=String(s.location_id); REV[id]=(REV[id]||0)+(+s.revenue||0); });
+  ALL=locs.filter(function(l){return (l.status||'active')==='active';}).map(function(l){
+    return { id:l.id, name:l.name||'', address:l.address||'', open:l.opening_date||'', keys:l.keys_date||'',
+             trading:!!l.opening_date, rev:Math.round(REV[String(l.id)]||0) };
+  });
+  var opened=ALL.filter(function(l){return l.trading;}).length;
+  var totRev=ALL.reduce(function(a,l){return a+l.rev;},0);
   document.getElementById('kpis').innerHTML=
-     '<div class="kpi"><div class="n">'+active.length+'</div><div class="l">Live laundromats</div></div>'
+     '<div class="kpi"><div class="n">'+ALL.length+'</div><div class="l">Live laundromats</div></div>'
     +'<div class="kpi"><div class="n">'+opened+'</div><div class="l">Open &amp; trading</div></div>'
-    +'<div class="kpi"><div class="n">'+(active.length-opened)+'</div><div class="l">In build / pre-open</div></div>'
+    +'<div class="kpi"><div class="n">'+(ALL.length-opened)+'</div><div class="l">In build / pre-open</div></div>'
     +'<div class="kpi"><div class="n">$'+Math.round(totRev).toLocaleString('en-AU')+'</div><div class="l">Revenue (all data)</div></div>';
-  var grid=document.getElementById('grid');
-  if(!active.length){ grid.innerHTML='<div class="empty" style="grid-column:1/-1">No live laundromats yet. Sites move here once a Sites Acquisition quote is signed.</div>'; return; }
-  active.sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
-  grid.innerHTML=active.map(function(l){
-    var open=l.opening_date, badge=open?'<span class="badge on">● Trading</span>':'<span class="badge off">In build</span>';
-    return '<a class="card" href="laundre-laundromat?loc='+encodeURIComponent(l.id)+'"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div class="nm">'+esc(l.name)+'</div>'+badge+'</div>'
-      +'<div class="ad">'+esc(l.address||'')+'</div>'
-      +'<div class="meta">'+(open?('<span>Opened <b>'+fdate(open)+'</b></span>'):(l.keys_date?('<span>Keys <b>'+fdate(l.keys_date)+'</b></span>'):''))
-      +'<span>Revenue <b>$'+Math.round(rev[String(l.id)]||0).toLocaleString('en-AU')+'</b></span></div></a>';
+  render();
+}).catch(function(e){ document.getElementById('rows').innerHTML='<tr><td colspan="5" class="empty">Could not load: '+esc(e.message)+'</td></tr>'; });
+
+function render(){
+  var rows=ALL.filter(function(l){
+    if(FILTER==='trading' && !l.trading) return false;
+    if(FILTER==='build' && l.trading) return false;
+    if(Q){ var hay=(l.name+' '+l.address).toLowerCase(); if(hay.indexOf(Q)<0) return false; }
+    return true;
+  });
+  rows.sort(function(a,b){
+    var k=SORT.k, d=SORT.dir, av,bv;
+    if(k==='rev'){ av=a.rev; bv=b.rev; return (av-bv)*d; }
+    if(k==='status'){ av=a.trading?1:0; bv=b.trading?1:0; return (av-bv)*d; }
+    if(k==='date'){ av=a.open||a.keys||''; bv=b.open||b.keys||''; return av<bv?-1*d:av>bv?1*d:0; }
+    av=(a.name||'').toLowerCase(); bv=(b.name||'').toLowerCase(); return av<bv?-1*d:av>bv?1*d:0;
+  });
+  var tb=document.getElementById('rows');
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="5" class="empty">'+(ALL.length?'No laundromats match your filter.':'No live laundromats yet. Sites move here once a Sites Acquisition quote is signed.')+'</td></tr>'; updateArrows(); return; }
+  tb.innerHTML=rows.map(function(l){
+    var badge=l.trading?'<span class="badge on">● Trading</span>':'<span class="badge off">In build</span>';
+    var dt=l.trading?('Opened '+fdate(l.open)):(l.keys?('Keys '+fdate(l.keys)):'—');
+    var href='laundre-laundromat?loc='+encodeURIComponent(l.id);
+    return '<tr onclick="location.href=\''+href+'\'">'
+      +'<td><div class="nm">'+esc(l.name)+'</div><div class="ad">'+esc(l.address)+'</div></td>'
+      +'<td>'+badge+'</td>'
+      +'<td class="hidem"><span class="dt">'+dt+'</span></td>'
+      +'<td class="num"><span class="rev">$'+l.rev.toLocaleString('en-AU')+'</span></td>'
+      +'<td class="num"><span class="go">›</span></td></tr>';
   }).join('');
-}).catch(function(e){ document.getElementById('grid').innerHTML='<div class="empty" style="grid-column:1/-1">Could not load: '+esc(e.message)+'</div>'; });
+  updateArrows();
+}
+function updateArrows(){
+  document.querySelectorAll('thead th[data-k]').forEach(function(th){
+    var ar=th.querySelector('.ar');
+    ar.textContent = (th.getAttribute('data-k')===SORT.k) ? (SORT.dir>0?'▲':'▼') : '';
+  });
+}
+document.getElementById('q').addEventListener('input',function(e){ Q=e.target.value.trim().toLowerCase(); render(); });
+document.querySelectorAll('.chip').forEach(function(c){ c.addEventListener('click',function(){
+  document.querySelectorAll('.chip').forEach(function(x){x.classList.remove('active');});
+  c.classList.add('active'); FILTER=c.getAttribute('data-f'); render();
+});});
+document.querySelectorAll('thead th[data-k]').forEach(function(th){ th.addEventListener('click',function(){
+  var k=th.getAttribute('data-k');
+  if(SORT.k===k){ SORT.dir=-SORT.dir; } else { SORT.k=k; SORT.dir=(k==='rev')?-1:1; }
+  render();
+});});
 </script>
 </body>
 </html>
